@@ -12,31 +12,33 @@ export default function HistoryPage() {
     const navigate = useNavigate();
     const lastDeletedRef = useRef<any | null>(null);
     const [showUndoToast, setShowUndoToast] = useState(false);
+    const deleteActivity = async (activity: any) => {
+    lastDeletedRef.current = activity; // store copy for undo
 
-    const deleteActivity = (activity: any) => {
-    lastDeletedRef.current = activity; // store it
-
-    // remove instantly
+    // remove visually
     setActivities(prev => prev.filter(a => a.id !== activity.id));
     setShowUndoToast(true);
 
-    // finalize deletion after 2 seconds (if no undo)
-    setTimeout(async () => {
-        if (lastDeletedRef.current && lastDeletedRef.current.id === activity.id) {
-        await supabase.from("activities").delete().eq("id", activity.id);
+    // delete now (no waiting)
+    await supabase.from("activities")
+        .delete()
+        .eq("id", activity.id);
+    };
+
+
+    const undoDelete = async () => {
+        if (!lastDeletedRef.current) return;
+
+        // restore locally
+        setActivities(prev => [lastDeletedRef.current, ...prev]);
+
+        // restore in database
+        await supabase.from("activities").insert(lastDeletedRef.current);
+
         lastDeletedRef.current = null;
-        }
-    }, 2000);
-    };
+        setShowUndoToast(false);
+        };
 
-    const undoDelete = () => {
-    if (!lastDeletedRef.current) return;
-
-    setActivities(prev => [lastDeletedRef.current, ...prev]);
-
-    lastDeletedRef.current = null;
-    setShowUndoToast(false);
-    };
 
 
 useEffect(() => {
