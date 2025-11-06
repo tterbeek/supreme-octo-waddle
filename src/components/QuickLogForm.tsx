@@ -21,11 +21,11 @@ export default function QuickLogForm({ type, onClose, onLogged }: QuickLogFormPr
   const [rating, setRating] = useState(3);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [animateIn, setAnimateIn] = useState(false);
-  const startY = useRef<number | null>(null);
-  const [dragY, setDragY] = useState(0);
   const [title, setTitle] = useState("");
 
   const ding = new Audio("/sounds/ding.mp3");
+  const [dragY, setDragY] = useState(0);
+  const startY = useRef<number | null>(null);
 
   useEffect(() => {
     setAnimateIn(true);
@@ -106,8 +106,8 @@ const useCustom = () => {
   };
 
   return (
-    <div
-  className="fixed inset-0 bg-black/40 flex items-end justify-center z-50"
+<div
+  className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 overscroll-none"
   onClick={onClose}
 >
 <div
@@ -116,24 +116,27 @@ const useCustom = () => {
     startY.current = e.touches[0].clientY;
   }}
   onTouchMove={(e) => {
-    if (startY.current === null) return;
+    if (startY.current == null) return;
     const currentY = e.touches[0].clientY;
     const diff = currentY - startY.current;
-    if (diff > 0) setDragY(diff); // user is dragging down
+    // only track downward drag
+    if (diff > 0) setDragY(diff);
   }}
   onTouchEnd={() => {
-    if (dragY > 80) {   // threshold — can tune later
-      setAnimateIn(false);
+    const threshold = 80; // px
+    if (dragY > threshold) {
+      setAnimateIn(false); // use your existing animateIn
       setTimeout(onClose, 200);
     }
     setDragY(0);
     startY.current = null;
   }}
   style={{ transform: `translateY(${dragY}px)` }}
-  className={`w-full max-w-md bg-white rounded-t-2xl p-6 transition-all ${
+  className={`w-full max-w-md bg-white rounded-t-2xl p-6 transition-transform ${
     animateIn ? "translate-y-0" : "translate-y-full"
-  } animate-fadeIn`}
+  } animate-fadeIn touch-pan-y overscroll-none will-change-transform`}
 >
+
 
 <div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
 

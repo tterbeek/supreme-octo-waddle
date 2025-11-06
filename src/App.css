@@ -40,3 +40,5 @@
 .read-the-docs {
   color: #888;
 }
+
+html, body { overscroll-behavior-y: contain; }

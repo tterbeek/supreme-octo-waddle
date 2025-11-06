@@ -212,38 +212,40 @@ const makeDots = (current: number, goal: number) => {
 
 <div className="flex flex-col gap-3">
   {activities.map((a) => (
-    <SwipeDelete key={a.id} onDelete={() => deleteActivity(a)}>
-<div className="border rounded-xl p-4 bg-white shadow-sm text-center">
-  {/* Line 1 */}
-<div className="text-base font-medium text-gray-900 flex flex-wrap gap-1 justify-center text-center">
+<SwipeDelete key={a.id} onDelete={() => deleteActivity(a)}>
+<div className="w-full rounded-xl p-4 bg-white border border-gray-200 shadow-sm">
 
-    {/* Title (or fallback to run/ride) */}
-    <span>{a.title || (a.type === "run" ? "Run" : "Ride")}</span>
 
-    <span>–</span>
-    <span>{a.distance_km} km</span>
+    {/* Line 1 */}
+    <div className="flex items-center justify-between text-base text-gray-900">
+      <div className="flex flex-wrap gap-1">
+        <span className="font-medium">{a.title || (a.type === "run" ? "Run" : "Ride")}</span>
+        <span>–</span>
+        <span>{a.distance_km} km</span>
+        <span>–</span>
+        <span className="text-gray-600">
+          {new Date(a.date).toLocaleDateString("en-GB", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })}
+        </span>
+      </div>
 
-    <span>–</span>
-  <span className="text-gray-500">{a.type === "run" ? "Run" : "Ride"}</span>
+      {a.type === "run" ? (
+        <Footprints className="w-5 h-5 text-black opacity-90" />
+      ) : (
+        <Bike className="w-5 h-5 text-black opacity-90" />
+      )}
+    </div>
 
-    <span>–</span>
-    <span>
-      {new Date(a.date).toLocaleDateString("en-GB", {
-        weekday: "short", // Thurs
-        day: "numeric",   // 5
-        month: "short"    // Nov
-      })}
-    </span>
+    {/* Stars */}
+    <div className="mt-1 flex justify-center">
+      <Stars value={a.feeling} />
+    </div>
 
   </div>
-
-  {/* Line 2: Stars */}
- <div className="mt-1 flex justify-center">
-    <Stars value={a.feeling} />
-  </div>
-</div>
-
-    </SwipeDelete>
+</SwipeDelete>
   ))}
 </div>
 
