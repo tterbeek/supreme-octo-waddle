@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm";
@@ -109,17 +108,9 @@ const Stars = ({ value }: { value: number | string }) => {
   );
 };
 
-  const currentYear = new Date().getFullYear();
 
-  const yearActivities = activities.filter(a =>
-    new Date(a.date).getFullYear() === currentYear
-  );
 
-  const runActivities = yearActivities.filter(a => a.type === "run");
-  const rideActivities = yearActivities.filter(a => a.type === "ride");
-
-  const totalRunDistance = runActivities.reduce((sum, a) => sum + a.distance_km, 0);
-  const totalRideDistance = rideActivities.reduce((sum, a) => sum + a.distance_km, 0);
+   
 
 // Weekly progress calculation
 const runGoal = goals.find(g => g.type === "run");
@@ -161,68 +152,36 @@ const makeDots = (current: number, goal: number) => {
 {/* Weekly Progress Block — only if goals exist */}
 {(runGoal || rideGoal) && (
   <div
-    className="mb-6 p-4 border rounded-lg bg-gray-50 cursor-pointer"
+    className="text-center mb-6 p-4 border rounded-lg bg-gray-50"
     onClick={() => navigate("/stats")}
   >
-    <div className="text-center text-xs font-semibold text-gray-500 mb-3">
-      This Week
-    </div>
+    <div className="font-semibold mb-1">This Week</div>
 
-    <div className="flex justify-between text-center text-sm">
+    <div className="text-left flex flex-wrap gap-6 justify-center text-sm text-gray-700">
 
-      {/* RUN */}
       {runGoal && (
-        <div className="flex-1">
-          <div className="font-medium text-gray-700">RUN</div>
-          <div className="text-gray-800">
-            {Math.round(runDist)} / {runGoal.distance_km} km
-          </div>
-
-          <div className="mt-1 flex justify-center gap-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-2 h-2 rounded-full ${
-                  i < Math.min(5, Math.floor((runDist / runGoal.distance_km) * 5))
-                    ? "bg-amber-400"
-                    : "bg-gray-300"
-                }`}
-              />
-            ))}
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">RUN:</span>
+          <span>{Math.round(runDist)} / {runGoal.distance_km} km</span>
+          <span className="text-amber-400">
+            {makeDots(runDist, runGoal.distance_km)}
+          </span>
         </div>
       )}
 
-      {/* Spacer */}
-      {(runGoal && rideGoal) && <div className="w-6" />}
-
-      {/* RIDE */}
       {rideGoal && (
-        <div className="flex-1">
-          <div className="font-medium text-gray-700">RIDE</div>
-          <div className="text-gray-800">
-            {Math.round(rideDist)} / {rideGoal.distance_km} km
-          </div>
-
-          <div className="mt-1 flex justify-center gap-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className={`w-2 h-2 rounded-full ${
-                  i < Math.min(5, Math.floor((rideDist / rideGoal.distance_km) * 5))
-                    ? "bg-amber-400"
-                    : "bg-gray-300"
-                }`}
-              />
-            ))}
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">RIDE:</span>
+          <span>{Math.round(rideDist)} / {rideGoal.distance_km} km</span>
+          <span className="text-amber-400">
+            {makeDots(rideDist, rideGoal.distance_km)}
+          </span>
         </div>
       )}
 
     </div>
   </div>
 )}
-
 
 
 {/* Run / Ride Buttons */}
