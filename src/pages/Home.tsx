@@ -5,6 +5,8 @@ import QuickLogForm from "../components/QuickLogForm";
 import Toast from "../components/Toast"; // ✅ add this
 import { Bike, Footprints } from "lucide-react";
 import SwipeDelete from "../components/SwipeDelete";
+import Sidebar from "../components/Sidebar";
+import { useNavigate } from "react-router-dom";
 
 
 export default function Home() {
@@ -14,22 +16,37 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [showUndoToast, setShowUndoToast] = useState(false);
   const lastDeletedRef = useRef<any | null>(null);
-
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const [goals, setGoals] = useState<any[]>([]);
 
 useEffect(() => {
   // Initial load
   const load = async () => {
-    const { data } = await supabase
-      .from("activities")
-      .select("*")
-      .order("date", { ascending: false });
+  const { data } = await supabase
+    .from("activities")
+    .select("*")
+    .order("date", { ascending: false });
 
-    setActivities(data || []);
-  };
+  setActivities(data || []);
+
+  // Load weekly goals
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: goalData } = await supabase
+      .from("goals")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("period", "week");
+
+    setGoals(goalData || []);
+  }
+};
+
 
   load();
 
-  // 🔥 Realtime subscription
+    // 🔥 Realtime subscription
   const channel = supabase
     .channel("activities-realtime")
     .on(
@@ -49,10 +66,16 @@ useEffect(() => {
     )
     .subscribe();
 
+
+    
   return () => {
     supabase.removeChannel(channel);
   };
+
+  
 }, []);
+
+
 
 
   const deleteActivity = async (activity: any) => {
@@ -98,30 +121,108 @@ const Stars = ({ value }: { value: number | string }) => {
   const totalRunDistance = runActivities.reduce((sum, a) => sum + a.distance_km, 0);
   const totalRideDistance = rideActivities.reduce((sum, a) => sum + a.distance_km, 0);
 
+// Weekly progress calculation
+const runGoal = goals.find(g => g.type === "run");
+const rideGoal = goals.find(g => g.type === "ride");
+
+// Determine start of week (Mon-based)
+const now = new Date();
+const weekStart = new Date(now);
+weekStart.setDate(now.getDate() - now.getDay() + 1); // Monday start
+
+const weekActivities = activities.filter(a => new Date(a.date) >= weekStart);
+
+const runWeek = weekActivities.filter(a => a.type === "run");
+const rideWeek = weekActivities.filter(a => a.type === "ride");
+
+const runDist = runWeek.reduce((s, a) => s + a.distance_km, 0);
+const rideDist = rideWeek.reduce((s, a) => s + a.distance_km, 0);
+
+// Helper to build dots
+const makeDots = (current: number, goal: number) => {
+  const filled = Math.min(5, Math.round((current / goal) * 5));
+  return "●".repeat(filled) + "○".repeat(5 - filled);
+};
+
+
 
  return (
-<div className="mt-2">
+  <div className="mt-2">
+    <div className="absolute top-4 left-4 z-20">
+  <button onClick={() => setMenuOpen(true)} className="p-2">
+    <div className="w-6 h-0.5 bg-black mb-1"></div>
+    <div className="w-6 h-0.5 bg-black mb-1"></div>
+    <div className="w-6 h-0.5 bg-black"></div>
+  </button>
+</div>
 
 
-{/* Year Summary */}
-<h2 className="text-sm font-medium text-gray-500 mb-1">This Year's Stats</h2>
 
-<div className="mt-2 mb-4 p-4 border rounded-lg bg-gray-50">
-  <div className="flex justify-between">
-    <div className="text-left">
-      <div className="font-semibold">Running</div>
-        <div className="text-sm text-gray-600">
-          {Math.round(totalRunDistance)} km • {runActivities.length} activities
-        </div>
+{/* Weekly Progress Block — only if goals exist */}
+{(runGoal || rideGoal) && (
+  <div
+    className="mb-6 p-4 border rounded-lg bg-gray-50 cursor-pointer"
+    onClick={() => navigate("/stats")}
+  >
+    <div className="text-center text-xs font-semibold text-gray-500 mb-3">
+      This Week
     </div>
-    <div className="text-right">
-      <div className="font-semibold">Cycling</div>
-      <div className="text-sm text-gray-600">
-        {Math.round(totalRideDistance)} km • {rideActivities.length} activities
-      </div>
+
+    <div className="flex justify-between text-center text-sm">
+
+      {/* RUN */}
+      {runGoal && (
+        <div className="flex-1">
+          <div className="font-medium text-gray-700">RUN</div>
+          <div className="text-gray-800">
+            {Math.round(runDist)} / {runGoal.distance_km} km
+          </div>
+
+          <div className="mt-1 flex justify-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full ${
+                  i < Math.min(5, Math.floor((runDist / runGoal.distance_km) * 5))
+                    ? "bg-amber-400"
+                    : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Spacer */}
+      {(runGoal && rideGoal) && <div className="w-6" />}
+
+      {/* RIDE */}
+      {rideGoal && (
+        <div className="flex-1">
+          <div className="font-medium text-gray-700">RIDE</div>
+          <div className="text-gray-800">
+            {Math.round(rideDist)} / {rideGoal.distance_km} km
+          </div>
+
+          <div className="mt-1 flex justify-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full ${
+                  i < Math.min(5, Math.floor((rideDist / rideGoal.distance_km) * 5))
+                    ? "bg-amber-400"
+                    : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   </div>
-</div>
+)}
+
 
 
 {/* Run / Ride Buttons */}
@@ -187,10 +288,6 @@ const Stars = ({ value }: { value: number | string }) => {
   ))}
 </div>
 
-<Link to="/presets" className="text-center text-sm text-gray-500 underline mt-4">
-  Manage Presets
-</Link>
-
 {showQuickLog && activityType && (
   <QuickLogForm
     type={activityType}
@@ -220,6 +317,7 @@ const Stars = ({ value }: { value: number | string }) => {
     }}
   />
 )}
+<Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
   </div>
 );

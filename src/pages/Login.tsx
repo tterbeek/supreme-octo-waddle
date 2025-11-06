@@ -43,7 +43,7 @@ export default function Login() {
 
           <button
             onClick={sendCode}
-            className="bg-blue-600 text-white w-full py-3 rounded font-semibold"
+            className="bg-amber-300 text-white w-full py-3 rounded font-semibold"
           >
             Send Code
           </button>
@@ -56,13 +56,13 @@ export default function Login() {
             type="text"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            placeholder="Enter 6-digit code"
+            placeholder="Enter 8-digit code"
             className="border rounded w-full px-3 py-2 mb-3 text-center tracking-widest text-lg"
           />
 
           <button
             onClick={verifyCode}
-            className="bg-blue-600 text-white w-full py-3 rounded font-semibold"
+            className="bg-amber-300 text-white w-full py-3 rounded font-semibold"
           >
             Verify & Sign In
           </button>

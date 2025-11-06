@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import PresetsPage from "./pages/PresetsPage";
 import AddPresetPage from "./pages/AddPresetPage";
 import EditPresetPage from "./pages/EditPresetPage";
-
+import StatsPage from "./pages/StatsPage";
+import GoalsPage from "./pages/GoalsPage";
 
 export default function App() {
 const [user, setUser] = useState<any>(null);
@@ -29,6 +30,8 @@ if (!user) return <Login />;
           <Route path="/presets" element={<PresetsPage />} />
           <Route path="/presets/new" element={<AddPresetPage />} />
           <Route path="/presets/:id" element={<EditPresetPage />} />
+          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
         </Routes>
       </div>
     </BrowserRouter>
