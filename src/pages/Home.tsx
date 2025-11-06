@@ -217,28 +217,36 @@ const makeDots = (current: number, goal: number) => {
 
 
     {/* Line 1 */}
-    <div className="flex items-center justify-between text-base text-gray-900">
-      <div className="flex flex-wrap gap-1">
-        <span className="font-medium">{a.title || (a.type === "run" ? "Run" : "Ride")}</span>
-        <span>–</span>
-        <span>{a.distance_km} km</span>
-        <span>–</span>
-        <span className="text-gray-600">
-          {new Date(a.date).toLocaleDateString("en-GB", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-          })}
-        </span>
-      </div>
+{/* Line 1 */}
+<div className="flex items-center justify-between text-base text-gray-900">
 
-      {a.type === "run" ? (
-        <Footprints className="w-5 h-5 text-black opacity-90" />
-      ) : (
-        <Bike className="w-5 h-5 text-black opacity-90" />
-      )}
+  {/* Center text block */}
+  <div className="flex-1 flex justify-center">
+    <div className="flex flex-wrap gap-1 justify-center text-center">
+      <span className="font-medium">{a.title || (a.type === "run" ? "Run" : "Ride")}</span>
+      <span>–</span>
+      <span>{a.distance_km} km</span>
+      <span>–</span>
+      <span className="text-gray-600">
+        {new Date(a.date).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        })}
+      </span>
     </div>
+  </div>
 
+  {/* Icon on the right */}
+  <div className="ml-3 flex-shrink-0">
+    {a.type === "run" ? (
+      <Footprints className="w-5 h-5 text-black opacity-90" />
+    ) : (
+      <Bike className="w-5 h-5 text-black opacity-90" />
+    )}
+  </div>
+
+</div>
     {/* Stars */}
     <div className="mt-1 flex justify-center">
       <Stars value={a.feeling} />

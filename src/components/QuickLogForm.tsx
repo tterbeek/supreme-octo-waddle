@@ -119,22 +119,28 @@ const useCustom = () => {
     if (startY.current == null) return;
     const currentY = e.touches[0].clientY;
     const diff = currentY - startY.current;
-    // only track downward drag
-    if (diff > 0) setDragY(diff);
+
+    if (diff > 0) {
+      e.preventDefault(); // ← BLOCK BROWSER SWIPE REFRESH
+      setDragY(diff);
+    }
   }}
   onTouchEnd={() => {
-    const threshold = 80; // px
+    const threshold = 80;
     if (dragY > threshold) {
-      setAnimateIn(false); // use your existing animateIn
+      setAnimateIn(false);
       setTimeout(onClose, 200);
     }
     setDragY(0);
     startY.current = null;
   }}
-  style={{ transform: `translateY(${dragY}px)` }}
+  style={{
+    transform: `translateY(${dragY}px)`,
+    touchAction: "none" // ← SUPER IMPORTANT FOR ANDROID
+  }}
   className={`w-full max-w-md bg-white rounded-t-2xl p-6 transition-transform ${
     animateIn ? "translate-y-0" : "translate-y-full"
-  } animate-fadeIn touch-pan-y overscroll-none will-change-transform`}
+  } animate-fadeIn will-change-transform`}
 >
 
 
