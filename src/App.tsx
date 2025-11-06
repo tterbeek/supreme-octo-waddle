@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
-import HistoryPage from "./pages/HistoryPage";
 import Login from "./pages/Login";
 import { supabase } from "./supabaseClient";
 import { useEffect, useState } from "react";
@@ -26,7 +25,6 @@ if (!user) return <Login />;
       <div className="mx-auto max-w-md min-h-screen p-4">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/history" element={<HistoryPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/presets" element={<PresetsPage />} />
           <Route path="/presets/new" element={<AddPresetPage />} />

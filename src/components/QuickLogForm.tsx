@@ -1,17 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { Preset } from "../types";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
-import Toast from "./Toast";
 import { Star } from "lucide-react";
 
 
 type QuickLogFormProps = {
   type: "run" | "ride";
   onClose: () => void;
+  onLogged: () => void; // ✅ add this line
 };
 
-export default function QuickLogForm({ type, onClose }: QuickLogFormProps) {
+
+export default function QuickLogForm({ type, onClose, onLogged }: QuickLogFormProps) {
   const navigate = useNavigate();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [activePreset, setActivePreset] = useState<Preset | null>(null);
@@ -20,7 +21,9 @@ export default function QuickLogForm({ type, onClose }: QuickLogFormProps) {
   const [rating, setRating] = useState(3);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [animateIn, setAnimateIn] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const startY = useRef<number | null>(null);
+  const [dragY, setDragY] = useState(0);
+  const [title, setTitle] = useState("");
 
   const ding = new Audio("/sounds/ding.mp3");
 
@@ -47,21 +50,26 @@ export default function QuickLogForm({ type, onClose }: QuickLogFormProps) {
       if (data && data.length > 0) {
         setActivePreset(data[0]);
         setDistance(data[0].distance_km ?? "");
+        setTitle(data[0].name ?? ""); // ✅ new
       }
     };
 
     load();
   }, [type]);
 
-  const usePreset = (preset: Preset) => {
-    setActivePreset(preset);
-    setDistance(preset.distance_km ?? "");
-  };
+const usePreset = (preset: Preset) => {
+  setActivePreset(preset);
+  setDistance(preset.distance_km ?? "");
+  setTitle(preset.name ?? ""); // ✅ new
+};
 
-  const useCustom = () => {
-    setActivePreset(null);
-    setDistance("");
-  };
+
+const useCustom = () => {
+  setActivePreset(null);
+  setDistance("");
+  setTitle(""); // ✅ clear title
+};
+
 
   const save = async () => {
     const {
@@ -75,7 +83,8 @@ export default function QuickLogForm({ type, onClose }: QuickLogFormProps) {
       type,
       date,
       distance_km: Number(distance),
-      feeling: rating
+      feeling: rating,
+      title // ✅ new
     });
 
     if (activePreset) {
@@ -86,7 +95,8 @@ export default function QuickLogForm({ type, onClose }: QuickLogFormProps) {
     }
 
     ding.play();
-    setShowToast(true);
+    onLogged();
+
 
     setAnimateIn(false);
     setTimeout(() => {
@@ -102,10 +112,29 @@ export default function QuickLogForm({ type, onClose }: QuickLogFormProps) {
 >
 <div
   onClick={(e) => e.stopPropagation()}
+  onTouchStart={(e) => {
+    startY.current = e.touches[0].clientY;
+  }}
+  onTouchMove={(e) => {
+    if (startY.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - startY.current;
+    if (diff > 0) setDragY(diff); // user is dragging down
+  }}
+  onTouchEnd={() => {
+    if (dragY > 80) {   // threshold — can tune later
+      setAnimateIn(false);
+      setTimeout(onClose, 200);
+    }
+    setDragY(0);
+    startY.current = null;
+  }}
+  style={{ transform: `translateY(${dragY}px)` }}
   className={`w-full max-w-md bg-white rounded-t-2xl p-6 transition-all ${
     animateIn ? "translate-y-0" : "translate-y-full"
   } animate-fadeIn`}
 >
+
 <div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
 
         {/* Last 3 Presets */}
@@ -136,6 +165,14 @@ export default function QuickLogForm({ type, onClose }: QuickLogFormProps) {
             Custom
           </button>
         </div>
+        {/* Title */}
+        <label className="text-sm text-gray-600">Title</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full border rounded-md p-2 mb-4"
+        />
 
         {/* Date */}
         <label className="text-sm text-gray-600">Date</label>
@@ -188,9 +225,7 @@ export default function QuickLogForm({ type, onClose }: QuickLogFormProps) {
         </button>
       </div>
 
-      {showToast && (
-        <Toast message="Activity logged ✅" onClose={() => setShowToast(false)} />
-      )}
+
     </div>
   );
 }

@@ -66,6 +66,22 @@ const rideActivities = yearActivities.filter(a => a.type === "ride");
 const totalRunDistance = runActivities.reduce((sum, a) => sum + a.distance_km, 0);
 const totalRideDistance = rideActivities.reduce((sum, a) => sum + a.distance_km, 0);
 
+const Stars = ({ value }: { value: number | string }) => {
+  const rating = Number(value); // ← force numeric
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span
+          key={n}
+          className={n <= rating ? "text-amber-400" : "text-gray-300"}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  );
+};
+
 
   return (
     <div>
@@ -108,6 +124,8 @@ const totalRideDistance = rideActivities.reduce((sum, a) => sum + a.distance_km,
             <div className="text-sm text-gray-600">
             {a.distance_km} km · {new Date(a.date).toLocaleDateString()}
             </div>
+            <Stars value={a.feeling} />
+
         </div>
         </SwipeDelete>
 
