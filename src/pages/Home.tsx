@@ -112,14 +112,16 @@ const Stars = ({ value }: { value: number | string }) => {
 
    
 
-// Weekly progress calculation
-const runGoal = goals.find(g => g.type === "run");
-const rideGoal = goals.find(g => g.type === "ride");
+// ✅ Get only WEEKLY goals
+const runGoal = goals.find(g => g.type === "run" && g.period === "week");
+const rideGoal = goals.find(g => g.type === "ride" && g.period === "week");
 
-// Determine start of week (Mon-based)
+
+// ✅ Monday-based week start at local midnight
 const now = new Date();
 const weekStart = new Date(now);
-weekStart.setDate(now.getDate() - now.getDay() + 1); // Monday start
+weekStart.setHours(0, 0, 0, 0);
+weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
 
 const weekActivities = activities.filter(a => new Date(a.date) >= weekStart);
 
@@ -215,44 +217,42 @@ const makeDots = (current: number, goal: number) => {
 <SwipeDelete key={a.id} onDelete={() => deleteActivity(a)}>
 <div className="w-full rounded-xl p-4 bg-white border border-gray-200 shadow-sm">
 
+  {/* Top Row */}
+  <div className="flex justify-between items-center">
 
-    {/* Line 1 */}
-{/* Line 1 */}
-<div className="flex items-center justify-between text-base text-gray-900">
+    {/* Text + Date */}
+    <div className="flex flex-col items-center flex-1">
+      <div className="flex flex-wrap gap-1 justify-center text-base text-gray-900">
+        <span className="font-medium">{a.title || (a.type === "run" ? "Run" : "Ride")}</span>
+        <span>–</span>
+        <span>{a.distance_km} km</span>
+        <span>–</span>
+        <span className="text-gray-600">
+          {new Date(a.date).toLocaleDateString("en-GB", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })}
+        </span>
+      </div>
 
-  {/* Center text block */}
-  <div className="flex-1 flex justify-center">
-    <div className="flex flex-wrap gap-1 justify-center text-center">
-      <span className="font-medium">{a.title || (a.type === "run" ? "Run" : "Ride")}</span>
-      <span>–</span>
-      <span>{a.distance_km} km</span>
-      <span>–</span>
-      <span className="text-gray-600">
-        {new Date(a.date).toLocaleDateString("en-GB", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-        })}
-      </span>
+      {/* Stars (centered under text - no icon influence) */}
+      <div className="mt-1 flex justify-center">
+        <Stars value={a.feeling} />
+      </div>
     </div>
-  </div>
 
-  {/* Icon on the right */}
-  <div className="ml-3 flex-shrink-0">
-    {a.type === "run" ? (
-      <Footprints className="w-5 h-5 text-black opacity-90" />
-    ) : (
-      <Bike className="w-5 h-5 text-black opacity-90" />
-    )}
+    {/* Icon - truly vertically centered next to the block */}
+    <div className="ml-3 flex self-center">
+      {a.type === "run" ? (
+        <Footprints className="w-6 h-6 text-black opacity-80" />
+      ) : (
+        <Bike className="w-6 h-6 text-black opacity-80" />
+      )}
+    </div>
   </div>
 
 </div>
-    {/* Stars */}
-    <div className="mt-1 flex justify-center">
-      <Stars value={a.feeling} />
-    </div>
-
-  </div>
 </SwipeDelete>
   ))}
 </div>
