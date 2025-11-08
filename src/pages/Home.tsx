@@ -92,25 +92,6 @@ const undoDelete = async () => {
   setShowUndoToast(false);
 };
 
-const Stars = ({ value }: { value: number | string }) => {
-  const rating = Number(value) || 0;
-  return (
-    <div className="flex gap-0.5">
-      {[1,2,3,4,5].map(n => (
-        <span
-          key={n}
-          className={n <= rating ? "text-amber-400" : "text-gray-300"}
-        >
-          ★
-        </span>
-      ))}
-    </div>
-  );
-};
-
-
-
-   
 
 // ✅ Get only WEEKLY goals
 const runGoal = goals.find(g => g.type === "run" && g.period === "week");
