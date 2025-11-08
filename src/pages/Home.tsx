@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm";
 import Toast from "../components/Toast"; // ✅ add this
-import { Bike, Footprints } from "lucide-react";
+import { Bike, Footprints, Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import SwipeDelete from "../components/SwipeDelete";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
@@ -213,48 +213,63 @@ const makeDots = (current: number, goal: number) => {
 <h2 className="text-sm font-medium text-gray-500 mt-6 mb-2">Recent Activity</h2>
 
 <div className="flex flex-col gap-3">
-  {activities.map((a) => (
-<SwipeDelete key={a.id} onDelete={() => deleteActivity(a)}>
-<div className="w-full rounded-xl p-4 bg-white border border-gray-200 shadow-sm">
-
-  {/* Top Row */}
-  <div className="flex justify-between items-center">
-
-    {/* Text + Date */}
-    <div className="flex flex-col items-center flex-1">
-      <div className="flex flex-wrap gap-1 justify-center text-base text-gray-900">
-        <span className="font-medium">{a.title || (a.type === "run" ? "Run" : "Ride")}</span>
-        <span>–</span>
-        <span>{a.distance_km} km</span>
-        <span>–</span>
-        <span className="text-gray-600">
-          {new Date(a.date).toLocaleDateString("en-GB", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-          })}
-        </span>
-      </div>
-
-      {/* Stars (centered under text - no icon influence) */}
-      <div className="mt-1 flex justify-center">
-        <Stars value={a.feeling} />
-      </div>
-    </div>
-
-    {/* Icon - truly vertically centered next to the block */}
-    <div className="ml-3 flex self-center">
-      {a.type === "run" ? (
-        <Footprints className="w-6 h-6 text-black opacity-80" />
-      ) : (
-        <Bike className="w-6 h-6 text-black opacity-80" />
-      )}
-    </div>
+{activities.map((a) => (
+  <SwipeDelete key={a.id} onDelete={() => deleteActivity(a)}>
+<div className="relative w-full rounded-xl p-4 bg-white border border-gray-200 shadow-sm">
+  {/* Center icon vertically using absolute positioning */}
+  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+    {a.type === "run" ? (
+      <Footprints className="w-6 h-6 text-black opacity-90" />
+    ) : (
+      <Bike className="w-6 h-6 text-black opacity-90" />
+    )}
   </div>
 
+  {/* Text block (centered) */}
+  <div className="flex flex-col items-center justify-center text-center">
+    <div className="flex flex-wrap gap-1 justify-center text-sm text-gray-900 text-center">
+      <span className="font-medium">
+        {a.title || (a.type === "run" ? "Run" : "Ride")}
+      </span>
+      <span>–</span>
+      <span>{a.distance_km} km</span>
+      <span>–</span>
+      <span className="text-gray-600">
+        {new Date(a.date).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        })}
+      </span>
+    </div>
+
+    {/* Feeling + Effort Row */}
+    <div className="mt-2 flex justify-center items-center gap-2">
+      {/* Feeling emoji */}
+      <div className="flex items-center">
+        {(() => {
+          const f = Number(a.feeling) || 0;
+          const base = "w-5 h-5";
+          if (f <= 1) return <Frown className={`${base} text-amber-400`} />;
+          if (f === 2) return <Meh className={`${base} text-amber-400`} />;
+          if (f === 3) return <Smile className={`${base} text-amber-400`} />;
+          if (f >= 4) return <Laugh className={`${base} text-amber-400`} />;
+          return <Meh className={`${base} text-gray-300`} />;
+        })()}
+      </div>
+
+      {/* Effort bolts — filled only */}
+      <div className="flex items-center gap-1">
+        {Array.from({ length: Number(a.effort) || 0 }).map((_, i) => (
+          <Zap key={i} className="w-4 h-4 text-amber-400" />
+        ))}
+      </div>
+    </div>
+  </div>
 </div>
-</SwipeDelete>
-  ))}
+
+  </SwipeDelete>
+))}
 </div>
 
 {showQuickLog && activityType && (

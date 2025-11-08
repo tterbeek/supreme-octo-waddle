@@ -2,8 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import type { Preset } from "../types";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
-import { Star } from "lucide-react";
-
+import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 
 type QuickLogFormProps = {
   type: "run" | "ride";
@@ -26,6 +25,9 @@ export default function QuickLogForm({ type, onClose, onLogged }: QuickLogFormPr
   const ding = new Audio("/sounds/ding.mp3");
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
+
+  const [effort, setEffort] = useState<number>(3);
+
 
   useEffect(() => {
     setAnimateIn(true);
@@ -50,7 +52,8 @@ export default function QuickLogForm({ type, onClose, onLogged }: QuickLogFormPr
       if (data && data.length > 0) {
         setActivePreset(data[0]);
         setDistance(data[0].distance_km ?? "");
-        setTitle(data[0].name ?? ""); // ✅ new
+        setTitle(data[0].name ?? "");
+        setEffort(data[0].effort ?? 3); 
       }
     };
 
@@ -61,6 +64,7 @@ const usePreset = (preset: Preset) => {
   setActivePreset(preset);
   setDistance(preset.distance_km ?? "");
   setTitle(preset.name ?? ""); // ✅ new
+  setEffort(preset.effort ?? 3); 
 };
 
 
@@ -84,7 +88,8 @@ const useCustom = () => {
       date,
       distance_km: Number(distance),
       feeling: rating,
-      title // ✅ new
+      title, // ✅ new
+      effort
     });
 
     if (activePreset) {
@@ -201,29 +206,65 @@ const useCustom = () => {
           className="w-full border rounded-md p-2 mb-4"
         />
 
-        {/* Feeling */}
-        <div className="mb-4">
-          <label className="block text-sm text-gray-600 mb-1">Feeling</label>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setRating(value)}
-                className="transition active:scale-95"
-              >
-              <Star
-                className={`w-7 h-7 ${
-                  value <= rating
-                    ? "fill-amber-400 text-amber-400 animate-pulseTap"
-                    : "text-gray-300"
-                }`}
-              />
+{/* Feeling & Effort */}
+<div className="mb-4">
+  <label className="block text-sm text-gray-600 mb-1">Feeling & Effort</label>
 
-              </button>
-            ))}
-          </div>
-        </div>
+  <div className="flex flex-col items-center gap-4">
+
+    {/* Feeling Row */}
+    <div className="flex justify-between w-full max-w-sm">
+      {[
+        { Icon: Frown, value: 1 },
+        { Icon: Meh, value: 2 },
+        { Icon: Smile, value: 3 },
+        { Icon: Laugh, value: 4 },
+      ].map(({ Icon, value }) => {
+        const active = rating === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setRating(value)}
+            className={`transition transform active:scale-95 ${
+              active ? "scale-110" : "opacity-70"
+            }`}
+          >
+            <Icon
+              className={`w-7 h-7 ${
+                active ? "text-amber-400" : "text-gray-300"
+              }`}
+            />
+          </button>
+        );
+      })}
+    </div>
+
+    {/* Effort Row */}
+    <div className="flex justify-between w-full max-w-sm">
+      {[1, 2, 3, 4, 5].map((val) => {
+        const active = val <= effort;
+        return (
+          <button
+            key={val}
+            type="button"
+            onClick={() => setEffort(val)}
+            className={`transition transform active:scale-95 ${
+              effort === val ? "scale-110" : ""
+            }`}
+          >
+            <Zap
+              className={`w-5 h-5 ${
+                active ? "text-amber-400" : "text-gray-300"
+              }`}
+            />
+          </button>
+        );
+      })}
+    </div>
+
+  </div>
+</div>
 
         {/* Save */}
         <button

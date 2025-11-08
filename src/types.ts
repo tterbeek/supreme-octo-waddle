@@ -4,4 +4,5 @@ export type Preset = {
   name: string;
   distance_km: number;
   duration_min: number;
+  effort?: number; 
 };

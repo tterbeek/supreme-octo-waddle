@@ -142,22 +142,30 @@ export default function StatsPage() {
       </div>
 
       {/* WEEK */}
-      <h2 className="text-sm font-semibold text-gray-500 mb-2">WEEK</h2>
+<h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
+  WEEK
+</h2>
       {makeGoalRow("RUN", currentWeek.run, previousWeek.run, getGoal("run", "week"), "week")}
       {makeGoalRow("RIDE", currentWeek.ride, previousWeek.ride, getGoal("ride", "week"), "week")}
 
       {/* MONTH */}
-      <h2 className="text-sm font-semibold text-gray-500 mb-2 mt-6">MONTH</h2>
+<h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
+  MONTH
+</h2>      
       {makeGoalRow("RUN", currentMonth.run, previousMonth.run, getGoal("run", "month"), "month")}
       {makeGoalRow("RIDE", currentMonth.ride, previousMonth.ride, getGoal("ride", "month"), "month")}
 
       {/* YEAR */}
-      <h2 className="text-sm font-semibold text-gray-500 mb-2 mt-6">YEAR</h2>
+<h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
+  YEAR
+</h2>
       {makeGoalRow("RUN", currentYear.run, [], getGoal("run", "year"), "")}
       {makeGoalRow("RIDE", currentYear.ride, [], getGoal("ride", "year"), "")}
 
       {/* ROLLING 90 DAYS */}
-      <h2 className="text-sm font-semibold text-gray-500 mb-2 mt-6">ROLLING 90 DAYS</h2>
+<h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
+  ROLLING 90 DAYS
+</h2>
       {(["run", "ride"] as const).map(type => {
         const curr = current90[type];
         const prev = previous90[type];
@@ -189,7 +197,9 @@ export default function StatsPage() {
       })}
 
       {/* THIS YEAR TOTALS */}
-      <h2 className="text-sm font-semibold text-gray-500 mb-2 mt-6">THIS YEAR’S TOTAL</h2>
+<h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
+  THIS YEAR'S TOTAL
+</h2>
       <div className="text-sm ml-2">
         <div className="mb-2">
           <span className="font-medium">RUN:</span> {sum(currentYear.run.map(a => a.distance_km)).toFixed(0)} km · {currentYear.run.length} activities
