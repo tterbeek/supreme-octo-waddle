@@ -46,7 +46,7 @@ export default function SwipeDelete({
 
       {/* Content that moves */}
         <div
-        className="bg-white transition-transform"
+        className="bg-movenotes-bg transition-transform"
         style={{ transform: `translateX(${offset}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

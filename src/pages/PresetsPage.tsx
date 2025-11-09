@@ -99,12 +99,12 @@ const openForm = (type: "run" | "ride") => {
         <div className="w-10" />
       </div>
 {/* Add Preset Buttons */}
-<h2 className="text-sm font-medium text-gray-500 mb-2 mt-2">Add Preset</h2>
+<h2 className="text-sm font-medium text-gray-500 mb-2">Add Preset</h2>
 
 <div className="flex gap-4 mb-6">
   <button
     onClick={() => openForm("run")}
-    className="flex-1 bg-amber-300 border border-amber-400 text-black py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
+    className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
   >
     <span className="text-xl">+</span>
     <Footprints className="w-5 h-5" />
@@ -113,7 +113,7 @@ const openForm = (type: "run" | "ride") => {
 
   <button
     onClick={() => openForm("ride")}
-    className="flex-1 bg-amber-300 border border-amber-400 text-black py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
+        className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
   >
     <span className="text-xl">+</span>
     <Bike className="w-5 h-5" />
@@ -129,7 +129,7 @@ const openForm = (type: "run" | "ride") => {
       {presets.filter((p) => p.type === "run").length > 0 && (
         <div className="mb-8">
           <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <Footprints className="w-5 h-5 text-black opacity-80" />
+            <Footprints className="w-5 h-5 text-gray-900 opacity-80" />
             <span>RUN</span>
           </h2>
 
@@ -187,7 +187,7 @@ const openForm = (type: "run" | "ride") => {
                       <Zap
                         className={`w-5 h-5 ${
                           val <= (edit[p.id]?.effort ?? 0)
-                            ? "text-amber-400"
+                            ? "text-movenotes-accent"
                             : "text-gray-300"
                         }`}
                       />
@@ -206,7 +206,7 @@ const openForm = (type: "run" | "ride") => {
       {presets.filter((p) => p.type === "ride").length > 0 && (
         <div>
           <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <Bike className="w-5 h-5 text-black opacity-80" />
+            <Bike className="w-5 h-5 text-gray-900 opacity-80" />
             <span>RIDE</span>
           </h2>
 
@@ -264,7 +264,7 @@ const openForm = (type: "run" | "ride") => {
                       <Zap
                         className={`w-5 h-5 ${
                           val <= (edit[p.id]?.effort ?? 0)
-                            ? "text-amber-400"
+                            ? "text-movenotes-accent"
                             : "text-gray-300"
                         }`}
                       />
@@ -287,7 +287,7 @@ const openForm = (type: "run" | "ride") => {
 
         <button
           onClick={save}
-          className="flex-1 bg-amber-300 border border-amber-400 text-black py-2 rounded-full text-sm font-medium transition transform hover:-translate-y-0.5"
+          className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-2 rounded-full text-sm font-medium transition transform hover:-translate-y-0.5"
         >
           Save
         </button>

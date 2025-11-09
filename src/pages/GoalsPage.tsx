@@ -114,7 +114,7 @@ export default function GoalsPage() {
 
         <button
           onClick={save}
-          className="flex-1 bg-amber-300 border border-amber-400 text-black py-2 rounded-full text-sm font-medium transition transform hover:-translate-y-0.5 active:scale-95"
+          className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-2 rounded-full text-sm font-medium transition transform hover:-translate-y-0.5 active:scale-95"
         >
           Save
         </button>

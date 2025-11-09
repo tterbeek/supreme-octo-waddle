@@ -101,7 +101,7 @@ export default function PresetForm({ type, onClose, onAdded }: PresetFormProps) 
             >
               <Zap
                 className={`w-6 h-6 ${
-                  n <= effort ? "text-amber-400" : "text-gray-300"
+                  n <= effort ? "text-movenotes-accent" : "text-gray-300"
                 }`}
               />
             </button>
@@ -111,7 +111,7 @@ export default function PresetForm({ type, onClose, onAdded }: PresetFormProps) 
         {/* Save */}
         <button
           onClick={save}
-          className="bg-amber-300 border border-amber-400 text-black w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
+          className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
         >
           Save Preset
         </button>

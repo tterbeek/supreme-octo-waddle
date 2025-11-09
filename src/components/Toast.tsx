@@ -10,7 +10,7 @@ export default function Toast(
   }, [onClose]);
 
   return (
-<div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-amber-300 border border-amber-400 text-black px-4 py-2 rounded-full shadow-lg text-sm font-medium z-50 animate-fadeIn animate-slideUp">
+<div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-amber-300 border border-amber-400 text-primary-text px-4 py-2 rounded-full shadow-lg text-sm font-medium z-50 animate-fadeIn animate-slideUp">
   {message}
 </div>
   );

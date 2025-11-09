@@ -6,6 +6,7 @@ import { Bike, Footprints, Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import SwipeDelete from "../components/SwipeDelete";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
+import AddNoteModal from "../components/AddNoteModal";
 
 
 export default function Home() {
@@ -18,6 +19,11 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const [goals, setGoals] = useState<any[]>([]);
+  const [lastActivityId, setLastActivityId] = useState<string | null>(null);
+  const [showNotePrompt, setShowNotePrompt] = useState(false);
+  const [showNoteSkippedToast, setShowNoteSkippedToast] = useState(false);
+  const [showNoteSavedToast, setShowNoteSavedToast] = useState(false);
+
 
 useEffect(() => {
   // Initial load
@@ -146,7 +152,7 @@ const makeDots = (current: number, goal: number) => {
         <div className="flex items-center gap-2">
           <span className="font-medium">RUN:</span>
           <span>{Math.round(runDist)} / {runGoal.distance_km} km</span>
-          <span className="text-amber-400">
+          <span className="text-movenotes-accent">
             {makeDots(runDist, runGoal.distance_km)}
           </span>
         </div>
@@ -156,7 +162,7 @@ const makeDots = (current: number, goal: number) => {
         <div className="flex items-center gap-2">
           <span className="font-medium">RIDE:</span>
           <span>{Math.round(rideDist)} / {rideGoal.distance_km} km</span>
-          <span className="text-amber-400">
+          <span className="text-movenotes-accent">
             {makeDots(rideDist, rideGoal.distance_km)}
           </span>
         </div>
@@ -173,7 +179,7 @@ const makeDots = (current: number, goal: number) => {
 <div className="flex gap-4">
   <button
     onClick={() => { setActivityType("run"); setShowQuickLog(true); }}
-    className="flex-1 bg-amber-300 border border-amber-400 text-black py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
+    className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
   >
     <span className="text-xl">+</span>
     <Footprints className="w-5 h-5" />
@@ -182,7 +188,7 @@ const makeDots = (current: number, goal: number) => {
 
   <button
     onClick={() => { setActivityType("ride"); setShowQuickLog(true); }}
-    className="flex-1 bg-amber-300 border border-amber-400 text-black py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
+    className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
   >
     <span className="text-xl">+</span>
     <Bike className="w-5 h-5" />
@@ -196,57 +202,63 @@ const makeDots = (current: number, goal: number) => {
 <div className="flex flex-col gap-3">
 {activities.map((a) => (
   <SwipeDelete key={a.id} onDelete={() => deleteActivity(a)}>
-<div className="relative w-full rounded-xl p-4 bg-white border border-gray-200 shadow-sm">
+<div className="relative w-full rounded-xl p-4 bg-warm-100 border border-warm-200 shadow-sm">
   {/* Center icon vertically using absolute positioning */}
   <div className="absolute right-4 top-1/2 -translate-y-1/2">
     {a.type === "run" ? (
-      <Footprints className="w-6 h-6 text-black opacity-90" />
+      <Footprints className="w-6 h-6 text-gray-900 opacity-90" />
     ) : (
-      <Bike className="w-6 h-6 text-black opacity-90" />
+      <Bike className="w-6 h-6 text-gray-900 opacity-90" />
     )}
   </div>
 
   {/* Text block (centered) */}
   <div className="flex flex-col items-center justify-center text-center">
-    <div className="flex flex-wrap gap-1 justify-center text-sm text-gray-900 text-center">
-      <span className="font-medium">
-        {a.title || (a.type === "run" ? "Run" : "Ride")}
-      </span>
-      <span>–</span>
-      <span>{a.distance_km} km</span>
-      <span>–</span>
-      <span className="text-gray-600">
-        {new Date(a.date).toLocaleDateString("en-GB", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-        })}
-      </span>
+  <div className="flex flex-wrap gap-1 justify-center text-sm text-gray-900 text-center">
+    <span className="font-medium">
+      {a.title || (a.type === "run" ? "Run" : "Ride")}
+    </span>
+    <span>–</span>
+    <span>{a.distance_km} km</span>
+    <span>–</span>
+    <span className="text-gray-900">
+      {new Date(a.date).toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })}
+    </span>
+  </div>
+
+  {/* Feeling + Effort Row */}
+  <div className="mt-2 flex justify-center items-center gap-2">
+    <div className="flex items-center">
+      {(() => {
+        const f = Number(a.feeling) || 0;
+        const base = "w-5 h-5";
+        if (f <= 1) return <Frown className={`${base} text-movenotes-accent`} />;
+        if (f === 2) return <Meh className={`${base} text-movenotes-accent`} />;
+        if (f === 3) return <Smile className={`${base} text-movenotes-accent`} />;
+        if (f >= 4) return <Laugh className={`${base} text-movenotes-accent`} />;
+        return <Meh className={`${base} text-gray-300`} />;
+      })()}
     </div>
 
-    {/* Feeling + Effort Row */}
-    <div className="mt-2 flex justify-center items-center gap-2">
-      {/* Feeling emoji */}
-      <div className="flex items-center">
-        {(() => {
-          const f = Number(a.feeling) || 0;
-          const base = "w-5 h-5";
-          if (f <= 1) return <Frown className={`${base} text-amber-400`} />;
-          if (f === 2) return <Meh className={`${base} text-amber-400`} />;
-          if (f === 3) return <Smile className={`${base} text-amber-400`} />;
-          if (f >= 4) return <Laugh className={`${base} text-amber-400`} />;
-          return <Meh className={`${base} text-gray-300`} />;
-        })()}
-      </div>
-
-      {/* Effort bolts — filled only */}
-      <div className="flex items-center gap-1">
-        {Array.from({ length: Number(a.effort) || 0 }).map((_, i) => (
-          <Zap key={i} className="w-4 h-4 text-amber-400" />
-        ))}
-      </div>
+    <div className="flex items-center gap-1">
+      {Array.from({ length: Number(a.effort) || 0 }).map((_, i) => (
+        <Zap key={i} className="w-4 h-4 text-movenotes-accent" />
+      ))}
     </div>
   </div>
+
+  {/* Note (only if present) */}
+  {a.notes && a.notes.trim() !== "" && (
+    <p className="mt-2 text-sm italic text-movenotes-muted leading-snug text-center max-w-xs">
+      “{a.notes.length > 100 ? a.notes.slice(0, 100) + "…" : a.notes}”
+    </p>
+  )}
+</div>
+
 </div>
 
   </SwipeDelete>
@@ -260,12 +272,56 @@ const makeDots = (current: number, goal: number) => {
       setShowQuickLog(false);
       setActivityType(null);
     }}
-    onLogged={() => setShowToast(true)} // ✅ triggers toast in Home
+    onLogged={(activityId) => {
+      setLastActivityId(activityId);
+      setShowToast(true);        // ✅ instant feedback
+    }}
+  />
+
+)}
+{showNotePrompt && lastActivityId && (
+  <AddNoteModal
+    activityId={lastActivityId}
+    onSave={() => {
+      setShowNotePrompt(false);
+      setShowNoteSavedToast(true);
+    }}
+    onSkip={() => {
+      setShowNotePrompt(false);
+      setShowNoteSkippedToast(true);
+    }}
   />
 )}
+
+
+
 {showToast && (
-  <Toast message="Activity logged ✅" onClose={() => setShowToast(false)} />
+  <Toast
+    message="Activity logged ✅"
+    onClose={() => {
+      setShowToast(false);
+
+      // ⏳ Wait until toast fully closes, then gently prompt for note
+      if (lastActivityId) {
+        setTimeout(() => setShowNotePrompt(true), 250);
+      }
+    }}
+  />
 )}
+{showNoteSavedToast && (
+  <Toast
+    message="Note saved 💾"
+    onClose={() => setShowNoteSavedToast(false)}
+  />
+)}
+
+{showNoteSkippedToast && (
+  <Toast
+    message="Note skipped ✋"
+    onClose={() => setShowNoteSkippedToast(false)}
+  />
+)}
+
 {showUndoToast && (
   <Toast
     message={

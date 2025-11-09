@@ -7,8 +7,9 @@ import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 type QuickLogFormProps = {
   type: "run" | "ride";
   onClose: () => void;
-  onLogged: () => void; // ✅ add this line
+  onLogged: (activityId: string) => void; // ✅ returns activity id
 };
+
 
 
 export default function QuickLogForm({ type, onClose, onLogged }: QuickLogFormProps) {
@@ -82,25 +83,48 @@ const useCustom = () => {
 
     if (!user) return;
 
-    await supabase.from("activities").insert({
+    const { data, error } = await supabase
+  .from("activities")
+  .insert([
+    {
       user_id: user.id,
       type,
       date,
       distance_km: Number(distance),
       feeling: rating,
-      title, // ✅ new
-      effort
-    });
+      title,
+      effort,
+    },
+  ])
+  .select("id")
+  .single();
 
-    if (activePreset) {
-      await supabase
-        .from("presets")
-        .update({ last_used_at: new Date().toISOString() })
-        .eq("id", activePreset.id);
-    }
+if (error) {
+  console.error("[QuickLogForm] Error saving activity:", error.message);
+  return;
+}
 
-    ding.play();
-    onLogged();
+const newActivityId = data?.id;
+if (!newActivityId) {
+  console.warn("[QuickLogForm] No activity ID returned after insert");
+  return;
+}
+
+if (activePreset) {
+  await supabase
+    .from("presets")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", activePreset.id);
+}
+
+ding.play();
+onLogged(newActivityId); // ✅ pass id to Home
+
+setAnimateIn(false);
+setTimeout(() => {
+  onClose();
+  navigate("/");
+}, 400);
 
 
     setAnimateIn(false);
@@ -143,13 +167,13 @@ const useCustom = () => {
     transform: `translateY(${dragY}px)`,
     touchAction: "none" // ← SUPER IMPORTANT FOR ANDROID
   }}
-  className={`w-full max-w-md bg-white rounded-t-2xl p-6 transition-transform ${
+  className={`w-full max-w-md bg-warm-100 rounded-t-2xl p-6 transition-transform ${
     animateIn ? "translate-y-0" : "translate-y-full"
   } animate-fadeIn will-change-transform`}
 >
 
 
-<div className="w-10 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+<div className="w-10 h-1.5 bg-warm-100 rounded-full mx-auto mb-4"></div>
 
         {/* Last 3 Presets */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
@@ -159,7 +183,7 @@ const useCustom = () => {
               onClick={() => usePreset(p)}
               className={`px-3 py-1 rounded-full text-sm border transition whitespace-nowrap ${
                 activePreset?.id === p.id
-                  ? "bg-amber-300 border-amber-400 text-black"
+                  ? "bg-amber-300 border-amber-400 text-primary-text"
                   : "border-gray-300 text-gray-600"
               }`}
             >
@@ -172,7 +196,7 @@ const useCustom = () => {
             onClick={useCustom}
             className={`px-3 py-1 rounded-full text-sm border transition whitespace-nowrap ${
               activePreset === null
-                ? "bg-amber-300 border-amber-400 text-black"
+                ? "bg-amber-300 border-amber-400 text-primary-text"
                 : "border-gray-300 text-gray-600"
             }`}
           >
@@ -232,7 +256,7 @@ const useCustom = () => {
           >
             <Icon
               className={`w-7 h-7 ${
-                active ? "text-amber-400" : "text-gray-300"
+                active ? "text-movenotes-accent" : "text-gray-300"
               }`}
             />
           </button>
@@ -255,7 +279,7 @@ const useCustom = () => {
           >
             <Zap
               className={`w-5 h-5 ${
-                active ? "text-amber-400" : "text-gray-300"
+                active ? "text-movenotes-accent" : "text-gray-300"
               }`}
             />
           </button>
@@ -269,7 +293,7 @@ const useCustom = () => {
         {/* Save */}
         <button
           onClick={save}
-          className="bg-amber-300 border border-amber-400 text-black w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
+          className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
         >
           Save
         </button>
