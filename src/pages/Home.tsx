@@ -52,7 +52,7 @@ useEffect(() => {
 
   const channel = supabase
     .channel("activities-realtime")
-    .on("postgres_changes", { event: "*", schema: "public", table: "activities" }, (payload) => {
+    .on("postgres_changes", { event: "*", schema: "public", table: "activities" }, (_) => {
       // same insert/update/delete logic
     })
     .subscribe();
