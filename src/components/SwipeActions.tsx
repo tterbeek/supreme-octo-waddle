@@ -1,38 +1,54 @@
-// src/components/SwipeActions.tsx
-import { useRef, useState } from "react";
+import { useRef } from "react";
+import type { ReactNode } from "react";
 
 type SwipeActionsProps = {
-  children: React.ReactNode;
-  onDelete: () => void;
-  onEdit: () => void;
+  children: ReactNode;
+  onDelete: () => void; // left swipe
+  onEdit: () => void;   // right swipe / right-click
 };
 
 export default function SwipeActions({ children, onDelete, onEdit }: SwipeActionsProps) {
   const startX = useRef<number | null>(null);
-  const [deltaX, setDeltaX] = useState(0);
+  const lastX = useRef<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
+    lastX.current = startX.current;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (startX.current == null) return;
-    const diff = e.touches[0].clientX - startX.current;
-    setDeltaX(diff);
+    lastX.current = e.touches[0].clientX;
+    // prevent horizontal scroll when intentional swipe
+    const diff = lastX.current - startX.current;
+    if (Math.abs(diff) > 10) {
+      e.preventDefault();
+    }
   };
 
   const handleTouchEnd = () => {
-    if (Math.abs(deltaX) > 50) {
-      if (deltaX < 0) onDelete();
-      else onEdit();
+    if (startX.current == null || lastX.current == null) {
+      startX.current = null;
+      lastX.current = null;
+      return;
     }
-    setDeltaX(0);
+
+    const diff = lastX.current - startX.current;
+    const threshold = 50; // px
+
+    if (diff <= -threshold) {
+      onDelete();        // swipe left → delete
+    } else if (diff >= threshold) {
+      onEdit();          // swipe right → edit
+    }
+
     startX.current = null;
+    lastX.current = null;
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    onEdit();
+    onEdit(); // right-click → edit
   };
 
   return (
@@ -41,11 +57,8 @@ export default function SwipeActions({ children, onDelete, onEdit }: SwipeAction
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative transition-transform duration-150"
-      style={{
-        transform: `translateX(${deltaX}px)`,
-        touchAction: "pan-y",
-      }}
+      className="relative"
+      style={{ touchAction: "pan-y" }} // vertical scroll allowed, horizontal handled by us
     >
       {children}
     </div>
