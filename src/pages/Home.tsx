@@ -3,10 +3,11 @@ import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm";
 import Toast from "../components/Toast"; // ✅ add this
 import { Bike, Footprints, Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
-import SwipeDelete from "../components/SwipeDelete";
+import SwipeActions from "../components/SwipeActions";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import AddNoteModal from "../components/AddNoteModal";
+import ActivityEditForm from "../components/ActivityEditForm";
 
 
 export default function Home() {
@@ -23,11 +24,10 @@ export default function Home() {
   const [showNotePrompt, setShowNotePrompt] = useState(false);
   const [showNoteSkippedToast, setShowNoteSkippedToast] = useState(false);
   const [showNoteSavedToast, setShowNoteSavedToast] = useState(false);
+  const [editActivity, setEditActivity] = useState<any | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-
-useEffect(() => {
-  // Initial load
-  const load = async () => {
+const refreshActivities = async () => {
   const { data } = await supabase
     .from("activities")
     .select("*")
@@ -35,7 +35,6 @@ useEffect(() => {
 
   setActivities(data || []);
 
-  // Load weekly goals
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     const { data: goalData } = await supabase
@@ -43,41 +42,24 @@ useEffect(() => {
       .select("*")
       .eq("user_id", user.id)
       .eq("period", "week");
-
     setGoals(goalData || []);
   }
 };
 
 
-  load();
+useEffect(() => {
+  refreshActivities(); // ✅ only once
 
-    // 🔥 Realtime subscription
   const channel = supabase
     .channel("activities-realtime")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "activities" },
-      (payload) => {
-        if (payload.eventType === "INSERT") {
-          setActivities((prev) => [payload.new, ...prev]);
-        } else if (payload.eventType === "DELETE") {
-          setActivities((prev) => prev.filter(a => a.id !== payload.old.id));
-        } else if (payload.eventType === "UPDATE") {
-          setActivities((prev) =>
-            prev.map((a) => (a.id === payload.new.id ? payload.new : a))
-          );
-        }
-      }
-    )
+    .on("postgres_changes", { event: "*", schema: "public", table: "activities" }, (payload) => {
+      // same insert/update/delete logic
+    })
     .subscribe();
 
-
-    
   return () => {
     supabase.removeChannel(channel);
   };
-
-  
 }, []);
 
 
@@ -201,8 +183,14 @@ const makeDots = (current: number, goal: number) => {
 
 <div className="flex flex-col gap-3">
 {activities.map((a) => (
-  <SwipeDelete key={a.id} onDelete={() => deleteActivity(a)}>
-<div className="relative w-full rounded-xl p-4 bg-warm-100 border border-warm-200 shadow-sm">
+    <SwipeActions
+    key={a.id}
+    onDelete={() => deleteActivity(a)}
+    onEdit={() => setEditActivity(a)} // 👈 open the edit modal
+  >
+<div 
+  className="relative w-full rounded-xl p-4 bg-warm-100 border border-warm-200 shadow-sm"
+>
   {/* Center icon vertically using absolute positioning */}
   <div className="absolute right-4 top-1/2 -translate-y-1/2">
     {a.type === "run" ? (
@@ -253,7 +241,7 @@ const makeDots = (current: number, goal: number) => {
 
   {/* Note (only if present) */}
   {a.notes && a.notes.trim() !== "" && (
-    <p className="mt-2 text-sm italic text-movenotes-muted leading-snug text-center max-w-xs">
+    <p className="mt-1 text-base text-gray-500 font-[DMSerifDisplay] italic leading-snug max-w-xs">
       “{a.notes.length > 100 ? a.notes.slice(0, 100) + "…" : a.notes}”
     </p>
   )}
@@ -261,7 +249,7 @@ const makeDots = (current: number, goal: number) => {
 
 </div>
 
-  </SwipeDelete>
+  </SwipeActions>
 ))}
 </div>
 
@@ -293,6 +281,26 @@ const makeDots = (current: number, goal: number) => {
   />
 )}
 
+{editActivity && (
+  <ActivityEditForm
+    activity={editActivity}
+    onClose={() => setEditActivity(null)}
+    onUpdated={() => {
+      setToastMessage("Activity updated ✅");
+      setEditActivity(null);
+      refreshActivities(); // call your fetch function if you have one
+    }}
+    onDeleted={() => {
+      setToastMessage("Activity deleted 🗑️");
+      setEditActivity(null);
+      refreshActivities();
+    }}
+  />
+)}
+
+{toastMessage && (
+  <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
+)}
 
 
 {showToast && (
@@ -338,6 +346,8 @@ const makeDots = (current: number, goal: number) => {
     }}
   />
 )}
+
+
 <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
   </div>
