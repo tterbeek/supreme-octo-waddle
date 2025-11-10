@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import type { Preset } from "../types";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
