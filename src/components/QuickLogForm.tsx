@@ -21,18 +21,15 @@ export default function QuickLogForm({ type, onClose, onLogged }: QuickLogFormPr
   const [distance, setDistance] = useState<number | string>("");
   const [rating, setRating] = useState(3);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [animateIn, setAnimateIn] = useState(false);
   const [title, setTitle] = useState("");
+  const [effort, setEffort] = useState<number>(3);
 
   const ding = new Audio("/sounds/ding.mp3");
-  const [dragY, setDragY] = useState(0);
-  const startY = useRef<number | null>(null);
 
-  const [effort, setEffort] = useState<number>(3);
 
 
   useEffect(() => {
-    setAnimateIn(true);
+
 
     const load = async () => {
       const {
@@ -122,14 +119,12 @@ ding.play();
 onLogged(newActivityId); // ✅ pass id to Home
 
 
-setAnimateIn(false);
 setTimeout(() => {
   onClose();
   navigate("/");
 }, 400);
 
 
-    setAnimateIn(false);
     setTimeout(() => {
       onClose();
       navigate("/");
