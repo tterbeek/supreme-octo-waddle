@@ -78,43 +78,43 @@ export default function ActivityEditForm({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-black/40 flex items-end justify-center z-50"
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        onTouchStart={(e) => {
-          startY.current = e.touches[0].clientY;
-        }}
-        onTouchMove={(e) => {
-          if (startY.current == null) return;
-          const currentY = e.touches[0].clientY;
-          const diff = currentY - startY.current;
-          if (diff > 0) {
-            e.preventDefault();
-            setDragY(diff);
-          }
-        }}
-        onTouchEnd={() => {
-          const threshold = 80;
-          if (dragY > threshold) {
-            setAnimateIn(false);
-            setTimeout(onClose, 200);
-          }
-          setDragY(0);
-          startY.current = null;
-        }}
-        style={{
-          transform: `translateY(${dragY}px)`,
-          touchAction: "none",
-        }}
-        className={`w-full max-w-md bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 ${
-          animateIn ? "translate-y-0" : "translate-y-full"
-        } animate-fadeIn`}
-      >
-        <div className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4" />
-
+<div
+  className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 overscroll-none"
+  onClick={onClose}
+>
+  <div
+    onClick={(e) => e.stopPropagation()}
+    onTouchStart={(e) => {
+      startY.current = e.touches[0].clientY;
+    }}
+    onTouchMove={(e) => {
+      if (startY.current == null) return;
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - startY.current;
+      if (diff > 0) {
+        e.preventDefault();
+        setDragY(diff);
+      }
+    }}
+    onTouchEnd={() => {
+      const threshold = 80;
+      if (dragY > threshold) {
+        setAnimateIn(false);
+        setTimeout(onClose, 200);
+      }
+      setDragY(0);
+      startY.current = null;
+    }}
+    style={{
+      transform: `translateY(${dragY}px)`,
+      touchAction: "none",
+    }}
+    className={`w-full max-w-md bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 
+      ${animateIn ? "translate-y-0" : "translate-y-full"} animate-fadeIn 
+      shadow-lg will-change-transform sm:rounded-2xl sm:mt-20`}
+  >
+    <div className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4" />
+    
         <h2 className="text-lg font-semibold text-center mb-4">
           Edit Activity
         </h2>
