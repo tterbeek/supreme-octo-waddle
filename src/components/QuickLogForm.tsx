@@ -194,8 +194,65 @@ return (
       className="w-full border rounded-md p-2 mb-4"
     />
 
-    {/* Feeling & Effort (unchanged) */}
-    {/* ... your existing feeling/effort block ... */}
+{/* Feeling & Effort */}
+<div className="mb-4">
+  <label className="block text-sm text-gray-600 mb-1">Feeling & Effort</label>
+
+  <div className="flex flex-col items-center gap-4">
+
+    {/* Feeling Row */}
+    <div className="flex justify-between w-full max-w-sm">
+      {[
+        { Icon: Frown, value: 1 },
+        { Icon: Meh, value: 2 },
+        { Icon: Smile, value: 3 },
+        { Icon: Laugh, value: 4 },
+      ].map(({ Icon, value }) => {
+        const active = rating === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setRating(value)}
+            className={`transition transform active:scale-95 ${
+              active ? "scale-110" : "opacity-70"
+            }`}
+          >
+            <Icon
+              className={`w-7 h-7 ${
+                active ? "text-movenotes-accent" : "text-gray-300"
+              }`}
+            />
+          </button>
+        );
+      })}
+    </div>
+
+    {/* Effort Row */}
+    <div className="flex justify-between w-full max-w-sm">
+      {[1, 2, 3, 4, 5].map((val) => {
+        const active = val <= effort;
+        return (
+          <button
+            key={val}
+            type="button"
+            onClick={() => setEffort(val)}
+            className={`transition transform active:scale-95 ${
+              effort === val ? "scale-110" : ""
+            }`}
+          >
+            <Zap
+              className={`w-5 h-5 ${
+                active ? "text-movenotes-accent" : "text-gray-300"
+              }`}
+            />
+          </button>
+        );
+      })}
+    </div>
+
+  </div>
+</div>
 
     {/* Save */}
     <button
@@ -206,5 +263,4 @@ return (
     </button>
   </ModalSheet>
 );
-
 }
