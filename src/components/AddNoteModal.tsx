@@ -1,5 +1,5 @@
 // src/components/AddNoteModal.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../supabaseClient";
 
@@ -9,47 +9,53 @@ interface AddNoteModalProps {
   onSkip: () => void;
 }
 
-export default function AddNoteModal({ activityId, onSave, onSkip }: AddNoteModalProps) {
+export default function AddNoteModal({
+  activityId,
+  onSave,
+  onSkip
+}: AddNoteModalProps) {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(true);
+  const userInteracted = useRef(false);
 
-  // 🌿 Auto-close after 4.5 s if no interaction
+  // ⏳ Auto-close only if NO interaction
   useEffect(() => {
-    if (note.trim() !== "") return; // typing cancels timer
+    if (userInteracted.current) return; // 🚫 User interacted → disable autoclose
+
     const t = setTimeout(() => {
       console.log("[AddNoteModal] Auto-closing (no interaction)");
-      setVisible(false); // trigger exit animation
-      setTimeout(onSkip, 400); // wait for fade/slide
+      setVisible(false);
+      setTimeout(onSkip, 400);
     }, 4500);
+
     return () => clearTimeout(t);
-  }, [note, onSkip]);
+  }, [onSkip]);
+
+  const markInteraction = () => {
+    userInteracted.current = true; // 👈 permanently disable auto-close
+  };
 
   const handleSave = async () => {
     if (!note.trim()) {
       onSkip();
       return;
     }
-setSaving(true);
 
-const { error } = await supabase
-  .from("activities")
-  .update({
-    notes: note,
-    note_updated_at: new Date().toISOString(), // ⏰ track last note edit
-  })
-  .eq("id", activityId);
+    setSaving(true);
 
-setSaving(false);
+    await supabase
+      .from("activities")
+      .update({
+        notes: note,
+        note_updated_at: new Date().toISOString(),
+      })
+      .eq("id", activityId);
 
-    if (error) {
-      console.error("[AddNoteModal] Error saving note:", error.message);
-      alert("Could not save note. Please try again.");
-    } else {
-      console.log("[AddNoteModal] Note saved for activity:", activityId);
-      setVisible(false);
-      setTimeout(onSave, 400);
-    }
+    setSaving(false);
+
+    setVisible(false);
+    setTimeout(onSave, 400);
   };
 
   return (
@@ -71,17 +77,25 @@ setSaving(false);
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 220, damping: 25 }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              markInteraction();        // 👈 tapping inside prevents auto-close
+            }}
             className="w-full max-w-md bg-movenotes-surface rounded-t-2xl p-6 text-movenotes-text shadow-lg"
           >
             <div className="w-10 h-1.5 bg-movenotes-border rounded-full mx-auto mb-4"></div>
+
             <h2 className="text-lg font-semibold text-center mb-3 text-movenotes-primary">
               Add a note about this activity
             </h2>
 
             <textarea
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => {
+                setNote(e.target.value);
+                markInteraction();        // 👈 typing disables auto-close
+              }}
+              onFocus={markInteraction}    // 👈 focusing disables auto-close
               placeholder="How did it feel today?"
               className="w-full h-28 border border-movenotes-border rounded-lg p-2 bg-movenotes-bg text-movenotes-text resize-none focus:ring-2 focus:ring-movenotes-primary outline-none mb-4"
             />
