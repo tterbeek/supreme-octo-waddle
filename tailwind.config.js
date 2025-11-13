@@ -5,6 +5,10 @@ export default {
   ],
   theme: {
     extend: {
+          fontFamily: {
+      nunito: ['"Nunito Sans"', "sans-serif"],
+      playfair: ['"Playfair Display"', "serif"],
+    },
       colors: {
         warm: {
           50:  "#F3EDE4", // app background

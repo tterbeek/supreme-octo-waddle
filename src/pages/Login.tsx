@@ -67,9 +67,18 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-movenotes-bg text-movenotes-text">
       <div className="w-full max-w-md p-6 bg-movenotes-surface shadow-sm rounded-2xl">
-        <h1 className="text-2xl font-semibold text-center text-movenotes-primary mb-6">
-          Log In to MoveNotes
-        </h1>
+<h1 className="text-2xl text-center mb-6 tracking-tight">
+  <span className="font-nunito text-movenotes-primary mr-1">
+    Log in to
+  </span>
+  <span className="font-nunito font-bold text-movenotes-primary">
+    Move
+  </span>
+  <span className="font-playfair italic text-movenotes-accent">
+    Notes
+  </span>
+</h1>
+
 
         {!codeSent ? (
           <>

@@ -97,13 +97,25 @@ export default function App() {
     <BrowserRouter>
       <AnimatePresence mode="wait">
         <motion.div
-          key="content"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="mx-auto max-w-md min-h-screen p-4 bg-movenotes-bg text-movenotes-text"
-        >
+  key="content"
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  exit={{ opacity: 0 }}
+  transition={{ duration: 0.4 }}
+  className="
+    mx-auto 
+    w-full 
+    max-w-md 
+    sm:max-w-lg 
+    md:max-w-2xl 
+    lg:max-w-3xl 
+    min-h-screen 
+    p-4 
+    bg-movenotes-bg 
+    text-movenotes-text
+  "
+>
+
 <Routes>
   {/* 🌿 Public routes (always visible) */}
   <Route path="/terms" element={<Terms />} />

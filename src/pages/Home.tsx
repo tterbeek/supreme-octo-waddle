@@ -8,7 +8,7 @@ import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import AddNoteModal from "../components/AddNoteModal";
 import ActivityEditForm from "../components/ActivityEditForm";
-
+import HeaderLogo from "../components/HeaderLogo";
 
 export default function Home() {
   const [activities, setActivities] = useState<any[]>([]);
@@ -48,19 +48,42 @@ const refreshActivities = async () => {
 
 
 useEffect(() => {
-  refreshActivities(); // ✅ only once
+  // Load once on mount
+  refreshActivities();
 
+  // 🔥 Realtime subscription for INSERT / UPDATE / DELETE
   const channel = supabase
     .channel("activities-realtime")
-    .on("postgres_changes", { event: "*", schema: "public", table: "activities" }, (_) => {
-      // same insert/update/delete logic
-    })
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "activities" },
+      (payload) => {
+        console.log("[Realtime] Change received:", payload);
+
+        if (payload.eventType === "INSERT") {
+          setActivities((prev) => [payload.new, ...prev]);
+        }
+
+        if (payload.eventType === "UPDATE") {
+          setActivities((prev) =>
+            prev.map((a) => (a.id === payload.new.id ? payload.new : a))
+          );
+        }
+
+        if (payload.eventType === "DELETE") {
+          setActivities((prev) =>
+            prev.filter((a) => a.id !== payload.old.id)
+          );
+        }
+      }
+    )
     .subscribe();
 
   return () => {
     supabase.removeChannel(channel);
   };
 }, []);
+
 
 
 
@@ -109,6 +132,8 @@ const makeDots = (current: number, goal: number) => {
 
 
  return (
+      <div className="min-h-screen bg-movenotes-bg p-4">
+      <HeaderLogo />
   <div className="mt-2">
     <div className="absolute top-4 left-4 z-20">
   <button onClick={() => setMenuOpen(true)} className="p-2">
@@ -188,28 +213,33 @@ const makeDots = (current: number, goal: number) => {
     onDelete={() => deleteActivity(a)}
     onEdit={() => setEditActivity(a)} // 👈 open the edit modal
   >
-<div 
-  className="relative w-full rounded-xl p-4 bg-warm-100 border border-warm-200 shadow-sm"
->
-  {/* Center icon vertically using absolute positioning */}
-  <div className="absolute right-4 top-1/2 -translate-y-1/2">
-    {a.type === "run" ? (
-      <Footprints className="w-6 h-6 text-gray-900 opacity-90" />
-    ) : (
-      <Bike className="w-6 h-6 text-gray-900 opacity-90" />
-    )}
-  </div>
+<div
+  className="
+    rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
+  w-full mx-auto
+  max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
+  sm:p-6 md:p-7
 
-  {/* Text block (centered) */}
-  <div className="flex flex-col items-center justify-center text-center">
-  <div className="flex flex-wrap gap-1 justify-center text-sm text-gray-900 text-center">
-    <span className="font-medium">
+  "
+>
+  {/* 1️⃣ Icon + Title */}
+  <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
+    {a.type === "run" ? (
+      <Footprints className="w-5 h-5 md:w-6 md:h-6 text-gray-900 opacity-90" />
+    ) : (
+      <Bike className="w-5 h-5 md:w-6 md:h-6 text-gray-900 opacity-90" />
+    )}
+
+    <span className="font-semibold text-gray-900 text-base md:text-lg leading-tight">
       {a.title || (a.type === "run" ? "Run" : "Ride")}
     </span>
-    <span>–</span>
+  </div>
+
+  {/* 2️⃣ Distance + Date */}
+  <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1">
     <span>{a.distance_km} km</span>
-    <span>–</span>
-    <span className="text-gray-900">
+    <span className="text-gray-400">·</span>
+    <span>
       {new Date(a.date).toLocaleDateString("en-GB", {
         weekday: "short",
         day: "numeric",
@@ -218,36 +248,40 @@ const makeDots = (current: number, goal: number) => {
     </span>
   </div>
 
-  {/* Feeling + Effort Row */}
-  <div className="mt-2 flex justify-center items-center gap-2">
-    <div className="flex items-center">
-      {(() => {
-        const f = Number(a.feeling) || 0;
-        const base = "w-5 h-5";
-        if (f <= 1) return <Frown className={`${base} text-movenotes-accent`} />;
-        if (f === 2) return <Meh className={`${base} text-movenotes-accent`} />;
-        if (f === 3) return <Smile className={`${base} text-movenotes-accent`} />;
-        if (f >= 4) return <Laugh className={`${base} text-movenotes-accent`} />;
-        return <Meh className={`${base} text-gray-300`} />;
-      })()}
-    </div>
+  {/* 3️⃣ Feeling + Effort */}
+  <div className="flex items-center justify-center gap-3 my-3">
+    {/* Feeling */}
+    {(() => {
+      const f = Number(a.feeling) || 0;
+      const base = "w-5 h-5 md:w-6 md:h-6";
+      if (f <= 1) return <Frown className={`${base} text-movenotes-accent`} />;
+      if (f === 2) return <Meh className={`${base} text-movenotes-accent`} />;
+      if (f === 3) return <Smile className={`${base} text-movenotes-accent`} />;
+      if (f >= 4) return <Laugh className={`${base} text-movenotes-accent`} />;
+    })()}
 
-    <div className="flex items-center gap-1">
+    {/* Effort */}
+    <div className="flex items-center gap-1 md:gap-1.5">
       {Array.from({ length: Number(a.effort) || 0 }).map((_, i) => (
-        <Zap key={i} className="w-4 h-4 text-movenotes-accent" />
+        <Zap key={i} className="w-4 h-4 md:w-5 md:h-5 text-movenotes-accent" />
       ))}
     </div>
   </div>
 
-  {/* Note (only if present) */}
-  {a.notes && a.notes.trim() !== "" && (
-    <p className="mt-1 text-base text-gray-500 font-[DMSerifDisplay] italic leading-snug max-w-xs">
-      “{a.notes.length > 100 ? a.notes.slice(0, 100) + "…" : a.notes}”
+  {/* 4️⃣ Notes */}
+  {a.notes?.trim() && (
+    <p
+      className="
+        mt-2 text-[15px] md:text-[17px] 
+        text-gray-600 font-[DMSerifDisplay] italic leading-snug
+        max-w-xs sm:max-w-sm md:max-w-md mx-auto
+      "
+    >
+      “{a.notes}”
     </p>
   )}
 </div>
 
-</div>
 
   </SwipeActions>
 ))}
@@ -350,6 +384,7 @@ const makeDots = (current: number, goal: number) => {
 
 <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
+  </div>
   </div>
 );
 

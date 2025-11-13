@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
+import HeaderLogo from "../components/HeaderLogo";
+import { Bike, Footprints, Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
+
 
 export default function StatsPage() {
   const navigate = useNavigate();
@@ -195,7 +198,8 @@ export default function StatsPage() {
 
   // --- RENDER ---
   return (
-    <div className="p-4 max-w-md mx-auto">
+        <div className="min-h-screen bg-movenotes-bg p-4">
+       <div className="p-4 max-w-md mx-auto">
       <div className="flex items-center justify-between mb-4">
         <button onClick={() => navigate("/")} className="text-sm underline">
           ← Back
@@ -264,7 +268,7 @@ export default function StatsPage() {
         </div>
       ))}
 
-{/* ROLLING 90 DAYS */}
+{/* LAST 90 DAYS TREND */}
 <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
   LAST 90 DAYS TREND
 </h2>
@@ -292,9 +296,17 @@ export default function StatsPage() {
     const trend =
       prevDist > 0 ? ((currDist / prevDist - 1) * 100).toFixed(0) : null;
     const avgFeeling = avg(current90.map((a) => a.feeling));
-
-    const labelIcon = type === "run" ? "🏃‍♂️" : "🚴‍♀️";
     const hasData = current90.length > 0;
+
+    // Pick Lucide icon for feeling
+    const FeelingIcon =
+      avgFeeling <= 1.5
+        ? Frown
+        : avgFeeling <= 2.5
+        ? Meh
+        : avgFeeling <= 3.5
+        ? Smile
+        : Laugh;
 
     return (
       <div
@@ -302,7 +314,11 @@ export default function StatsPage() {
         className="bg-warm-100 border border-warm-200 rounded-xl p-4 shadow-sm"
       >
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-xl">{labelIcon}</span>
+          {type === "run" ? (
+            <Footprints className="w-5 h-5 text-gray-900" />
+          ) : (
+            <Bike className="w-5 h-5 text-gray-900" />
+          )}
           <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
             {type.toUpperCase()}
           </h3>
@@ -319,19 +335,13 @@ export default function StatsPage() {
               </span>
             </p>
 
-            <p className="mt-1 text-amber-500 text-lg text-center">
-              {avgFeeling < 1.5
-                ? "☹️"
-                : avgFeeling < 2.5
-                ? "😐"
-                : avgFeeling < 3.5
-                ? "🙂"
-                : "😄"}
-            </p>
+            <div className="flex justify-center mt-2">
+              <FeelingIcon className="w-6 h-6 text-movenotes-accent" />
+            </div>
 
             {trend && (
               <p
-                className={`text-sm mt-1 text-center ${
+                className={`text-sm mt-2 text-center ${
                   Number(trend) >= 0 ? "text-green-600" : "text-red-600"
                 }`}
               >
@@ -346,6 +356,8 @@ export default function StatsPage() {
 </div>
 
 
+    </div>
+    <HeaderLogo withTagline delay={0.2} />
     </div>
     
   );
