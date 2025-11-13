@@ -17,26 +17,31 @@ export default function AddNoteModal({
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [visible, setVisible] = useState(true);
+
+  // 🛑 Tracks whether the user has interacted with the modal
   const userInteracted = useRef(false);
+
+  // 🔐 Mark ANY interaction
+  const markInteraction = () => {
+    userInteracted.current = true;
+  };
 
   // ⏳ Auto-close only if NO interaction
   useEffect(() => {
-    if (userInteracted.current) return; // 🚫 User interacted → disable autoclose
-
     const t = setTimeout(() => {
-      console.log("[AddNoteModal] Auto-closing (no interaction)");
-      setVisible(false);
-      setTimeout(onSkip, 400);
+      if (!userInteracted.current) {
+        console.log("[AddNoteModal] Auto-closing (no interaction)");
+        setVisible(false);
+        setTimeout(onSkip, 400);
+      }
     }, 4500);
 
     return () => clearTimeout(t);
   }, [onSkip]);
 
-  const markInteraction = () => {
-    userInteracted.current = true; // 👈 permanently disable auto-close
-  };
-
   const handleSave = async () => {
+    markInteraction(); // user clearly acted
+
     if (!note.trim()) {
       onSkip();
       return;
@@ -67,9 +72,13 @@ export default function AddNoteModal({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
           className="fixed inset-0 bg-black/40 flex items-end justify-center z-50"
+
+          // ⛔ Close ONLY if user has NOT interacted
           onClick={() => {
-            setVisible(false);
-            setTimeout(onSkip, 400);
+            if (!userInteracted.current) {
+              setVisible(false);
+              setTimeout(onSkip, 400);
+            }
           }}
         >
           <motion.div
@@ -77,13 +86,16 @@ export default function AddNoteModal({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 220, damping: 25 }}
+
+            // 🛑 Prevent interaction from bubbling to the backdrop
             onClick={(e) => {
               e.stopPropagation();
-              markInteraction();        // 👈 tapping inside prevents auto-close
+              markInteraction();
             }}
+
             className="w-full max-w-md bg-movenotes-surface rounded-t-2xl p-6 text-movenotes-text shadow-lg"
           >
-            <div className="w-10 h-1.5 bg-movenotes-border rounded-full mx-auto mb-4"></div>
+            <div className="w-10 h-1.5 bg-movenotes-border rounded-full mx-auto mb-4" />
 
             <h2 className="text-lg font-semibold text-center mb-3 text-movenotes-primary">
               Add a note about this activity
@@ -93,9 +105,9 @@ export default function AddNoteModal({
               value={note}
               onChange={(e) => {
                 setNote(e.target.value);
-                markInteraction();        // 👈 typing disables auto-close
+                markInteraction(); // typing disables auto-close
               }}
-              onFocus={markInteraction}    // 👈 focusing disables auto-close
+              onFocus={markInteraction} // tapping input disables auto-close
               placeholder="How did it feel today?"
               className="w-full h-28 border border-movenotes-border rounded-lg p-2 bg-movenotes-bg text-movenotes-text resize-none focus:ring-2 focus:ring-movenotes-primary outline-none mb-4"
             />
@@ -111,6 +123,7 @@ export default function AddNoteModal({
               >
                 Skip
               </button>
+
               <button
                 onClick={handleSave}
                 disabled={saving}
