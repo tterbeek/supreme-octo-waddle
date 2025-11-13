@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import HeaderLogo from "../components/HeaderLogo";
-import { Bike, Footprints, Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
+import { Bike, Footprints, Frown, Meh, Smile, Laugh } from "lucide-react";
 
 
 export default function StatsPage() {
