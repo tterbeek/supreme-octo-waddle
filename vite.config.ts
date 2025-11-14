@@ -7,6 +7,10 @@ export default defineConfig({
     react(),
 VitePWA({
   registerType: "autoUpdate",
+  workbox: {
+    clientsClaim: true,   // 🔥 take control without reload
+    skipWaiting: true,    // 🔥 activate new SW immediately
+  },
   manifest: {
     name: "MoveNotes",
     short_name: "MoveNotes",
