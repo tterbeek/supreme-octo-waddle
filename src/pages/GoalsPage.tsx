@@ -1,124 +1,132 @@
+// src/pages/GoalsPage.tsx
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
-
-type Period = "week" | "month" | "year";
-type Sport = "run" | "ride";
+import HeaderLogo from "../components/HeaderLogo";
+import SwipeActions from "../components/SwipeActions";
+import AddGoalModal from "../components/AddGoalModal";
+import EditGoalModal from "../components/EditGoalModal";
+import type { Goal } from "../types";
+import { Target } from "lucide-react";
 
 export default function GoalsPage() {
   const navigate = useNavigate();
-  const [edit, setEdit] = useState<Record<string, string>>({
-    "run-week": "",
-    "run-month": "",
-    "run-year": "",
-    "ride-week": "",
-    "ride-month": "",
-    "ride-year": "",
-  });
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+
+  const loadGoals = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return navigate("/");
+
+    const { data } = await supabase
+      .from("goals")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+
+    setGoals(data || []);
+    setLoading(false);
+  };
+
+// Group + sort
+const periodOrder: Record<"week" | "month" | "year", number> = {
+  week: 1,
+  month: 2,
+  year: 3,
+};
+
+const typeOrder: Record<"run" | "ride" | "any", number> = {
+  any: 1,
+  ride: 2,
+  run: 3,
+};
+
+const sortedGoals = [...goals].sort((a, b) => {
+  const pDiff = periodOrder[a.period] - periodOrder[b.period];
+  if (pDiff !== 0) return pDiff;
+  return typeOrder[a.activity_type] - typeOrder[b.activity_type];
+});
+
 
   useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("user_id", user.id);
-
-      const updated = { ...edit };
-      (data || []).forEach((g) => {
-        updated[`${g.type}-${g.period}`] = g.distance_km === null ? "" : String(g.distance_km);
-      });
-
-      setEdit(updated);
-    };
-
-    load();
+    loadGoals();
   }, []);
 
-  const update = (type: Sport, period: Period, value: string) => {
-    setEdit((prev) => ({
-      ...prev,
-      [`${type}-${period}`]: value
-    }));
-  };
-
-  const save = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const updates = Object.entries(edit).map(([key, value]) => {
-      const [type, period] = key.split("-") as [Sport, Period];
-      return {
-        user_id: user.id,
-        type,
-        period,
-        distance_km: value === "" ? null : Number(value),
-      };
-    });
-
-    await supabase
-      .from("goals")
-      .upsert(updates, { onConflict: "user_id,type,period" });
-
-    navigate("/");
-  };
-
-  const Field = (type: Sport, period: Period) => (
-    <div key={`${type}-${period}`} className="flex items-center justify-between border rounded-lg px-3 py-2 mb-2 bg-white">
-      <span className="capitalize text-gray-700 text-sm">{period} goal</span>
-
-      <div className="flex items-center">
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          value={edit[`${type}-${period}`]}
-          onChange={(e) => update(type, period, e.target.value)}
-          className="w-20 border rounded-md p-1 text-right text-sm"
-        />
-        <span className="text-gray-500 text-sm ml-1">km</span>
-      </div>
-    </div>
-  );
-
-  const Section = (label: string, type: Sport) => (
-    <div className="mb-8">
-      <h2 className="text-sm font-semibold text-gray-500 mb-2">{label}</h2>
-      {(["week", "month", "year"] as Period[]).map((p) => Field(type, p))}
-    </div>
-  );
-
   return (
-    <div className="p-4 max-w-md mx-auto">
+    <div className="min-h-screen bg-movenotes-bg p-4 max-w-md mx-auto">
+      <HeaderLogo />
+      <button onClick={() => navigate("/")} className="text-sm underline mt-2">
+        ← Back
+      </button>
 
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={() => navigate("/")} className="text-sm underline">
-          ← Back
-        </button>
-        <h1 className="text-lg font-bold">Goals</h1>
-        <div className="w-10" />
-      </div>
+      {/* Add Goal Button */}
+      <button
+        onClick={() => setShowAdd(true)}
+        className="w-full flex items-center justify-center gap-2 
+                   bg-amber-300 border border-amber-400 text-primary-text 
+                   py-3 rounded-full text-lg font-medium my-4"
+      >
+        <span className="text-xl">+</span>
+        <Target className="w-5 h-5" />
+        <span>Goal</span>
+      </button>
 
-      {Section("RUNNING", "run")}
-      {Section("CYCLING", "ride")}
+      <h2 className="text-sm font-medium text-gray-600 mt-4 mb-2">
+        Your Goals
+      </h2>
 
-      <div className="flex gap-3 mt-6">
-        <button
-          onClick={() => navigate("/")}
-          className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-full text-sm font-medium"
-        >
-          Cancel
-        </button>
+      {loading ? (
+        <p className="text-gray-500">Loading…</p>
+      ) : goals.length === 0 ? (
+        <p className="text-gray-500 italic">No goals yet.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {sortedGoals.map((g) => (
+            <SwipeActions
+              key={g.id}
+              onEdit={() => setEditingGoal(g)}
+              onDelete={() => setEditingGoal(g)}
+            >
+              <div className="p-4 bg-warm-100 border border-warm-200 rounded-xl shadow-sm text-center">
+                <div className="font-semibold text-gray-900">
+                  {g.name || "Goal"}
+                </div>
+                <div className="text-gray-700 text-sm mt-1">
+                  {g.metric === "distance"
+                    ? `${g.target} km`
+                    : `${g.target} activities`}
+                </div>
+              </div>
+            </SwipeActions>
+          ))}
+        </div>
+      )}
 
-        <button
-          onClick={save}
-          className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-2 rounded-full text-sm font-medium transition transform hover:-translate-y-0.5 active:scale-95"
-        >
-          Save
-        </button>
-      </div>
+      {/* Dialogs */}
+      {showAdd && (
+        <AddGoalModal
+          onClose={() => setShowAdd(false)}
+          onAdded={loadGoals}
+          existingGoals={goals}
+          onDuplicate={(goal) => setEditingGoal(goal)}
+        />
+
+      )}
+
+      {editingGoal && (
+        <EditGoalModal
+          goal={editingGoal}
+          onClose={() => setEditingGoal(null)}
+          onUpdated={loadGoals}
+          onDeleted={(id) => {
+            setEditingGoal(null);
+            setGoals((prev) => prev.filter((g) => g.id !== id));
+          }}
+        />
+      )}
     </div>
   );
 }

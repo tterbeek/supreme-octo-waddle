@@ -2,20 +2,22 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import HeaderLogo from "../components/HeaderLogo";
-import { Bike, Footprints, Frown, Meh, Smile, Laugh } from "lucide-react";
-
+import {
+  Bike,
+  Footprints,
+  Target,
+  Hash,
+  Frown,
+  Meh,
+  Laugh,
+  Smile
+} from "lucide-react";
+import type { Goal } from "../types";
 
 export default function StatsPage() {
   const navigate = useNavigate();
   const [activities, setActivities] = useState<any[]>([]);
-  const [goals, setGoals] = useState<any[]>([]);
-  const parseDate = (value: string | Date) => {
-  if (!value) return null;
-  const d = typeof value === "string" ? new Date(value + "T00:00:00Z") : new Date(value);
-  return isNaN(d.getTime()) ? null : d;
-  };
-
-
+  const [goals, setGoals] = useState<Goal[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -39,23 +41,20 @@ export default function StatsPage() {
 
   // Helpers
   const sum = (arr: number[]) => arr.reduce((a, b) => a + b, 0);
-  const avg = (arr: number[]) => (arr.length ? sum(arr) / arr.length : 0);
-
-  const group = (filterFn: (a: any) => boolean) => {
-    const filtered = activities.filter(filterFn);
-    return {
-      run: filtered.filter((a) => a.type === "run"),
-      ride: filtered.filter((a) => a.type === "ride"),
-    };
-  };
-
   const now = new Date();
 
-  // --- PERIOD HELPERS ---
+  const parseDate = (value: string | Date) => {
+    const d = typeof value === "string"
+      ? new Date(value + "T00:00:00Z")
+      : new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  // Period helpers
   const startOfWeek = (date: Date) => {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // Monday start
+    const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
     d.setHours(0, 0, 0, 0);
     return d;
@@ -63,211 +62,202 @@ export default function StatsPage() {
   const startOfMonth = (date: Date) =>
     new Date(date.getFullYear(), date.getMonth(), 1);
 
-  // --- WEEKS ---
+  // Week periods
   const currentWeekStart = startOfWeek(now);
   const lastWeekStart = new Date(currentWeekStart);
   lastWeekStart.setDate(lastWeekStart.getDate() - 7);
   const weekBeforeStart = new Date(currentWeekStart);
   weekBeforeStart.setDate(weekBeforeStart.getDate() - 14);
 
-  const currentWeek = group((a) => new Date(a.date) >= currentWeekStart);
-  const lastWeek = group(
+  const currentWeek = activities.filter((a) => parseDate(a.date)! >= currentWeekStart);
+  const lastWeek = activities.filter(
     (a) =>
-      new Date(a.date) >= lastWeekStart &&
-      new Date(a.date) < currentWeekStart
+      parseDate(a.date)! >= lastWeekStart &&
+      parseDate(a.date)! < currentWeekStart
   );
-  const weekBefore = group(
+  const weekBefore = activities.filter(
     (a) =>
-      new Date(a.date) >= weekBeforeStart &&
-      new Date(a.date) < lastWeekStart
+      parseDate(a.date)! >= weekBeforeStart &&
+      parseDate(a.date)! < lastWeekStart
   );
 
-  // --- MONTHS ---
+  // Month periods
   const currentMonthStart = startOfMonth(now);
-  const lastMonthStart = new Date(
-    now.getFullYear(),
-    now.getMonth() - 1,
-    1
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const monthBeforeStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
+  const currentMonth = activities.filter(
+    (a) => parseDate(a.date)! >= currentMonthStart
   );
-  const monthBeforeStart = new Date(
-    now.getFullYear(),
-    now.getMonth() - 2,
-    1
+  const lastMonth = activities.filter(
+    (a) =>
+      parseDate(a.date)! >= lastMonthStart &&
+      parseDate(a.date)! < currentMonthStart
+  );
+  const monthBefore = activities.filter(
+    (a) =>
+      parseDate(a.date)! >= monthBeforeStart &&
+      parseDate(a.date)! < lastMonthStart
   );
 
-  const currentMonth = group((a) => new Date(a.date) >= currentMonthStart);
-  const lastMonth = group(
-    (a) =>
-      new Date(a.date) >= lastMonthStart &&
-      new Date(a.date) < currentMonthStart
-  );
-  const monthBefore = group(
-    (a) =>
-      new Date(a.date) >= monthBeforeStart &&
-      new Date(a.date) < lastMonthStart
-  );
-
-  // --- YEAR ---
+  // Year
   const yearStart = new Date(now.getFullYear(), 0, 1);
-  const currentYear = group((a) => new Date(a.date) >= yearStart);
+  const currentYear = activities.filter((a) => parseDate(a.date)! >= yearStart);
 
-  const getGoal = (type: "run" | "ride", period: string) =>
-    goals.find((g) => g.type === type && g.period === period);
+  const iconForType = (t: string) =>
+    t === "run" ? Footprints : t === "ride" ? Bike : Target;
 
-  // --- UI COMPONENTS ---
-  const ProgressRow = ({
-    label,
-    current,
-    goal,
-  }: {
-    label: string;
-    current: number;
-    goal?: any;
-  }) => {
-    const target = goal?.distance_km || 0;
-    const progress = target > 0 ? Math.min(1, current / target) : 0;
+  const metricIcon = (metric: string) =>
+    metric === "distance" ? Target : Hash;
 
-    return (
-      <div className="mb-3">
-        <div className="text-sm text-gray-700 font-medium">{label}</div>
-        {goal ? (
-          <>
-            <div className="text-sm text-gray-800">
-              {current.toFixed(0)} / {target} km
-            </div>
-            <div className="flex gap-1 mt-1">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    i < Math.floor(progress * 5)
-                      ? "bg-movenotes-accent"
-                      : "bg-gray-300"
-                  }`}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="text-xs text-gray-400">No goal set</div>
-        )}
-      </div>
-    );
-  };
-
-  const CompareRow = ({
-    label,
-    currentArr,
-    prevArr,
-    periodLabel,
-  }: {
-    label: string;
-    currentArr: any[];
-    prevArr: any[];
-    periodLabel: string;
-  }) => {
-    const currDist = sum(currentArr.map((a) => a.distance_km));
-    const prevDist = sum(prevArr.map((a) => a.distance_km));
-
-    if (currDist === 0 && prevDist === 0)
-      return (
-        <div className="text-xs text-gray-400 mt-1">Not enough data</div>
-      );
-
-    const change =
-      prevDist > 0 ? ((currDist / prevDist - 1) * 100).toFixed(0) : null;
-
-    return (
-      <div className="text-xs text-gray-600">
-        {label}: {currDist.toFixed(0)} km{" "}
-        {change && (
-          <>
-            {currDist > prevDist ? (
-              <span className="text-green-600">↑ {change}%</span>
-            ) : currDist < prevDist ? (
-              <span className="text-red-600">↓ {change}%</span>
-            ) : (
-              "(same)"
-            )}
-          </>
-        )}{" "}
-        vs previous {periodLabel}
-      </div>
-    );
-  };
-
-  // --- RENDER ---
-  return (
-        <div className="min-h-screen bg-movenotes-bg p-4">
-       <div className="p-4 max-w-md mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={() => navigate("/")} className="text-sm underline">
-          ← Back
-        </button>
-        <h1 className="text-lg font-bold">Stats</h1>
-        <div className="w-10" />
-      </div>
-
-      {/* WEEK */}
-      <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
-        WEEK
-      </h2>
-      {(["run", "ride"] as const).map((type) => {
-        const goal = getGoal(type, "week");
-        return (
-          <div key={type} className="mb-4">
-            <ProgressRow
-              label={`${type.toUpperCase()} — This week`}
-              current={sum(currentWeek[type].map((a) => a.distance_km))}
-              goal={goal}
-            />
-            <CompareRow
-              label={`${type.toUpperCase()} — Last week`}
-              currentArr={lastWeek[type]}
-              prevArr={weekBefore[type]}
-              periodLabel="week"
-            />
-          </div>
-        );
-      })}
-
-      {/* MONTH */}
-      <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
-        MONTH
-      </h2>
-      {(["run", "ride"] as const).map((type) => {
-        const goal = getGoal(type, "month");
-        return (
-          <div key={type} className="mb-4">
-            <ProgressRow
-              label={`${type.toUpperCase()} — This month`}
-              current={sum(currentMonth[type].map((a) => a.distance_km))}
-              goal={goal}
-            />
-            <CompareRow
-              label={`${type.toUpperCase()} — Last month`}
-              currentArr={lastMonth[type]}
-              prevArr={monthBefore[type]}
-              periodLabel="month"
-            />
-          </div>
-        );
-      })}
-
-      {/* YEAR */}
-      <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
-        YEAR
-      </h2>
-      {(["run", "ride"] as const).map((type) => (
-        <div key={type} className="mb-4">
-          <div className="text-sm text-gray-800">
-            {type.toUpperCase()}:{" "}
-            {sum(currentYear[type].map((a) => a.distance_km)).toFixed(0)} km ·{" "}
-            {currentYear[type].length} activities
-          </div>
-        </div>
+  // Progress Dots (0..5)
+  const ProgressDots = ({ ratio }: { ratio: number }) => (
+    <div className="flex gap-1 mt-1">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={i}
+          className={`w-2.5 h-2.5 rounded-full ${
+            i < Math.floor(ratio * 5)
+              ? "bg-movenotes-accent"
+              : "bg-gray-300"
+          }`}
+        />
       ))}
+    </div>
+  );
 
+  // Section component reused for week/month/year
+  const GoalSection = ({
+    title,
+    period,
+    currentActs,
+    lastActs,
+    beforeActs,
+  }: {
+    title: string;
+    period: Goal["period"];
+    currentActs: any[];
+    lastActs: any[];
+    beforeActs: any[];
+  }) => {
+    const periodGoals = goals.filter((g) => g.period === period);
+
+    if (periodGoals.length === 0) return null; // 🔥 hide entire block if no goals
+
+    return (
+      <>
+        <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
+          {title}
+        </h2>
+
+        <div className="flex flex-col gap-4">
+          {periodGoals.map((g) => {
+            const Icon = iconForType(g.activity_type);
+            const MIcon = metricIcon(g.metric);
+
+            const filterType = (type: string, arr: any[]) =>
+              type === "any" ? arr : arr.filter((a) => a.type === type);
+
+            const currList = filterType(g.activity_type, currentActs);
+            const currDist = sum(currList.map((a) => a.distance_km));
+            const currCount = currList.length;
+
+            const lastList = filterType(g.activity_type, lastActs);
+            const beforeList = filterType(g.activity_type, beforeActs);
+
+            // distance_compare uses completed weeks/months only
+            const prevDist = sum(beforeList.map((a) => a.distance_km));
+            const lastDist = sum(lastList.map((a) => a.distance_km));
+            const change =
+              prevDist > 0 ? ((lastDist / prevDist - 1) * 100).toFixed(0) : null;
+
+            const target = g.target;
+            const value = g.metric === "distance" ? currDist : currCount;
+            const ratio = target > 0 ? Math.min(1, value / target) : 0;
+
+            return (
+              <div
+                key={g.id}
+                className="bg-warm-100 border border-warm-200 rounded-xl p-4 shadow-sm"
+              >
+                {/* Title */}
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className="w-5 h-5 text-gray-900" />
+                  <MIcon className="w-4 h-4 text-gray-500" />
+                  <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
+                    {g.name || `${g.activity_type} ${g.metric}`}
+                  </h3>
+                </div>
+
+                {/* Value / target */}
+                <div className="text-base text-gray-900 font-medium">
+                  {g.metric === "distance"
+                    ? `${Math.round(value)} / ${Math.round(target)} km`
+                    : `${currCount} / ${target} activities`}
+                </div>
+
+
+                {/* Dots */}
+                <ProgressDots ratio={ratio} />
+
+                {/* Comparison (distance only) */}
+                {g.metric === "distance" && change && (
+                  <div
+                    className={`text-sm mt-2 ${
+                      Number(change) >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {Number(change) >= 0 ? "↑" : "↓"} {change}% vs previous{" "}
+                    {period}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-movenotes-bg p-4">
+      <div className="p-4 max-w-md mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => navigate("/")} className="text-sm underline">
+            ← Back
+          </button>
+          <h1 className="text-lg font-bold">Stats</h1>
+          <div className="w-10" />
+        </div>
+
+        {/* WEEK */}
+        <GoalSection
+          title="WEEK"
+          period="week"
+          currentActs={currentWeek}
+          lastActs={lastWeek}
+          beforeActs={weekBefore}
+        />
+
+        {/* MONTH */}
+        <GoalSection
+          title="MONTH"
+          period="month"
+          currentActs={currentMonth}
+          lastActs={lastMonth}
+          beforeActs={monthBefore}
+        />
+
+        {/* YEAR */}
+        <GoalSection
+          title="YEAR"
+          period="year"
+          currentActs={currentYear}
+          lastActs={[]} // no comparison for year
+          beforeActs={[]}
+        />
 {/* LAST 90 DAYS TREND */}
 <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
   LAST 90 DAYS TREND
@@ -281,24 +271,33 @@ export default function StatsPage() {
     const days180Ago = new Date(days90Ago);
     days180Ago.setDate(days180Ago.getDate() - 90);
 
+    const parse = (d: string) => new Date(d + "T00:00:00Z");
+
     const current90 = activities.filter(
-      (a) => a.type === type && parseDate(a.date)! >= days90Ago
+      (a) => a.type === type && parse(a.date) >= days90Ago
     );
+
     const previous90 = activities.filter(
       (a) =>
         a.type === type &&
-        parseDate(a.date)! >= days180Ago &&
-        parseDate(a.date)! < days90Ago
+        parse(a.date) >= days180Ago &&
+        parse(a.date) < days90Ago
     );
 
     const currDist = sum(current90.map((a) => a.distance_km));
     const prevDist = sum(previous90.map((a) => a.distance_km));
     const trend =
       prevDist > 0 ? ((currDist / prevDist - 1) * 100).toFixed(0) : null;
-    const avgFeeling = avg(current90.map((a) => a.feeling));
+
+    const avgFeeling =
+      current90.length > 0
+        ? current90.reduce((t, a) => t + (a.feeling || 0), 0) /
+          current90.length
+        : 0;
+
     const hasData = current90.length > 0;
 
-    // Pick Lucide icon for feeling
+    // Pick Lucide feeling icon
     const FeelingIcon =
       avgFeeling <= 1.5
         ? Frown
@@ -329,9 +328,9 @@ export default function StatsPage() {
         ) : (
           <>
             <p className="text-base text-gray-900 font-medium">
-              {currDist.toFixed(0)} km total
+              {Math.round(currDist)} km total
               <span className="text-sm text-gray-600 ml-1">
-                · {(currDist / 12.9).toFixed(1)} km / week avg
+                · {Math.round(currDist / 12.9)} km / week avg
               </span>
             </p>
 
@@ -356,10 +355,10 @@ export default function StatsPage() {
 </div>
 
 
-    </div>
-    <HeaderLogo withTagline delay={0.2} />
-    </div>
-    
-  );
+        
+      </div>
 
+      <HeaderLogo withTagline delay={0.2} />
+    </div>
+  );
 }
