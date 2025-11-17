@@ -59,6 +59,9 @@ export default function Home() {
   const [hasMoreFeed, setHasMoreFeed] = useState(true);
   const FEED_PAGE_SIZE = 20;
 
+  // prevent concurrent loadMoreFeed calls
+  const isLoadingMoreRef = useRef(false);
+
   // --------------------------------------------------
   // HELPERS
   // --------------------------------------------------
@@ -96,33 +99,36 @@ export default function Home() {
   const loadMoreFeed = async () => {
   if (!hasMoreFeed) return;
   if (!userId) return;
+  if (isLoadingMoreRef.current) return; // ⛔ already fetching
 
-  // 🔥 read current offset *once* outside state setters
-  const offset = feedOffset;
+  isLoadingMoreRef.current = true;
 
-  const { data: more } = await supabase
-    .from("activities")
-    .select("*")
-    .eq("user_id", userId)
-    .order("date", { ascending: false })
-    .range(offset, offset + FEED_PAGE_SIZE - 1);
+  try {
+    const offset = feedOffset;
 
-  if (!more || more.length === 0) {
-    setHasMoreFeed(false);
-    return;
-  }
+    const { data: more } = await supabase
+      .from("activities")
+      .select("*")
+      .eq("user_id", userId)
+      .order("date", { ascending: false })
+      .range(offset, offset + FEED_PAGE_SIZE - 1);
 
-  // Append results
-  setActivities((prev) => [...prev, ...more]);
+    if (!more || more.length === 0) {
+      setHasMoreFeed(false);
+      return;
+    }
 
-  // Advance offset safely
-  setFeedOffset((prev) => prev + more.length);
+    setActivities((prev) => [...prev, ...more]);
+    setFeedOffset((prev) => prev + more.length);
 
-  // Stop if fewer than full page
-  if (more.length < FEED_PAGE_SIZE) {
-    setHasMoreFeed(false);
+    if (more.length < FEED_PAGE_SIZE) {
+      setHasMoreFeed(false);
+    }
+  } finally {
+    isLoadingMoreRef.current = false;
   }
 };
+
 
   // --------------------------------------------------
   // INITIAL LOAD: user → goals → activitiesForGoals + feed

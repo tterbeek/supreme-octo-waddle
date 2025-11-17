@@ -71,15 +71,22 @@ export default function StatsPage() {
               <div key={g.id}>
                 <GoalProgressCard goal={g} activities={activities} />
 
-                {comparison !== null && (
-                  <p
-                    className={`text-sm mt-1 ml-1 ${
-                      comparison >= 0 ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {comparison >= 0 ? "↑" : "↓"} {comparison}% vs previous
-                  </p>
-                )}
+            {comparison !== null && (
+              <p
+                className={`text-sm mt-1 ml-1 ${
+                  comparison >= 0
+                    ? "text-green-600"
+                    : comparison >= -5
+                    ? "text-gray-500"
+                    : comparison >= -15
+                    ? "text-yellow-500"
+                    : "text-red-600"
+                }`}
+              >
+                {comparison >= 0 ? "↑" : "↓"} {comparison}% vs previous
+              </p>
+            )}
+
               </div>
             );
           })}
