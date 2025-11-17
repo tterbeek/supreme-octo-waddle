@@ -3,7 +3,7 @@ import type { Preset } from "../types";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
-import ModalSheet from "../components/ModalSheet";
+import ModalSheet from "./ModalSheet";
 
 type QuickLogFormProps = {
   type: "run" | "ride";
@@ -131,8 +131,7 @@ setTimeout(() => {
     }, 400);
   };
 
-  console.log("QuickLogFssssorm build timestamp: 2025-01-13 22:15");
-
+  
 return (
   <>
     {/* MAIN QUICKLOG SHEET */}

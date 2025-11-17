@@ -1,7 +1,7 @@
 // src/pages/Home.tsx
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
-import QuickLogForm from "../components/QuickLogForm";
+import QuickLogForm from "../components/QuickLogForm2";
 import Toast from "../components/Toast";
 import { Bike, Footprints, Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import SwipeActions from "../components/SwipeActions";
