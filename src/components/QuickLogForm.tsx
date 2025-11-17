@@ -131,6 +131,8 @@ setTimeout(() => {
     }, 400);
   };
 
+  console.log("QuickLogForm build timestamp: 2025-01-13 22:15");
+
 return (
   <>
     {/* MAIN QUICKLOG SHEET */}
