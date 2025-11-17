@@ -26,7 +26,7 @@ export default function GoalProgressRow({
       {hasGoal ? (
         <>
           <div className="text-sm text-gray-800">
-            {current.toFixed(0)} / {target} {unit ?? ""}
+            {current} / {target} {unit ?? ""}
           </div>
           <div className="flex gap-1 mt-1">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -41,7 +41,7 @@ export default function GoalProgressRow({
         </>
       ) : (
         <div className="text-xs text-gray-400">
-          {current.toFixed(0)} {unit ?? ""} (no goal set)
+          {current} {unit ?? ""} (no goal set)
         </div>
       )}
     </div>

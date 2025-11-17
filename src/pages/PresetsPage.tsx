@@ -90,14 +90,11 @@ const openForm = (type: "run" | "ride") => {
 
   // ✅ Proper return block
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={() => navigate("/")} className="text-sm underline">
-          ← Back
-        </button>
-        <h1 className="text-lg font-bold">Manage Presets</h1>
-        <div className="w-10" />
-      </div>
+<div className="mb-4">
+  <h1 className="text-lg font-bold text-gray-600 text-center">
+    Presets
+  </h1>
+
 {/* Add Preset Buttons */}
 <h2 className="text-sm font-medium text-gray-500 mb-2">Add Preset</h2>
 

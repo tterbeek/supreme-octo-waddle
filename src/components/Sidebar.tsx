@@ -1,5 +1,6 @@
-import { supabase } from "../supabaseClient";
 import { Link } from "react-router-dom";
+import { supabase } from "../supabaseClient";
+import HamburgerButton from "./HamburgerButton";
 
 export default function Sidebar({
   open,
@@ -28,19 +29,35 @@ export default function Sidebar({
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <h2 className="text-lg font-semibold mb-6">Menu</h2>
+      {/* HAMBURGER HEADER */}
+      <div className="flex items-center justify-between mb-6">
+        <HamburgerButton open={open} onClick={onClose} />
+      </div>
 
+        {/* NAV LINKS */}
         <nav className="flex flex-col gap-4 text-md">
-          <Link to="/presets" onClick={onClose} className="hover:underline">
-            Manage Presets
+
+          {/* ⭐ Recommended: include Home */}
+          <Link to="/" onClick={onClose} className="hover:underline">
+            Activity Feed
+          </Link>
+
+          <Link to="/stats" onClick={onClose} className="hover:underline">
+            Statistics
           </Link>
 
           <Link to="/goals" onClick={onClose} className="hover:underline">
             Manage Goals
           </Link>
 
+          <Link to="/presets" onClick={onClose} className="hover:underline">
+            Manage Presets
+          </Link>
+
+
+          {/* Logout */}
           <button
-            className="text-left text-red-600 hover:underline"
+            className="text-left text-red-600 hover:underline mt-4"
             onClick={async () => {
               await supabase.auth.signOut();
               onClose();

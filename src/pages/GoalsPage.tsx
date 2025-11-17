@@ -2,12 +2,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
-import HeaderLogo from "../components/HeaderLogo";
 import SwipeActions from "../components/SwipeActions";
 import AddGoalModal from "../components/AddGoalModal";
 import EditGoalModal from "../components/EditGoalModal";
 import type { Goal } from "../types";
-import { Target } from "lucide-react";
+import { Target, Star } from "lucide-react";
 
 export default function GoalsPage() {
   const navigate = useNavigate();
@@ -16,6 +15,26 @@ export default function GoalsPage() {
 
   const [showAdd, setShowAdd] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+
+const [starredGoalIds, setStarredGoalIds] = useState<string[]>([]);
+
+useEffect(() => {
+  const loadPrefs = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("goal_preferences")
+      .select("goal_id")
+      .eq("user_id", user.id);
+
+    setStarredGoalIds((data || []).map((r) => r.goal_id));
+  };
+
+  loadPrefs();
+}, []);
+
+
 
   const loadGoals = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -50,6 +69,36 @@ const sortedGoals = [...goals].sort((a, b) => {
   return typeOrder[a.activity_type] - typeOrder[b.activity_type];
 });
 
+const toggleStar = async (goalId: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const isStarred = starredGoalIds.includes(goalId);
+
+  if (isStarred) {
+    await supabase
+      .from("goal_preferences")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("goal_id", goalId);
+
+    setStarredGoalIds((prev) => prev.filter((id) => id !== goalId));
+  } else {
+    // Limit to max 2
+    if (starredGoalIds.length >= 2) {
+      alert("You can select up to 2 goals to show on the home screen.");
+      return;
+    }
+
+    await supabase.from("goal_preferences").insert({
+      user_id: user.id,
+      goal_id: goalId,
+    });
+
+    setStarredGoalIds((prev) => [...prev, goalId]);
+  }
+};
+
 
   useEffect(() => {
     loadGoals();
@@ -57,12 +106,8 @@ const sortedGoals = [...goals].sort((a, b) => {
 
   return (
     <div className="min-h-screen bg-movenotes-bg p-4 max-w-md mx-auto">
-      <HeaderLogo />
-      <button onClick={() => navigate("/")} className="text-sm underline mt-2">
-        ← Back
-      </button>
-
-      {/* Add Goal Button */}
+      
+        {/* Add Goal Button */}
       <button
         onClick={() => setShowAdd(true)}
         className="w-full flex items-center justify-center gap-2 
@@ -84,25 +129,45 @@ const sortedGoals = [...goals].sort((a, b) => {
         <p className="text-gray-500 italic">No goals yet.</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {sortedGoals.map((g) => (
-            <SwipeActions
-              key={g.id}
-              onEdit={() => setEditingGoal(g)}
-              onDelete={() => setEditingGoal(g)}
-            >
-              <div className="p-4 bg-warm-100 border border-warm-200 rounded-xl shadow-sm text-center">
-                <div className="font-semibold text-gray-900">
-                  {g.name || "Goal"}
-                </div>
-                <div className="text-gray-700 text-sm mt-1">
-                  {g.metric === "distance"
-                    ? `${g.target} km`
-                    : `${g.target} activities`}
-                </div>
-              </div>
-            </SwipeActions>
-          ))}
+  {sortedGoals.map((g) => (
+    <SwipeActions
+      key={g.id}
+      onEdit={() => setEditingGoal(g)}
+    >
+      <div className="relative p-4 bg-warm-100 border border-warm-200 rounded-xl shadow-sm text-center">
+
+        {/* ⭐ STAR BUTTON */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();    // prevent triggering Swipe or opening modal
+            toggleStar(g.id);
+          }}
+          className="absolute top-2 right-2"
+        >
+          <Star
+            className={`w-5 h-5 ${
+              starredGoalIds.includes(g.id)
+                ? "text-movenotes-accent fill-movenotes-accent"
+                : "text-gray-400"
+            }`}
+          />
+        </button>
+
+        {/* TITLE */}
+        <div className="font-semibold text-gray-900">
+          {g.name || "Goal"}
         </div>
+
+        {/* TARGET */}
+        <div className="text-gray-700 text-sm mt-1">
+          {g.metric === "distance"
+            ? `${g.target} km`
+            : `${g.target} activities`}
+        </div>
+      </div>
+    </SwipeActions>
+  ))}
+</div>
       )}
 
       {/* Dialogs */}

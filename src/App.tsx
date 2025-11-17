@@ -14,12 +14,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { User } from "@supabase/supabase-js";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
-
+import Sidebar from "./components/Sidebar";
+import Layout from "./components/Layout";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+
 
   // 🌅 Splash logic
   useEffect(() => {
@@ -95,6 +98,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
+    
+
       <AnimatePresence mode="wait">
         <motion.div
   key="content"
@@ -118,18 +123,69 @@ export default function App() {
     </>
   ) : (
     <>
-      <Route path="/" element={<Home />} />
-      <Route path="/presets" element={<PresetsPage />} />
-      <Route path="/presets/new" element={<AddPresetPage />} />
-      <Route path="/presets/:id" element={<EditPresetPage />} />
-      <Route path="/stats" element={<StatsPage />} />
-      <Route path="/goals" element={<GoalsPage />} />
+<Route
+  path="/"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <Home />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/presets"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <PresetsPage />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/presets/new"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <AddPresetPage />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/presets/:id"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <EditPresetPage />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/stats"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <StatsPage />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/goals"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <GoalsPage />
+    </Layout>
+  }
+/>
+
+
     </>
   )}
 </Routes>
 
         </motion.div>
       </AnimatePresence>
+      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
     </BrowserRouter>
+    
   );
 }

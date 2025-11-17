@@ -3,11 +3,10 @@ import type { ReactNode } from "react";
 
 type SwipeActionsProps = {
   children: ReactNode;
-  onDelete: () => void; // left swipe
   onEdit: () => void;   // right swipe / right-click
 };
 
-export default function SwipeActions({ children, onDelete, onEdit }: SwipeActionsProps) {
+export default function SwipeActions({ children, onEdit }: SwipeActionsProps) {
   const startX = useRef<number | null>(null);
   const lastX = useRef<number | null>(null);
 
@@ -36,9 +35,7 @@ export default function SwipeActions({ children, onDelete, onEdit }: SwipeAction
     const diff = lastX.current - startX.current;
     const threshold = 50; // px
 
-    if (diff <= -threshold) {
-      onDelete();        // swipe left → delete
-    } else if (diff >= threshold) {
+    if (diff >= threshold) {
       onEdit();          // swipe right → edit
     }
 
