@@ -1,61 +1,44 @@
-import { useRef } from "react";
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEvent, TouchEvent } from "react";
 
 type SwipeActionsProps = {
   children: ReactNode;
-  onEdit: () => void;   // right swipe / right-click
+  onEdit: () => void;
 };
 
 export default function SwipeActions({ children, onEdit }: SwipeActionsProps) {
-  const startX = useRef<number | null>(null);
-  const lastX = useRef<number | null>(null);
+  let touchStartY = 0;
+  let touchEndY = 0;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-    lastX.current = startX.current;
+  const onTouchStart = (e: TouchEvent) => {
+    touchStartY = e.touches[0].clientY;
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (startX.current == null) return;
-    lastX.current = e.touches[0].clientX;
-    // prevent horizontal scroll when intentional swipe
-    const diff = lastX.current - startX.current;
-    if (Math.abs(diff) > 10) {
-      e.preventDefault();
+  const onTouchEnd = () => {
+    const diff = Math.abs(touchEndY - touchStartY);
+
+    // If vertical movement is small → treat as a tap
+    if (diff < 10) {
+      onEdit();
     }
   };
 
-  const handleTouchEnd = () => {
-    if (startX.current == null || lastX.current == null) {
-      startX.current = null;
-      lastX.current = null;
-      return;
-    }
-
-    const diff = lastX.current - startX.current;
-    const threshold = 50; // px
-
-    if (diff >= threshold) {
-      onEdit();          // swipe right → edit
-    }
-
-    startX.current = null;
-    lastX.current = null;
+  const onTouchMove = (e: TouchEvent) => {
+    touchEndY = e.touches[0].clientY;
+    // ❗ Do NOT call preventDefault — allow native scrolling
   };
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    onEdit(); // right-click → edit
+  const onClick = (e: MouseEvent) => {
+    onEdit();
   };
 
   return (
     <div
-      onContextMenu={handleContextMenu}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onClick={onClick}
       className="relative"
-      style={{ touchAction: "pan-y" }} // vertical scroll allowed, horizontal handled by us
+      style={{ touchAction: "pan-y" }} // allow vertical scroll
     >
       {children}
     </div>
