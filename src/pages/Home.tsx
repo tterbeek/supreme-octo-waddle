@@ -283,12 +283,14 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     ? homeGoalStats.length > 0
     : homeGoals.length > 0;
 
-  const displayedGoals = useRpcGoals
-    ? homeGoalStats.slice(0, 2)
-    : homeGoals.slice(0, 2);
+  const displayedGoalStats = homeGoalStats.slice(0, 2);
+  const displayedLegacyGoals = homeGoals.slice(0, 2);
+  const displayedCount = useRpcGoals
+    ? displayedGoalStats.length
+    : displayedLegacyGoals.length;
 
   const goalGridClass =
-    displayedGoals.length === 1
+    displayedCount === 1
       ? "grid grid-cols-1 gap-3"
       : "grid grid-cols-1 sm:grid-cols-2 gap-3";
 
@@ -379,10 +381,10 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
 
             <div className={goalGridClass}>
               {useRpcGoals
-                ? displayedGoals.map((g) => (
+                ? displayedGoalStats.map((g) => (
                     <GoalStatCardHome key={g.goal_id} stat={g} />
                   ))
-                : displayedGoals.map((g) => (
+                : displayedLegacyGoals.map((g) => (
                     <GoalProgressCard
                       key={g.id}
                       goal={g}
