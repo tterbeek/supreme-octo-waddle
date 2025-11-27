@@ -8,6 +8,7 @@ import PresetsPage from "./pages/PresetsPage";
 import AddPresetPage from "./pages/AddPresetPage";
 import EditPresetPage from "./pages/EditPresetPage";
 import StatsPage from "./pages/StatsPage";
+import StatsRpcPage from "./pages/StatsRpcPage";
 import GoalsPage from "./pages/GoalsPage";
 import AnimatedLogo from "./components/AnimatedLogo";
 import { motion, AnimatePresence } from "framer-motion";
@@ -127,7 +128,25 @@ export default function App() {
   path="/"
   element={
     <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <Home useRpcGoals />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/home-legacy"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
       <Home />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/home-rpc"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <Home useRpcGoals />
     </Layout>
   }
 />
@@ -163,7 +182,25 @@ export default function App() {
   path="/stats"
   element={
     <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <StatsRpcPage />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/stats-legacy"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
       <StatsPage />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/stats-rpc"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <StatsRpcPage />
     </Layout>
   }
 />

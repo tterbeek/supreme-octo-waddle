@@ -71,3 +71,17 @@ export default defineConfig([
   },
 ])
 ```
+
+## Stats page using Supabase stored procedures
+
+- Default stats route `/stats` now uses the Supabase RPC-backed page.
+- Legacy client-side stats remain available at `/stats-legacy` (not linked in the sidebar). `/stats-rpc` is an alias to the new default.
+- Expected procedures:
+  - `stats_goal_progress(user_id uuid)` → rows with `goal_id, name, activity_type (run|ride|any), metric (distance|count), period (week|month|year), target, current_value, unit (km|activities), progress_ratio (0-1), comparison_pct`.
+  - `stats_trends_90_days(user_id uuid)` → rows with `activity_type (run|ride), total_distance, weekly_avg_distance, trend_pct (vs previous 90 days), avg_feeling`.
+- The page will show loading/error states if these RPCs are missing or fail; make sure to create them in Supabase before using the route.
+
+## Home page using Supabase goal stats
+
+- Default home `/` now uses the `stats_goal_progress` RPC for the top goals section (rest of the feed/quick-log behavior is unchanged).
+- Legacy client-side home remains available at `/home-legacy` (not linked in the sidebar). `/home-rpc` is an alias to the new default.

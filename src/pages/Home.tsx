@@ -3,7 +3,17 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm2";
 import Toast from "../components/Toast";
-import { Bike, Footprints, Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
+import {
+  Bike,
+  Footprints,
+  Zap,
+  Frown,
+  Meh,
+  Smile,
+  Laugh,
+  Target,
+  Hash,
+} from "lucide-react";
 import SwipeActions from "../components/SwipeActions";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +22,22 @@ import ActivityEditForm from "../components/ActivityEditForm";
 import GoalProgressCard from "../components/GoalProgressCard";
 import type { Goal } from "../types";
 
-export default function Home() {
+type GoalStat = {
+  goal_id: string;
+  name: string | null;
+  activity_type: "run" | "ride" | "any";
+  metric: "distance" | "count";
+  period: "week" | "month" | "year";
+  target: number;
+  current_value: number;
+  unit: "km" | "activities";
+  progress_ratio: number;
+  comparison_pct: number | null;
+};
+
+const GOAL_RPC = "stats_goal_progress";
+
+export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean }) {
   const navigate = useNavigate();
 
   // --------------------------------------------------
@@ -29,6 +54,7 @@ export default function Home() {
   // Goals
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]); // IDs
+  const [goalStats, setGoalStats] = useState<GoalStat[]>([]);
 
   // Quick log
   const [showQuickLog, setShowQuickLog] = useState(false);
@@ -62,6 +88,29 @@ export default function Home() {
   // prevent concurrent loadMoreFeed calls
   const isLoadingMoreRef = useRef(false);
 
+  const activityOrder: Record<GoalStat["activity_type"], number> = {
+    run: 0,
+    ride: 1,
+    any: 2,
+  };
+
+  const sortGoalStats = (items: GoalStat[]) =>
+    [...items].sort((a, b) => {
+      const aOrder = activityOrder[a.activity_type] ?? 99;
+      const bOrder = activityOrder[b.activity_type] ?? 99;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+
+  const comparisonClass = (comparison: number | null) => {
+    if (comparison === null) return "";
+    if (comparison === 0) return "text-gray-500";
+    if (comparison >= 0) return "text-green-600";
+    if (comparison >= -5) return "text-gray-500";
+    if (comparison >= -15) return "text-yellow-500";
+    return "text-red-600";
+  };
+
   // --------------------------------------------------
   // HELPERS
   // --------------------------------------------------
@@ -69,19 +118,24 @@ export default function Home() {
   async function refreshActivities() {
     if (!userId) return;
 
-    // 1) For goals: last 60 days
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 60);
-    const cutoffStr = cutoff.toISOString().split("T")[0];
+    if (!useRpcGoals) {
+      // 1) For goals: last 60 days
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 60);
+      const cutoffStr = cutoff.toISOString().split("T")[0];
 
-    const { data: goalActs } = await supabase
-      .from("activities")
-      .select("id, user_id, type, date, distance_km, feeling, effort")
-      .eq("user_id", userId)
-      .gte("date", cutoffStr)
-      .order("date", { ascending: false });
+      const { data: goalActs } = await supabase
+        .from("activities")
+        .select("id, user_id, type, date, distance_km, feeling, effort")
+        .eq("user_id", userId)
+        .gte("date", cutoffStr)
+        .order("date", { ascending: false });
 
-    setActivitiesForGoals(goalActs || []);
+      setActivitiesForGoals(goalActs || []);
+    } else {
+      const { data, error } = await supabase.rpc(GOAL_RPC, { user_id: userId });
+      if (!error) setGoalStats((data as GoalStat[]) || []);
+    }
 
     // 2) For feed: first page (20)
     const { data: firstFeed } = await supabase
@@ -159,19 +213,27 @@ export default function Home() {
 
       setSelectedGoals(prefs?.map((p) => p.goal_id) || []);
 
-      // 3) Activities for goals (last 60 days)
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 60);
-      const cutoffStr = cutoff.toISOString().split("T")[0];
+      if (useRpcGoals) {
+        // 3a) Goal stats from Supabase RPC
+        const { data: stats, error: statsErr } = await supabase.rpc(GOAL_RPC, {
+          user_id: user.id,
+        });
+        if (!statsErr) setGoalStats((stats as GoalStat[]) || []);
+      } else {
+        // 3b) Activities for goals (last 60 days) for client-side calc
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 60);
+        const cutoffStr = cutoff.toISOString().split("T")[0];
 
-      const { data: goalActs } = await supabase
-        .from("activities")
-        .select("id, user_id, type, date, distance_km, feeling, effort")
-        .eq("user_id", user.id)
-        .gte("date", cutoffStr)
-        .order("date", { ascending: false });
+        const { data: goalActs } = await supabase
+          .from("activities")
+          .select("id, user_id, type, date, distance_km, feeling, effort")
+          .eq("user_id", user.id)
+          .gte("date", cutoffStr)
+          .order("date", { ascending: false });
 
-      setActivitiesForGoals(goalActs || []);
+        setActivitiesForGoals(goalActs || []);
+      }
 
       // 4) First feed page
       const { data: firstFeed } = await supabase
@@ -213,6 +275,74 @@ export default function Home() {
     .filter((g) => selectedGoals.includes(g.id))
     .slice(0, 3); // still respect up to 3, we’ll *display* max 2
 
+  const homeGoalStats = sortGoalStats(
+    goalStats.filter((g) => selectedGoals.includes(g.goal_id))
+  ).slice(0, 3);
+
+  const showGoalSection = useRpcGoals
+    ? homeGoalStats.length > 0
+    : homeGoals.length > 0;
+
+  const displayedGoals = useRpcGoals
+    ? homeGoalStats.slice(0, 2)
+    : homeGoals.slice(0, 2);
+
+  const goalGridClass =
+    displayedGoals.length === 1
+      ? "grid grid-cols-1 gap-3"
+      : "grid grid-cols-1 sm:grid-cols-2 gap-3";
+
+  const GoalStatCardHome = ({ stat }: { stat: GoalStat }) => {
+    const ratio = Math.max(0, Math.min(1, Number(stat.progress_ratio) || 0));
+    const comparison =
+      stat.comparison_pct === null ? null : Math.round(stat.comparison_pct);
+    const ActivityIcon =
+      stat.activity_type === "run"
+        ? Footprints
+        : stat.activity_type === "ride"
+        ? Bike
+        : Target;
+    const MetricIcon = stat.metric === "distance" ? Target : Hash;
+
+    return (
+      <div className="rounded-xl bg-warm-100 border border-warm-200 shadow-sm px-3 py-2">
+        <div className="flex items-center gap-2 mb-1.5">
+          <ActivityIcon className="w-4 h-4 text-gray-900" />
+          <MetricIcon className="w-3.5 h-3.5 text-gray-500" />
+          <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
+            {stat.name || `${stat.activity_type} ${stat.metric}`}
+          </h3>
+        </div>
+
+        <div className="text-base text-gray-900 font-medium">
+          {Math.round(stat.current_value)} / {Math.round(stat.target)}{" "}
+          {stat.unit}
+        </div>
+
+        <div className="flex gap-1 mt-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-2.5 h-2.5 rounded-full ${
+                i < Math.floor(ratio * 5)
+                  ? "bg-movenotes-accent"
+                  : "bg-gray-300"
+              }`}
+            />
+          ))}
+        </div>
+
+        {comparison !== null && (
+          <p className={`text-sm mt-1 ${comparisonClass(comparison)}`}>
+            {comparison === 0
+              ? "no change from previous period"
+              : `${comparison >= 0 ? "↑" : "↓"} ${comparison}% vs previous`}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   // --------------------------------------------------
   // DELETE / UNDO
   // --------------------------------------------------
@@ -238,24 +368,28 @@ export default function Home() {
         {/* -------------------------------------------------- */}
         {/* HOME GOALS SECTION (above QuickLog buttons)       */}
         {/* -------------------------------------------------- */}
-        {homeGoals.length > 0 && (
+        {showGoalSection && (
           <div
             className="bg-warm-100 border border-warm-200 rounded-xl p-4 shadow-sm mt-4 mb-6"
-            onClick={() => navigate("/stats")}
+            onClick={() => navigate(useRpcGoals ? "/stats" : "/stats-legacy")}
           >
             <h2 className="text-sm font-semibold text-gray-700 mb-3">
               Your Goals
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {homeGoals.slice(0, 2).map((g) => (
-                <GoalProgressCard
-                  key={g.id}
-                  goal={g}
-                  activities={activitiesForGoals}
-                  compact
-                />
-              ))}
+            <div className={goalGridClass}>
+              {useRpcGoals
+                ? displayedGoals.map((g) => (
+                    <GoalStatCardHome key={g.goal_id} stat={g} />
+                  ))
+                : displayedGoals.map((g) => (
+                    <GoalProgressCard
+                      key={g.id}
+                      goal={g}
+                      activities={activitiesForGoals}
+                      compact
+                    />
+                  ))}
             </div>
           </div>
         )}
