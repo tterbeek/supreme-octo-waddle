@@ -36,6 +36,7 @@ type GoalStat = {
 };
 
 const GOAL_RPC = "stats_goal_progress";
+const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
 export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean }) {
   const navigate = useNavigate();
@@ -55,6 +56,12 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   const [goals, setGoals] = useState<Goal[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]); // IDs
   const [goalStats, setGoalStats] = useState<GoalStat[]>([]);
+  const [signedNoteImages, setSignedNoteImages] = useState<Record<string, string>>(
+    {}
+  );
+  const [noteImageOrientation, setNoteImageOrientation] = useState<
+    Record<string, "portrait" | "landscape">
+  >({});
 
   // Quick log
   const [showQuickLog, setShowQuickLog] = useState(false);
@@ -294,6 +301,41 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
       ? "grid grid-cols-1 gap-3"
       : "grid grid-cols-1 sm:grid-cols-2 gap-3";
 
+  // --------------------------------------------------
+  // SIGNED URLS FOR NOTE IMAGES (feeds)
+  // --------------------------------------------------
+  useEffect(() => {
+    const withImages = activities.filter((a) => a.note_image_url);
+    if (withImages.length === 0) {
+      setSignedNoteImages({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        withImages.map(async (a) => {
+          const path = a.note_image_url as string;
+          const { data, error } = await supabase.storage
+            .from(NOTE_BUCKET)
+            .createSignedUrl(path, 3600); // 1h
+          if (error) return [a.id, null] as const;
+          return [a.id, data?.signedUrl || null] as const;
+        })
+      );
+      if (cancelled) return;
+      const map: Record<string, string> = {};
+      entries.forEach(([id, url]) => {
+        if (url) map[id] = url;
+      });
+      setSignedNoteImages(map);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activities]);
+
   const GoalStatCardHome = ({ stat }: { stat: GoalStat }) => {
     const ratio = Math.max(0, Math.min(1, Number(stat.progress_ratio) || 0));
     const comparison =
@@ -514,16 +556,46 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
                 </div>
 
                 {/* Notes */}
-                {a.notes?.trim() && (
-                  <p
-                    className="
-                      mt-2 text-[15px] md:text[17px]
-                      text-gray-600 font-[DMSerifDisplay] italic leading-snug
-                      max-w-xs sm:max-w-sm md:max-w-md mx-auto
-                    "
-                  >
-                    “{a.notes}”
-                  </p>
+                {(a.notes?.trim() || signedNoteImages[a.id]) && (
+                  <div className="mt-3 space-y-2">
+                    {a.notes?.trim() && (
+                      <p
+                        className="
+                          text-[15px] md:text[17px]
+                          text-gray-600 font-[DMSerifDisplay] italic leading-snug
+                          max-w-xs sm:max-w-sm md:max-w-md mx-auto
+                        "
+                      >
+                        “{a.notes}”
+                      </p>
+                    )}
+
+                    {signedNoteImages[a.id] && (
+                      <div>
+                        <img
+                          src={signedNoteImages[a.id]}
+                          alt="Activity note"
+                          loading="lazy"
+                          className={`
+                            rounded-xl border border-warm-200 shadow-sm
+                            ${
+                              noteImageOrientation[a.id] === "portrait"
+                                ? "max-h-80 w-auto max-w-full mx-auto object-contain"
+                                : "w-full max-h-56 object-cover"
+                            }
+                          `}
+                          onLoad={(e) => {
+                            const { naturalWidth, naturalHeight } = e.currentTarget;
+                            setNoteImageOrientation((prev) => ({
+                              ...prev,
+                              [a.id]:
+                                naturalHeight > naturalWidth ? "portrait" : "landscape",
+                            }));
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </SwipeActions>

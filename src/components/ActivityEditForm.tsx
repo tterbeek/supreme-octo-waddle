@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
-import { Zap, Frown, Meh, Smile, Laugh, Trash2 } from "lucide-react";
+import { Zap, Frown, Meh, Smile, Laugh, Trash2, Camera } from "lucide-react";
+
+const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
 type ActivityEditFormProps = {
   activity: any; // existing activity record
@@ -21,10 +23,17 @@ export default function ActivityEditForm({
   const [rating, setRating] = useState(activity.feeling || 3);
   const [effort, setEffort] = useState(activity.effort || 3);
   const [note, setNote] = useState(activity.notes || "");
+  const [noteImageUrl, setNoteImageUrl] = useState(activity.note_image_url || null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [saving, setSaving] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
+  const originalImagePath = useRef<string | null>(activity.note_image_url || null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setAnimateIn(true);
@@ -32,26 +41,128 @@ export default function ActivityEditForm({
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from("activities")
-      .update({
-        title,
-        distance_km: Number(distance),
-        date,
-        feeling: rating,
-        effort,
-        notes: note,
-        note_updated_at: new Date().toISOString(),
-      })
-      .eq("id", activity.id);
+    setUploadError(null);
+    let imageUrl = noteImageUrl;
+    const deletePaths: string[] = [];
 
-    setSaving(false);
+    try {
+      if (selectedFile) {
+        setUploading(true);
+        setUploadProgress(10);
 
-    if (error) {
-      console.error("[EditActivity] Save error:", error.message);
-      alert("Could not save changes");
+        // Compress on edit as well to keep consistency
+        const compressed = await (async () => {
+          const maxDim = 1600;
+          const quality = 0.75;
+          return new Promise<Blob>((resolve, reject) => {
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(selectedFile);
+            img.onload = () => {
+              const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+              const canvas = document.createElement("canvas");
+              canvas.width = Math.round(img.width * scale);
+              canvas.height = Math.round(img.height * scale);
+              const ctx = canvas.getContext("2d");
+              if (!ctx) {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error("Cannot get canvas context"));
+                return;
+              }
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              canvas.toBlob(
+                (blob) => {
+                  URL.revokeObjectURL(objectUrl);
+                  if (!blob) {
+                    reject(new Error("Unable to compress image"));
+                  } else {
+                    resolve(blob);
+                  }
+                },
+                "image/jpeg",
+                quality
+              );
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(objectUrl);
+              reject(new Error("Could not load image"));
+            };
+            img.src = objectUrl;
+          });
+        })();
+
+        setUploadProgress(40);
+
+        const {
+          data: { user },
+          error: userErr,
+        } = await supabase.auth.getUser();
+        if (userErr || !user) throw userErr || new Error("No user");
+
+        const path = `${user.id}/${activity.id}-${Date.now()}.jpg`;
+        const { error: uploadErr } = await supabase.storage
+          .from(NOTE_BUCKET)
+          .upload(path, compressed, {
+            contentType: "image/jpeg",
+            upsert: true,
+          });
+        if (uploadErr) throw uploadErr;
+
+        setUploadProgress(80);
+        imageUrl = path;
+
+        if (originalImagePath.current && originalImagePath.current !== imageUrl) {
+          deletePaths.push(originalImagePath.current);
+        }
+      }
+
+      if (noteImageUrl === null && selectedFile === null && activity.note_image_url) {
+        // cleared existing image
+        imageUrl = null;
+        if (originalImagePath.current) {
+          deletePaths.push(originalImagePath.current);
+        }
+      }
+
+      await supabase
+        .from("activities")
+        .update({
+          title,
+          distance_km: Number(distance),
+          date,
+          feeling: rating,
+          effort,
+          notes: note,
+          note_updated_at: new Date().toISOString(),
+          note_image_url: imageUrl,
+        })
+        .eq("id", activity.id);
+
+      setUploadProgress(100);
+
+      // best-effort cleanup of old images
+      if (deletePaths.length > 0) {
+        const { error: removeErr } = await supabase.storage
+          .from(NOTE_BUCKET)
+          .remove(deletePaths);
+        if (removeErr) {
+          console.warn("[EditActivity] Failed to delete old images", removeErr.message);
+        } else {
+          // avoid re-deleting on subsequent edits
+          originalImagePath.current = imageUrl;
+        }
+      } else {
+        originalImagePath.current = imageUrl;
+      }
+    } catch (err: any) {
+      console.error("[EditActivity] Save error:", err);
+      setUploadError(err?.message || "Could not save changes");
+      setSaving(false);
+      setUploading(false);
       return;
     }
+
+    setSaving(false);
+    setUploading(false);
 
     onUpdated();
     setAnimateIn(false);
@@ -211,6 +322,66 @@ export default function ActivityEditForm({
           placeholder="Add a short note about your activity..."
           className="w-full border border-warm-200 rounded-md p-2 mb-4 resize-none focus:ring-1 focus:ring-movenotes-primary"
         />
+
+        {/* Photo attach / clear */}
+        <div className="mb-4 flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+          >
+            <Camera className="w-4 h-4 text-amber-700" />
+            <span>Snap or attach</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setSelectedFile(file);
+              setUploadError(null);
+              setUploadProgress(0);
+            }}
+            className="hidden"
+          />
+          {noteImageUrl && (
+            <button
+              type="button"
+              className="text-xs text-red-600 underline"
+              onClick={() => {
+                setNoteImageUrl(null);
+                setSelectedFile(null);
+              }}
+            >
+              Remove current image
+            </button>
+          )}
+          {selectedFile && (
+            <span className="text-xs text-gray-600">
+              Selected: {selectedFile.name}
+            </span>
+          )}
+        </div>
+
+        {uploadError && (
+          <p className="text-sm text-red-600 mb-2">{uploadError}</p>
+        )}
+        {(uploading || saving) && (
+          <div className="mb-4">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-2 bg-movenotes-primary transition-all"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              {uploading ? "Uploading image..." : "Saving..."}
+            </p>
+          </div>
+        )}
 
         {/* Save */}
         <button

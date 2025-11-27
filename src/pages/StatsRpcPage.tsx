@@ -459,11 +459,8 @@ export default function StatsRpcPage() {
       <div className="p-2 max-w-md mx-auto">
         <div className="mb-4">
           <h1 className="text-lg font-bold text-gray-600 text-center">
-            Stats (Supabase)
+            Stats
           </h1>
-          <p className="text-xs text-gray-500 text-center mt-1">
-            All metrics are precomputed via Supabase stored procedures.
-          </p>
         </div>
 
         {loading && (
