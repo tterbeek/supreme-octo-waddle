@@ -3,9 +3,14 @@ import type { ReactNode, MouseEvent, TouchEvent } from "react";
 type SwipeActionsProps = {
   children: ReactNode;
   onEdit: () => void;
+  disabled?: boolean;
 };
 
-export default function SwipeActions({ children, onEdit }: SwipeActionsProps) {
+export default function SwipeActions({
+  children,
+  onEdit,
+  disabled,
+}: SwipeActionsProps) {
   let startY = 0;
   let isScrolling = false;
 
@@ -33,10 +38,10 @@ export default function SwipeActions({ children, onEdit }: SwipeActionsProps) {
 
   return (
     <div
-      onClick={onClick}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+      onClick={disabled ? undefined : onClick}
+      onTouchStart={disabled ? undefined : onTouchStart}
+      onTouchMove={disabled ? undefined : onTouchMove}
+      onTouchEnd={disabled ? undefined : onTouchEnd}
       className="relative"
       style={{ touchAction: "pan-y" }} // Allow natural scrolling
     >

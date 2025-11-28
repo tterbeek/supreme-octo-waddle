@@ -66,6 +66,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     url: string;
     activity: any;
   } | null>(null);
+  const lightboxOpenedAt = useRef<number>(0);
 
   // Quick log
   const [showQuickLog, setShowQuickLog] = useState(false);
@@ -487,6 +488,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
             <SwipeActions
               key={a.id}
               onEdit={() => setEditActivity(a)}
+              disabled={!!lightbox}
             >
               <div
                 className="
@@ -591,6 +593,15 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
                           `}
                           onClick={(e) => {
                             e.stopPropagation();
+                            lightboxOpenedAt.current = Date.now();
+                            setLightbox({ url: signedNoteImages[a.id], activity: a });
+                          }}
+                          onTouchStart={(e) => {
+                            e.stopPropagation();
+                          }}
+                          onTouchEnd={(e) => {
+                            e.stopPropagation();
+                            lightboxOpenedAt.current = Date.now();
                             setLightbox({ url: signedNoteImages[a.id], activity: a });
                           }}
                           onLoad={(e) => {
@@ -617,7 +628,14 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         {lightbox && (
           <div
             className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col"
-            onClick={() => setLightbox(null)}
+            onClick={(e) => {
+              // ignore the immediate click that follows the tap that opened the lightbox
+              if (Date.now() - lightboxOpenedAt.current < 300) {
+                e.stopPropagation();
+                return;
+              }
+              setLightbox(null);
+            }}
           >
             <button
               aria-label="Close"
