@@ -172,6 +172,16 @@ export default function ActivityEditForm({
   const handleDelete = async () => {
     if (!confirm("Delete this activity?")) return;
 
+    // Best effort: remove associated image from storage
+    if (activity.note_image_url) {
+      const { error: removeErr } = await supabase.storage
+        .from(NOTE_BUCKET)
+        .remove([activity.note_image_url]);
+      if (removeErr) {
+        console.warn("[EditActivity] Could not delete image from storage", removeErr.message);
+      }
+    }
+
     const { error } = await supabase
       .from("activities")
       .delete()

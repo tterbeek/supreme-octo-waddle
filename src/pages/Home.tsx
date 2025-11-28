@@ -62,6 +62,10 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   const [noteImageOrientation, setNoteImageOrientation] = useState<
     Record<string, "portrait" | "landscape">
   >({});
+  const [lightbox, setLightbox] = useState<{
+    url: string;
+    activity: any;
+  } | null>(null);
 
   // Quick log
   const [showQuickLog, setShowQuickLog] = useState(false);
@@ -318,7 +322,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
           const path = a.note_image_url as string;
           const { data, error } = await supabase.storage
             .from(NOTE_BUCKET)
-            .createSignedUrl(path, 3600); // 1h
+            .createSignedUrl(path, 86400); // 24h
           if (error) return [a.id, null] as const;
           return [a.id, data?.signedUrl || null] as const;
         })
@@ -491,6 +495,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
                   max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
                   sm:p-6 md:p-7
                 "
+                onClick={() => setEditActivity(a)}
               >
                 {/* Icon + Title */}
                 <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
@@ -584,6 +589,10 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
                                 : "w-full max-h-56 object-cover"
                             }
                           `}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLightbox({ url: signedNoteImages[a.id], activity: a });
+                          }}
                           onLoad={(e) => {
                             const { naturalWidth, naturalHeight } = e.currentTarget;
                             setNoteImageOrientation((prev) => ({
@@ -605,6 +614,63 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         {/* -------------------------------------------------- */}
         {/* MODALS & TOASTS                                    */}
         {/* -------------------------------------------------- */}
+        {lightbox && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col"
+            onClick={() => setLightbox(null)}
+          >
+            <button
+              aria-label="Close"
+              className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightbox(null);
+              }}
+            >
+              ×
+            </button>
+            <div className="flex-1 flex items-center justify-center p-4">
+              <div className="relative max-w-5xl w-full h-full flex items-center justify-center">
+                <div className="absolute inset-4 rounded-3xl pointer-events-none shadow-md shadow-[rgba(0,0,0,0.15)]" />
+                <img
+                  src={lightbox.url}
+                  alt="Activity note full size"
+                  className="relative max-h-full max-w-full object-contain rounded-3xl"
+                />
+                <div className="absolute inset-0 rounded-3xl pointer-events-none"
+                  style={{
+                    background:
+                      "radial-gradient(circle at center, transparent 60%, rgba(0,0,0,0.18) 100%)",
+                  }}
+                />
+              </div>
+            </div>
+            <div className="pb-6 px-6 text-center text-sm text-white/80">
+              {lightbox.activity?.date && (
+                <span>
+                  {new Date(lightbox.activity.date).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              )}
+              {lightbox.activity?.distance_km && (
+                <span className="mx-2">•</span>
+              )}
+              {lightbox.activity?.distance_km && (
+                <span>{Number(lightbox.activity.distance_km).toFixed(1)} km</span>
+              )}
+              {lightbox.activity?.type && (
+                <span className="mx-2">•</span>
+              )}
+              {lightbox.activity?.type && (
+                <span className="uppercase">{lightbox.activity.type}</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {showQuickLog && activityType && (
           <QuickLogForm
             type={activityType}
