@@ -34,9 +34,14 @@ export default function ActivityEditForm({
   const startY = useRef<number | null>(null);
   const originalImagePath = useRef<string | null>(activity.note_image_url || null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const openedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
+    openedAtRef.current = Date.now();
     setAnimateIn(true);
+    return () => {};
   }, []);
 
   const handleSave = async () => {
@@ -200,10 +205,18 @@ export default function ActivityEditForm({
 
   return (
 <div
+  ref={overlayRef}
   className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 overscroll-none"
-  onClick={onClose}
+  onClick={() => {
+    const elapsed = Date.now() - openedAtRef.current;
+    if (elapsed < 400) {
+      return;
+    }
+    onClose();
+  }}
 >
   <div
+    ref={panelRef}
     onClick={(e) => e.stopPropagation()}
     onTouchStart={(e) => {
       startY.current = e.touches[0].clientY;
@@ -221,7 +234,10 @@ export default function ActivityEditForm({
       const threshold = 80;
       if (dragY > threshold) {
         setAnimateIn(false);
-        setTimeout(onClose, 200);
+        setTimeout(() => {
+          console.log("[ActivityEditForm] drag close -> onClose");
+          onClose();
+        }, 200);
       }
       setDragY(0);
       startY.current = null;
