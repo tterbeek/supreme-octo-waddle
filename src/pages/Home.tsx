@@ -67,6 +67,11 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     activity: any;
   } | null>(null);
   const lightboxOpenedAt = useRef<number>(0);
+  const imageTouch = useRef<{ x: number; y: number; moved: boolean }>({
+    x: 0,
+    y: 0,
+    moved: false,
+  });
 
   // Quick log
   const [showQuickLog, setShowQuickLog] = useState(false);
@@ -597,9 +602,19 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
                             setLightbox({ url: signedNoteImages[a.id], activity: a });
                           }}
                           onTouchStart={(e) => {
-                            e.stopPropagation();
+                            const t = e.touches[0];
+                            imageTouch.current = { x: t.clientX, y: t.clientY, moved: false };
+                          }}
+                          onTouchMove={(e) => {
+                            const t = e.touches[0];
+                            const dx = Math.abs(t.clientX - imageTouch.current.x);
+                            const dy = Math.abs(t.clientY - imageTouch.current.y);
+                            if (dx > 8 || dy > 8) {
+                              imageTouch.current.moved = true;
+                            }
                           }}
                           onTouchEnd={(e) => {
+                            if (imageTouch.current.moved) return; // treat as scroll, do nothing
                             e.stopPropagation();
                             lightboxOpenedAt.current = Date.now();
                             setLightbox({ url: signedNoteImages[a.id], activity: a });
