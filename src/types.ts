@@ -1,9 +1,9 @@
 export type Preset = {
-  id: number;
-  type: "run" | "ride";
+  id: string;
+  type: string;
   name: string;
-  distance_km: number;
-  duration_min: number;
+  distance_km: number | null;
+  duration_min: number | null;
   effort?: number; 
 };
 
@@ -20,4 +20,3 @@ export type Goal = {
   created_at?: string;
   updated_at?: string;
 };
-

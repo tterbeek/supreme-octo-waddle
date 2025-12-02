@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import { Zap, Frown, Meh, Smile, Laugh, Trash2, Camera } from "lucide-react";
+import { ACTIVITY_TYPES } from "../config/activityTypes";
 
 const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
@@ -19,6 +20,15 @@ export default function ActivityEditForm({
 }: ActivityEditFormProps) {
   const [title, setTitle] = useState(activity.title || "");
   const [distance, setDistance] = useState(activity.distance_km || "");
+  const activityType = activity.type;
+  const typeConfig = ACTIVITY_TYPES[activityType];
+  const [showOptionalDistance, setShowOptionalDistance] = useState(
+    activity.distance_km != null && !typeConfig.defaultFields.includes("distance_km")
+  );
+  const [duration, setDuration] = useState(activity.duration_min || "");
+  const [showOptionalDuration, setShowOptionalDuration] = useState(
+    activity.duration_min != null && !typeConfig.defaultFields.includes("duration_min")
+  );
   const [date, setDate] = useState(activity.date || "");
   const [rating, setRating] = useState(activity.feeling || 3);
   const [effort, setEffort] = useState(activity.effort || 3);
@@ -49,6 +59,25 @@ export default function ActivityEditForm({
     setUploadError(null);
     let imageUrl = noteImageUrl;
     const deletePaths: string[] = [];
+
+    const distanceValue =
+      (typeConfig.defaultFields.includes("distance_km") || showOptionalDistance) &&
+      distance
+        ? Number(distance)
+        : null;
+
+    const durationValue =
+      (typeConfig.defaultFields.includes("duration_min") || showOptionalDuration) &&
+      duration
+        ? Number(duration)
+        : null;
+
+    const effortValue =
+      ["run", "ride", "swim", "hike"].includes(activityType)
+        ? Number(effort) || null
+        : null;
+
+    const feelingValue = Number(rating) || null;
 
     try {
       if (selectedFile) {
@@ -132,10 +161,11 @@ export default function ActivityEditForm({
         .from("activities")
         .update({
           title,
-          distance_km: Number(distance),
+          distance_km: distanceValue,
+          duration_min: durationValue,
           date,
-          feeling: rating,
-          effort,
+          feeling: feelingValue,
+          effort: effortValue,
           notes: note,
           note_updated_at: new Date().toISOString(),
           note_image_url: imageUrl,
@@ -269,19 +299,62 @@ export default function ActivityEditForm({
         <label className="text-sm text-gray-600">Date</label>
         <input
           type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full border border-warm-200 rounded-md p-2 mb-4"
-        />
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className="w-full border border-warm-200 rounded-md p-2 mb-4"
+      />
 
-        {/* Distance */}
-        <label className="text-sm text-gray-600">Distance (km)</label>
-        <input
-          type="number"
-          value={distance}
-          onChange={(e) => setDistance(e.target.value)}
-          className="w-full border border-warm-200 rounded-md p-2 mb-4"
-        />
+        {/* DISTANCE FIELD (default or optional) */}
+        {(typeConfig.defaultFields.includes("distance_km") || showOptionalDistance) && (
+          <>
+            <label className="text-sm text-gray-600">Distance (km)</label>
+            <input
+              type="number"
+              value={distance}
+              onChange={(e) => setDistance(e.target.value)}
+              className="w-full border border-warm-200 rounded-md p-2 mb-4"
+            />
+          </>
+        )}
+
+        {/* OPTIONAL DISTANCE BUTTON */}
+        {!typeConfig.defaultFields.includes("distance_km") &&
+          typeConfig.optionalFields.includes("distance_km") &&
+          !showOptionalDistance && (
+            <button
+              type="button"
+              className="text-blue-600 text-sm underline mb-4"
+              onClick={() => setShowOptionalDistance(true)}
+            >
+              + Add distance
+            </button>
+          )}
+
+        {/* DURATION FIELD (default or optional) */}
+        {(typeConfig.defaultFields.includes("duration_min") || showOptionalDuration) && (
+          <>
+            <label className="text-sm text-gray-600">Duration (min)</label>
+            <input
+              type="number"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className="w-full border border-warm-200 rounded-md p-2 mb-4"
+            />
+          </>
+        )}
+
+        {/* OPTIONAL DURATION BUTTON */}
+        {!typeConfig.defaultFields.includes("duration_min") &&
+          typeConfig.optionalFields.includes("duration_min") &&
+          !showOptionalDuration && (
+            <button
+              type="button"
+              className="text-blue-600 text-sm underline mb-4"
+              onClick={() => setShowOptionalDuration(true)}
+            >
+              + Add duration
+            </button>
+          )}
 
         {/* Feeling & Effort */}
         <div className="mb-4">
@@ -314,28 +387,30 @@ export default function ActivityEditForm({
               })}
             </div>
 
-            {/* Effort Row */}
-            <div className="flex justify-between w-full max-w-sm">
-              {[1, 2, 3, 4, 5].map((val) => {
-                const active = val <= effort;
-                return (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setEffort(val)}
-                    className={`transition transform active:scale-95 ${
-                      effort === val ? "scale-110" : ""
-                    }`}
-                  >
-                    <Zap
-                      className={`w-5 h-5 ${
-                        active ? "text-movenotes-accent" : "text-gray-300"
+            {/* EFFORT — only for run/ride/swim/hike */}
+            {["run", "ride", "swim", "hike"].includes(activityType) && (
+              <div className="flex justify-between w-full max-w-sm">
+                {[1, 2, 3, 4, 5].map((val) => {
+                  const active = val <= effort;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setEffort(val)}
+                      className={`transition transform active:scale-95 ${
+                        effort === val ? "scale-110" : ""
                       }`}
-                    />
-                  </button>
-                );
-              })}
-            </div>
+                    >
+                      <Zap
+                        className={`w-5 h-5 ${
+                          active ? "text-movenotes-accent" : "text-gray-300"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

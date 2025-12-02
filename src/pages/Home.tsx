@@ -2,7 +2,10 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm2";
+import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
+import { IconActivity } from "@tabler/icons-react";
+import { ACTIVITY_TYPES } from "../config/activityTypes";
 import {
   Bike,
   Footprints,
@@ -74,8 +77,9 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   });
 
   // Quick log
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
   const [showQuickLog, setShowQuickLog] = useState(false);
-  const [activityType, setActivityType] = useState<"run" | "ride" | null>(null);
 
   // Toasts
   const [showToast, setShowToast] = useState(false);
@@ -455,31 +459,14 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
           Log Activity
         </h2>
 
-        <div className="flex gap-4">
-          <button
-            onClick={() => {
-              setActivityType("run");
-              setShowQuickLog(true);
-            }}
-            className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
-          >
-            <span className="text-xl">+</span>
-            <Footprints className="w-5 h-5" />
-            <span>Run</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActivityType("ride");
-              setShowQuickLog(true);
-            }}
-            className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
-          >
-            <span className="text-xl">+</span>
-            <Bike className="w-5 h-5" />
-            <span>Ride</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowTypeSelector(true)}
+          className="w-full flex items-center justify-center gap-2 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium my-2 transition transform hover:-translate-y-0.5 active:scale-95"
+        >
+          <span className="text-xl">+</span>
+          <IconActivity size={20} strokeWidth={1.8} />
+          <span>Activity</span>
+        </button>
 
         {/* -------------------------------------------------- */}
         {/* RECENT HISTORY                                     */}
@@ -489,157 +476,176 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         </h2>
 
         <div className="flex flex-col gap-3">
-          {activities.map((a) => (
-            <SwipeActions
-              key={a.id}
-              onEdit={() => setEditActivity(a)}
-              disabled={!!lightbox}
-            >
-              <div
-                className="
-                  rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
-                  w-full mx-auto
-                  max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
-                  sm:p-6 md:p-7
-                "
-                onClick={() => setEditActivity(a)}
+          {activities.map((a) => {
+            const typeConfig = ACTIVITY_TYPES[a.type] ?? ACTIVITY_TYPES["other"];
+            const TypeIcon = typeConfig.Icon;
+            return (
+              <SwipeActions
+                key={a.id}
+                onEdit={() => setEditActivity(a)}
+                disabled={!!lightbox}
               >
-                {/* Icon + Title */}
-                <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
-                  {a.type === "run" ? (
-                    <Footprints className="w-5 h-5 md:w-6 md:h-6 text-gray-900 opacity-90" />
-                  ) : (
-                    <Bike className="w-5 h-5 md:w-6 md:h-6 text-gray-900 opacity-90" />
+                <div
+                  className="
+                    rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
+                    w-full mx-auto
+                    max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
+                    sm:p-6 md:p-7
+                  "
+                  onClick={() => setEditActivity(a)}
+                >
+                  {/* Icon + Title */}
+                  <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
+                    <TypeIcon size={24} strokeWidth={1.8} />
+                    <span className="font-semibold text-gray-900 text-base md:text-lg leading-tight">
+                      {a.title || typeConfig.label}
+                    </span>
+                  </div>
+
+                  {/* Distance/Duration + Date */}
+                  <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1 flex-wrap">
+                    {a.distance_km != null && (
+                      <>
+                        <span>{a.distance_km} km</span>
+                        <span className="text-gray-400">·</span>
+                      </>
+                    )}
+                    {a.duration_min != null && (
+                      <>
+                        <span>{a.duration_min} min</span>
+                        <span className="text-gray-400">·</span>
+                      </>
+                    )}
+                    <span>
+                      {new Date(a.date).toLocaleDateString("en-GB", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                        year: "2-digit"
+                      }).replace(/(\d{2})$/, "’$1")}
+                    </span>
+                  </div>
+
+                  {/* Feeling + Effort */}
+                  <div className="flex items-center justify-center gap-3 my-3">
+                    {/* Feeling */}
+                    {(() => {
+                      const f = Number(a.feeling) || 0;
+                      const base = "w-5 h-5 md:w-6 md:h-6";
+                      if (f <= 1)
+                        return (
+                          <Frown className={`${base} text-movenotes-accent`} />
+                        );
+                      if (f === 2)
+                        return <Meh className={`${base} text-movenotes-accent`} />;
+                      if (f === 3)
+                        return (
+                          <Smile className={`${base} text-movenotes-accent`} />
+                        );
+                      if (f >= 4)
+                        return (
+                          <Laugh className={`${base} text-movenotes-accent`} />
+                        );
+                      return null;
+                    })()}
+
+                    {/* Effort */}
+                    <div className="flex items-center gap-1 md:gap-1.5">
+                      {Array.from({ length: Number(a.effort) || 0 }).map(
+                        (_, i) => (
+                          <Zap
+                            key={i}
+                            className="w-4 h-4 md:w-5 md:h-5 text-movenotes-accent"
+                          />
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  {(a.notes?.trim() || signedNoteImages[a.id]) && (
+                    <div className="mt-3 space-y-2">
+                      {a.notes?.trim() && (
+                        <p
+                          className="
+                            text-[15px] md:text[17px]
+                            text-gray-600 font-[DMSerifDisplay] italic leading-snug
+                            max-w-xs sm:max-w-sm md:max-w-md mx-auto
+                          "
+                        >
+                          “{a.notes}”
+                        </p>
+                      )}
+
+                      {signedNoteImages[a.id] && (
+                        <div>
+                          <img
+                            src={signedNoteImages[a.id]}
+                            alt="Activity note"
+                            loading="lazy"
+                            className={`
+                              rounded-xl border border-warm-200 shadow-sm
+                              ${
+                                noteImageOrientation[a.id] === "portrait"
+                                  ? "max-h-80 w-auto max-w-full mx-auto object-contain"
+                                  : "w-full max-h-56 object-cover"
+                              }
+                            `}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              lightboxOpenedAt.current = Date.now();
+                              setLightbox({ url: signedNoteImages[a.id], activity: a });
+                            }}
+                            onTouchStart={(e) => {
+                              const t = e.touches[0];
+                              imageTouch.current = { x: t.clientX, y: t.clientY, moved: false };
+                            }}
+                            onTouchMove={(e) => {
+                              const t = e.touches[0];
+                              const dx = Math.abs(t.clientX - imageTouch.current.x);
+                              const dy = Math.abs(t.clientY - imageTouch.current.y);
+                              if (dx > 8 || dy > 8) {
+                                imageTouch.current.moved = true;
+                              }
+                            }}
+                            onTouchEnd={(e) => {
+                              if (imageTouch.current.moved) return; // treat as scroll, do nothing
+                              e.stopPropagation();
+                              lightboxOpenedAt.current = Date.now();
+                              setLightbox({ url: signedNoteImages[a.id], activity: a });
+                            }}
+                            onLoad={(e) => {
+                              const { naturalWidth, naturalHeight } = e.currentTarget;
+                              setNoteImageOrientation((prev) => ({
+                                ...prev,
+                                [a.id]:
+                                  naturalHeight > naturalWidth ? "portrait" : "landscape",
+                              }));
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   )}
-
-                  <span className="font-semibold text-gray-900 text-base md:text-lg leading-tight">
-                    {a.title || (a.type === "run" ? "Run" : "Ride")}
-                  </span>
                 </div>
-
-                {/* Distance + Date */}
-                <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1">
-                  <span>{a.distance_km} km</span>
-                  <span className="text-gray-400">·</span>
-                  <span>
-                    {new Date(a.date).toLocaleDateString("en-GB", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      year: "2-digit"
-                    }).replace(/(\d{2})$/, "’$1")}
-                  </span>
-                </div>
-
-                {/* Feeling + Effort */}
-                <div className="flex items-center justify-center gap-3 my-3">
-                  {/* Feeling */}
-                  {(() => {
-                    const f = Number(a.feeling) || 0;
-                    const base = "w-5 h-5 md:w-6 md:h-6";
-                    if (f <= 1)
-                      return (
-                        <Frown className={`${base} text-movenotes-accent`} />
-                      );
-                    if (f === 2)
-                      return <Meh className={`${base} text-movenotes-accent`} />;
-                    if (f === 3)
-                      return (
-                        <Smile className={`${base} text-movenotes-accent`} />
-                      );
-                    if (f >= 4)
-                      return (
-                        <Laugh className={`${base} text-movenotes-accent`} />
-                      );
-                    return null;
-                  })()}
-
-                  {/* Effort */}
-                  <div className="flex items-center gap-1 md:gap-1.5">
-                    {Array.from({ length: Number(a.effort) || 0 }).map(
-                      (_, i) => (
-                        <Zap
-                          key={i}
-                          className="w-4 h-4 md:w-5 md:h-5 text-movenotes-accent"
-                        />
-                      )
-                    )}
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {(a.notes?.trim() || signedNoteImages[a.id]) && (
-                  <div className="mt-3 space-y-2">
-                    {a.notes?.trim() && (
-                      <p
-                        className="
-                          text-[15px] md:text[17px]
-                          text-gray-600 font-[DMSerifDisplay] italic leading-snug
-                          max-w-xs sm:max-w-sm md:max-w-md mx-auto
-                        "
-                      >
-                        “{a.notes}”
-                      </p>
-                    )}
-
-                    {signedNoteImages[a.id] && (
-                      <div>
-                        <img
-                          src={signedNoteImages[a.id]}
-                          alt="Activity note"
-                          loading="lazy"
-                          className={`
-                            rounded-xl border border-warm-200 shadow-sm
-                            ${
-                              noteImageOrientation[a.id] === "portrait"
-                                ? "max-h-80 w-auto max-w-full mx-auto object-contain"
-                                : "w-full max-h-56 object-cover"
-                            }
-                          `}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            lightboxOpenedAt.current = Date.now();
-                            setLightbox({ url: signedNoteImages[a.id], activity: a });
-                          }}
-                          onTouchStart={(e) => {
-                            const t = e.touches[0];
-                            imageTouch.current = { x: t.clientX, y: t.clientY, moved: false };
-                          }}
-                          onTouchMove={(e) => {
-                            const t = e.touches[0];
-                            const dx = Math.abs(t.clientX - imageTouch.current.x);
-                            const dy = Math.abs(t.clientY - imageTouch.current.y);
-                            if (dx > 8 || dy > 8) {
-                              imageTouch.current.moved = true;
-                            }
-                          }}
-                          onTouchEnd={(e) => {
-                            if (imageTouch.current.moved) return; // treat as scroll, do nothing
-                            e.stopPropagation();
-                            lightboxOpenedAt.current = Date.now();
-                            setLightbox({ url: signedNoteImages[a.id], activity: a });
-                          }}
-                          onLoad={(e) => {
-                            const { naturalWidth, naturalHeight } = e.currentTarget;
-                            setNoteImageOrientation((prev) => ({
-                              ...prev,
-                              [a.id]:
-                                naturalHeight > naturalWidth ? "portrait" : "landscape",
-                            }));
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </SwipeActions>
-          ))}
+              </SwipeActions>
+            );
+          })}
         </div>
 
         {/* -------------------------------------------------- */}
         {/* MODALS & TOASTS                                    */}
         {/* -------------------------------------------------- */}
+        <SelectActivityTypeModal
+          open={showTypeSelector}
+          onClose={() => setShowTypeSelector(false)}
+          onSelect={(typeId) => {
+            setSelectedType(typeId);
+            setShowTypeSelector(false);
+            setShowQuickLog(true);
+          }}
+        />
+
         {lightbox && (
           <div
             className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col"
@@ -694,6 +700,12 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
               {lightbox.activity?.distance_km && (
                 <span>{Number(lightbox.activity.distance_km).toFixed(1)} km</span>
               )}
+              {lightbox.activity?.duration_min && (
+                <>
+                  <span className="mx-2">•</span>
+                  <span>{Number(lightbox.activity.duration_min)} min</span>
+                </>
+              )}
               {lightbox.activity?.type && (
                 <span className="mx-2">•</span>
               )}
@@ -704,12 +716,11 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
           </div>
         )}
 
-        {showQuickLog && activityType && (
+        {showQuickLog && (
           <QuickLogForm
-            type={activityType}
+            initialType={selectedType ?? "run"}
             onClose={() => {
               setShowQuickLog(false);
-              setActivityType(null);
             }}
             onLogged={async (activityId) => {
               setLastActivityId(activityId);

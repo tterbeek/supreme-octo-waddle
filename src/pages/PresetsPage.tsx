@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
-import { Zap, Footprints, Bike } from "lucide-react";
+import { Zap } from "lucide-react";
 import type { Preset } from "../types";
 import PresetForm from "../components/PresetForm";
+import { ACTIVITY_TYPES } from "../config/activityTypes";
 
 
 
@@ -11,16 +12,16 @@ export default function PresetsPage() {
   const navigate = useNavigate();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [edit, setEdit] = useState<
-    Record<string, { name: string; distance: string; effort: number }>
+    Record<
+      string,
+      { name: string; distance: string; duration: string; effort: number | null }
+    >
   >({});
 
-const [showForm, setShowForm] = useState(false);
-const [newType, setNewType] = useState<"run" | "ride" | null>(null);
-
-const openForm = (type: "run" | "ride") => {
-  setNewType(type);
-  setShowForm(true);
-};
+  const [showForm, setShowForm] = useState(false);
+  const [selectedType, setSelectedType] = useState<
+    keyof typeof ACTIVITY_TYPES
+  >("run");
 
 
   // Load presets
@@ -41,11 +42,15 @@ const openForm = (type: "run" | "ride") => {
       setPresets(data || []);
 
       // Initialize editable copy
-      const obj: Record<string, { name: string; distance: string; effort: number }> = {};
+      const obj: Record<
+        string,
+        { name: string; distance: string; duration: string; effort: number | null }
+      > = {};
       (data || []).forEach((p) => {
         obj[p.id] = {
           name: p.name ?? "",
           distance: String(p.distance_km ?? ""),
+          duration: String(p.duration_min ?? ""),
           effort: p.effort ?? 3,
         };
       });
@@ -56,7 +61,11 @@ const openForm = (type: "run" | "ride") => {
   }, []);
 
   // Update local edit state
-  const setField = (id: string, field: "name" | "distance" | "effort", value: any) => {
+  const setField = (
+    id: string,
+    field: "name" | "distance" | "duration" | "effort",
+    value: any
+  ) => {
     setEdit((prev) => ({
       ...prev,
       [id]: { ...prev[id], [field]: value },
@@ -70,13 +79,21 @@ const openForm = (type: "run" | "ride") => {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    const updates = Object.entries(edit).map(([id, e]) => ({
-      id,
-      user_id: user.id,
-      name: e.name,
-      distance_km: e.distance === "" ? null : Number(e.distance),
-      effort: e.effort ?? 3,
-    }));
+    const updates = Object.entries(edit).map(([id, e]) => {
+      const typeConfig = ACTIVITY_TYPES[
+        (presets.find((p) => p.id === id)?.type as keyof typeof ACTIVITY_TYPES) ||
+          "other"
+      ];
+      const allowEffort = ["run", "ride", "swim", "hike"].includes(typeConfig.id);
+      return {
+        id,
+        user_id: user.id,
+        name: e.name,
+        distance_km: e.distance === "" ? null : Number(e.distance),
+        duration_min: e.duration === "" ? null : Number(e.duration),
+        effort: allowEffort ? e.effort ?? 3 : null,
+      };
+    });
 
     await supabase.from("presets").upsert(updates, { onConflict: "id" });
     navigate("/");
@@ -88,6 +105,10 @@ const openForm = (type: "run" | "ride") => {
     setPresets((prev) => prev.filter((p) => String(p.id) !== id));
   };
 
+  const filteredPresets = presets.filter((p) => p.type === selectedType);
+  const selectedTypeLabel =
+    ACTIVITY_TYPES[selectedType]?.label || selectedType;
+
   // ✅ Proper return block
   return (
 <div className="mb-4">
@@ -95,181 +116,143 @@ const openForm = (type: "run" | "ride") => {
     Presets
   </h1>
 
-{/* Add Preset Buttons */}
-<h2 className="text-sm font-medium text-gray-500 mb-2">Add Preset</h2>
+{/* Activity type selector */}
+<div className="flex gap-3 my-4 overflow-x-auto pb-2">
+  {Object.values(ACTIVITY_TYPES).map((t) => {
+    const Icon = t.Icon;
+    return (
+      <button
+        key={t.id}
+        onClick={() => setSelectedType(t.id as keyof typeof ACTIVITY_TYPES)}
+        className={`flex flex-col items-center px-3 py-2 rounded-xl border ${
+          selectedType === t.id
+            ? "bg-amber-100 border-amber-300"
+            : "bg-warm-100 border-warm-200"
+        }`}
+      >
+        <Icon size={22} />
+        <span className="text-xs mt-1">{t.label}</span>
+      </button>
+    );
+  })}
+</div>
 
+{/* Add Preset Button */}
+<h2 className="text-sm font-medium text-gray-500 mb-2">Add Preset</h2>
 <div className="flex gap-4 mb-6">
   <button
-    onClick={() => openForm("run")}
+    onClick={() => setShowForm(true)}
     className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
   >
     <span className="text-xl">+</span>
-    <Footprints className="w-5 h-5" />
-    <span>Run</span>
-  </button>
-
-  <button
-    onClick={() => openForm("ride")}
-        className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
-  >
-    <span className="text-xl">+</span>
-    <Bike className="w-5 h-5" />
-    <span>Ride</span>
+    <span>Add Preset</span>
   </button>
 </div>
 
-      {presets.length === 0 && (
-        <p className="text-gray-500 text-sm mb-4">No presets yet</p>
+      {filteredPresets.length === 0 && (
+        <p className="text-gray-500 text-sm mb-4">No presets for this activity type</p>
       )}
 
-      {/* --- RUNNING GROUP --- */}
-      {presets.filter((p) => p.type === "run").length > 0 && (
+      {filteredPresets.length > 0 && (
         <div className="mb-8">
-          <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <Footprints className="w-5 h-5 text-gray-900 opacity-80" />
-            <span>RUN</span>
+          <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-2 capitalize">
+            <span>{selectedTypeLabel}</span>
           </h2>
 
-          {presets
-            .filter((p) => p.type === "run")
-            .map((p) => (
-              <div
-                key={p.id}
-                className="border rounded-lg p-4 mb-3 bg-white shadow-sm"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-xs text-gray-600">Name</label>
-                  <button
-                    onClick={() => del(String(p.id))}
-                    className="text-xs text-red-500 underline"
-                  >
-                    Delete
-                  </button>
-                </div>
-
-                <input
-                  type="text"
-                  value={edit[p.id]?.name ?? ""}
-                  onChange={(e) => setField(String(p.id), "name", e.target.value)}
-                  className="w-full border rounded-md p-2 mb-3 text-sm"
-                />
-
-                {/* Distance */}
-                <label className="block text-xs text-gray-600 mb-1">
-                  Distance (km)
-                </label>
-                <input
-                  type="number"
-                  value={edit[p.id]?.distance ?? ""}
-                  onChange={(e) =>
-                    setField(String(p.id), "distance", e.target.value)
-                  }
-                  className="w-full border rounded-md p-2 mb-3 text-sm"
-                />
-
-                {/* Effort */}
-                <label className="block text-xs text-gray-600 mb-1">
-                  Effort
-                </label>
-                <div className="flex justify-between max-w-xs mb-3">
-                  {[1, 2, 3, 4, 5].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setField(String(p.id), "effort", val)}
-                      className={`transition transform active:scale-95 ${
-                        edit[p.id]?.effort === val ? "scale-110" : ""
-                      }`}
-                    >
-                      <Zap
-                        className={`w-5 h-5 ${
-                          val <= (edit[p.id]?.effort ?? 0)
-                            ? "text-movenotes-accent"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
+          {filteredPresets.map((p) => {
+            const typeConfig = ACTIVITY_TYPES[p.type] ?? ACTIVITY_TYPES["other"];
+            const isEndurance = ["run", "ride", "swim", "hike"].includes(
+              typeConfig.id
+            );
+            return (
+            <div
+              key={p.id}
+              className="border rounded-lg p-4 mb-3 bg-white shadow-sm"
+            >
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs text-gray-600">Name</label>
+                <button
+                  onClick={() => del(String(p.id))}
+                  className="text-xs text-red-500 underline"
+                >
+                  Delete
+                </button>
               </div>
-            ))}
-        </div>
-      )}
 
-      {/* --- DIVIDER --- */}
-      <hr className="border-t border-gray-300 my-4" />
+              <input
+                type="text"
+                value={edit[p.id]?.name ?? ""}
+                onChange={(e) => setField(String(p.id), "name", e.target.value)}
+                className="w-full border rounded-md p-2 mb-3 text-sm"
+              />
 
-      {/* --- CYCLING GROUP --- */}
-      {presets.filter((p) => p.type === "ride").length > 0 && (
-        <div>
-          <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <Bike className="w-5 h-5 text-gray-900 opacity-80" />
-            <span>RIDE</span>
-          </h2>
+              {/* Distance (if default/optional) */}
+              {typeConfig.defaultFields.includes("distance_km") ||
+              typeConfig.optionalFields.includes("distance_km") ? (
+                <>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Distance (km)
+                  </label>
+                  <input
+                    type="number"
+                    value={edit[p.id]?.distance ?? ""}
+                    onChange={(e) =>
+                      setField(String(p.id), "distance", e.target.value)
+                    }
+                    className="w-full border rounded-md p-2 mb-3 text-sm"
+                  />
+                </>
+              ) : null}
 
-          {presets
-            .filter((p) => p.type === "ride")
-            .map((p) => (
-              <div
-                key={p.id}
-                className="border rounded-lg p-4 mb-3 bg-white shadow-sm"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-xs text-gray-600">Name</label>
-                  <button
-                    onClick={() => del(String(p.id))}
-                    className="text-xs text-red-500 underline"
-                  >
-                    Delete
-                  </button>
-                </div>
+              {/* Duration (if default/optional) */}
+              {typeConfig.defaultFields.includes("duration_min") ||
+              typeConfig.optionalFields.includes("duration_min") ? (
+                <>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Duration (min)
+                  </label>
+                  <input
+                    type="number"
+                    value={edit[p.id]?.duration ?? ""}
+                    onChange={(e) =>
+                      setField(String(p.id), "duration", e.target.value)
+                    }
+                    className="w-full border rounded-md p-2 mb-3 text-sm"
+                  />
+                </>
+              ) : null}
 
-                <input
-                  type="text"
-                  value={edit[p.id]?.name ?? ""}
-                  onChange={(e) => setField(String(p.id), "name", e.target.value)}
-                  className="w-full border rounded-md p-2 mb-3 text-sm"
-                />
-
-                {/* Distance */}
-                <label className="block text-xs text-gray-600 mb-1">
-                  Distance (km)
-                </label>
-                <input
-                  type="number"
-                  value={edit[p.id]?.distance ?? ""}
-                  onChange={(e) =>
-                    setField(String(p.id), "distance", e.target.value)
-                  }
-                  className="w-full border rounded-md p-2 mb-3 text-sm"
-                />
-
-                {/* Effort */}
-                <label className="block text-xs text-gray-600 mb-1">
-                  Effort
-                </label>
-                <div className="flex justify-between max-w-xs mb-3">
-                  {[1, 2, 3, 4, 5].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setField(String(p.id), "effort", val)}
-                      className={`transition transform active:scale-95 ${
-                        edit[p.id]?.effort === val ? "scale-110" : ""
-                      }`}
-                    >
-                      <Zap
-                        className={`w-5 h-5 ${
-                          val <= (edit[p.id]?.effort ?? 0)
-                            ? "text-movenotes-accent"
-                            : "text-gray-300"
+              {/* Effort (endurance only) */}
+              {isEndurance && (
+                <>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Effort
+                  </label>
+                  <div className="flex justify-between max-w-xs mb-3">
+                    {[1, 2, 3, 4, 5].map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setField(String(p.id), "effort", val)}
+                        className={`transition transform active:scale-95 ${
+                          edit[p.id]?.effort === val ? "scale-110" : ""
                         }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+                      >
+                        <Zap
+                          className={`w-5 h-5 ${
+                            val <= (edit[p.id]?.effort ?? 0)
+                              ? "text-movenotes-accent"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+          })}
         </div>
       )}
 
@@ -289,17 +272,49 @@ const openForm = (type: "run" | "ride") => {
           Save
         </button>
       </div>
-      {showForm && newType && (
-  <PresetForm
-    type={newType}
-    onClose={() => setShowForm(false)}
-    onAdded={() => {
-      setShowForm(false);
-      // refresh presets
-      window.location.reload();
-    }}
-  />
-)}
+      {showForm && (
+        <PresetForm
+          initialType={selectedType}
+          onClose={() => setShowForm(false)}
+          onAdded={async (newPreset) => {
+            setShowForm(false);
+            if (newPreset) {
+              setPresets((prev) => {
+                const next = [...prev.filter((p) => p.id !== newPreset.id), newPreset];
+                // simple sort: type then name
+                return next.sort((a, b) => {
+                  if (a.type === b.type) {
+                    return (a.name || "").localeCompare(b.name || "");
+                  }
+                  return (a.type || "").localeCompare(b.type || "");
+                });
+              });
+              setEdit((prev) => ({
+                ...prev,
+                [newPreset.id]: {
+                  name: newPreset.name ?? "",
+                  distance: String(newPreset.distance_km ?? ""),
+                  duration: String(newPreset.duration_min ?? ""),
+                  effort: newPreset.effort ?? 3,
+                },
+              }));
+            } else {
+              // fallback reload if no preset returned
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+              if (!user) return;
+              const { data } = await supabase
+                .from("presets")
+                .select("*")
+                .eq("user_id", user.id)
+                .order("type", { ascending: true })
+                .order("name", { ascending: true });
+              setPresets(data || []);
+            }
+          }}
+        />
+      )}
 
     </div>
   );
