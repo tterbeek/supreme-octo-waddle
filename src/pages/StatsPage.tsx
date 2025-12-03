@@ -1,8 +1,8 @@
 // src/pages/StatsPage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
-import HeaderLogo from "../components/HeaderLogo";
 import { Bike, Footprints, Frown, Meh, Laugh, Smile } from "lucide-react";
+import HeaderLogo from "../components/HeaderLogo";
 
 import type { Goal } from "../types";
 import GoalProgressCard from "../components/GoalProgressCard";
@@ -11,10 +11,14 @@ import {
   parseActivityDate,
   sumDistance,
 } from "../lib/goalEngine";
+import TooltipBubble from "../components/TooltipBubble";
+import { useTooltipManager } from "../hooks/useTooltipManager";
 
 export default function StatsPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
+  const statsHeaderRef = useRef<HTMLDivElement | null>(null);
 
   // --------------------------------------------------
   // LOAD ACTIVITIES + GOALS (same as homepage)
@@ -40,6 +44,12 @@ export default function StatsPage() {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    if (!hasSeen("stats_trends_info")) {
+      showTooltip("stats_trends_info");
+    }
+  }, [hasSeen, showTooltip]);
 
   // --------------------------------------------------
   // GROUP GOALS BY PERIOD
@@ -101,11 +111,19 @@ export default function StatsPage() {
   return (
     <div className="min-h-screen bg-movenotes-bg p-2">
       <div className="p-2 max-w-md mx-auto">
-  <div className="mb-4">
-  <h1 className="text-lg font-bold text-gray-600 text-center">
-    Stats
-  </h1>
-</div>
+        <div
+          className="mb-4 relative flex items-center justify-center"
+          ref={statsHeaderRef}
+        >
+          <h1 className="text-lg font-bold text-gray-600 text-center">
+            Stats
+          </h1>
+          {visible === "stats_trends_info" && (
+            <TooltipBubble position="bottom" onClose={hideTooltip}>
+              Your stats update automatically as you log activities.
+            </TooltipBubble>
+          )}
+        </div>
 
         {/* -------------------------------------------------- */}
         {/* GOALS (Unified Engine) */}

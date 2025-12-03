@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import ModalSheet from "./ModalSheet";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
+import { useTooltipManager } from "../hooks/useTooltipManager";
 
 type QuickLogFormProps = {
   initialType?: string;
@@ -95,6 +96,7 @@ export default function QuickLogForm2({
   onLogged,
 }: QuickLogFormProps) {
   const navigate = useNavigate();
+  const { showTooltip } = useTooltipManager();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [activePreset, setActivePreset] = useState<Preset | null>(null);
 
@@ -236,6 +238,7 @@ export default function QuickLogForm2({
         .eq("id", activePreset.id);
     }
 
+    showTooltip("after_first_log");
     ding.play();
     onLogged(newActivityId); // ✅ pass id to Home
 

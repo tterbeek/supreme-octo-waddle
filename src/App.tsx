@@ -18,6 +18,7 @@ import Privacy from "./pages/Privacy";
 import Sidebar from "./components/Sidebar";
 import Layout from "./components/Layout";
 import OnboardingCarousel from "./components/OnboardingCarousel";
+import SettingsPage from "./pages/SettingsPage";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -135,6 +136,7 @@ export default function App() {
   {!user ? (
     <>
       <Route path="/" element={<Login />} />
+      <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
     </>
   ) : (
@@ -225,6 +227,15 @@ export default function App() {
   element={
     <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
       <GoalsPage />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/settings"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <SettingsPage />
     </Layout>
   }
 />

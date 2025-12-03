@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
 import type { Preset } from "../types";
 import PresetForm from "../components/PresetForm";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
+import TooltipBubble from "../components/TooltipBubble";
+import { useTooltipManager } from "../hooks/useTooltipManager";
 
 
 
@@ -22,6 +24,8 @@ export default function PresetsPage() {
   const [selectedType, setSelectedType] = useState<
     keyof typeof ACTIVITY_TYPES
   >("run");
+  const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
+  const headerRef = useRef<HTMLDivElement | null>(null);
 
 
   // Load presets
@@ -59,6 +63,12 @@ export default function PresetsPage() {
 
     load();
   }, []);
+
+  useEffect(() => {
+    if (!hasSeen("presets_info")) {
+      showTooltip("presets_info");
+    }
+  }, [hasSeen, showTooltip]);
 
   // Update local edit state
   const setField = (
@@ -112,13 +122,22 @@ export default function PresetsPage() {
   // ✅ Proper return block
   return (
 <div className="mb-4">
-  <h1 className="text-lg font-bold text-gray-600 text-center">
-    Presets
-  </h1>
+  <div className="relative flex items-center justify-center" ref={headerRef}>
+    <h1 className="text-lg font-bold text-gray-600 text-center">
+      Presets
+    </h1>
+    {visible === "presets_info" && (
+      <TooltipBubble position="bottom" onClose={hideTooltip}>
+        Create a preset to make logging your regular activities one tap faster.
+      </TooltipBubble>
+    )}
+  </div>
 
 {/* Activity type selector */}
 <div className="flex gap-3 my-4 overflow-x-auto pb-2">
-  {Object.values(ACTIVITY_TYPES).map((t) => {
+  {Object.values(ACTIVITY_TYPES)
+    .filter((t) => t.id !== "any")
+    .map((t) => {
     const Icon = t.Icon;
     return (
       <button

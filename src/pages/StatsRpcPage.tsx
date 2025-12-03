@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bike,
   Footprints,
@@ -11,6 +11,8 @@ import {
 import { supabase } from "../supabaseClient";
 import HeaderLogo from "../components/HeaderLogo";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
+import TooltipBubble from "../components/TooltipBubble";
+import { useTooltipManager } from "../hooks/useTooltipManager";
 
 // Expected Supabase stored procedures:
 // - stats_goal_progress(user_id uuid)
@@ -303,6 +305,8 @@ export default function StatsRpcPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
+  const statsHeaderRef = useRef<HTMLDivElement | null>(null);
   const activityOrder: Record<string, number> = Object.keys(ACTIVITY_TYPES).reduce(
     (acc, key, idx) => {
       acc[key] = idx;
@@ -438,6 +442,12 @@ export default function StatsRpcPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!hasSeen("stats_trends_info")) {
+      showTooltip("stats_trends_info");
+    }
+  }, [hasSeen, showTooltip]);
+
   const sortGoals = (items: GoalStat[]) =>
     [...items].sort((a, b) => {
       const aOrder = activityOrder[a.activity_type] ?? 99;
@@ -471,10 +481,18 @@ export default function StatsRpcPage() {
   return (
     <div className="min-h-screen bg-movenotes-bg p-2">
       <div className="p-2 max-w-md mx-auto">
-        <div className="mb-4">
+        <div
+          className="mb-4 relative flex items-center justify-center"
+          ref={statsHeaderRef}
+        >
           <h1 className="text-lg font-bold text-gray-600 text-center">
             Stats
           </h1>
+          {visible === "stats_trends_info" && (
+            <TooltipBubble position="bottom" onClose={hideTooltip}>
+              Your stats update automatically as you log activities.
+            </TooltipBubble>
+          )}
         </div>
 
         {loading && (

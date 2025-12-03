@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { supabase } from "../supabaseClient";
 import HamburgerButton from "./HamburgerButton";
+import { Settings as SettingsIcon } from "lucide-react";
 
 export default function Sidebar({
   open,
@@ -54,18 +54,14 @@ export default function Sidebar({
             Manage Presets
           </Link>
 
-
-          {/* Logout */}
-          <button
-            className="text-left text-red-600 hover:underline mt-4"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              onClose();
-              window.location.reload();
-            }}
+          <Link
+            to="/settings"
+            onClick={onClose}
+            className="hover:underline flex items-center gap-2"
           >
-            Logout
-          </button>
+            <SettingsIcon className="w-4 h-4 text-gray-600" />
+            <span>Settings</span>
+          </Link>
         </nav>
       </div>
     </div>

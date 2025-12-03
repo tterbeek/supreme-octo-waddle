@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm2";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
+import TooltipBubble from "../components/TooltipBubble";
 import { IconActivity } from "@tabler/icons-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import {
@@ -22,6 +23,7 @@ import AddNoteModal from "../components/AddNoteModal";
 import ActivityEditForm from "../components/ActivityEditForm";
 import GoalProgressCard from "../components/GoalProgressCard";
 import type { Goal } from "../types";
+import { useTooltipManager } from "../hooks/useTooltipManager";
 
 type GoalStat = {
   goal_id: string;
@@ -63,6 +65,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   const [noteImageOrientation, setNoteImageOrientation] = useState<
     Record<string, "portrait" | "landscape">
   >({});
+  const { visible, showTooltip, hideTooltip } = useTooltipManager();
   const [lightbox, setLightbox] = useState<{
     url: string;
     activity: any;
@@ -73,6 +76,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     y: 0,
     moved: false,
   });
+  const logButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Quick log
   const [showTypeSelector, setShowTypeSelector] = useState(false);
@@ -419,6 +423,12 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     localStorage.getItem("movenotes_onboarding_done") === "true";
   const showFirstLogPrompt = hasDoneOnboarding && activities.length === 0;
 
+  useEffect(() => {
+    if (activities.length === 0) {
+      showTooltip("home_log_button");
+    }
+  }, [activities.length, showTooltip]);
+
   // --------------------------------------------------
   // DELETE / UNDO
   // --------------------------------------------------
@@ -492,14 +502,26 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
           Log Activity
         </h2>
 
-        <button
-          onClick={() => setShowTypeSelector(true)}
-          className="w-full flex items-center justify-center gap-2 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium my-2 transition transform hover:-translate-y-0.5 active:scale-95"
-        >
-          <span className="text-xl">+</span>
-          <IconActivity size={20} strokeWidth={1.8} />
-          <span>Activity</span>
-        </button>
+        <div className="relative inline-block w-full">
+          <button
+            ref={logButtonRef}
+            onClick={() => {
+              hideTooltip();
+              setShowTypeSelector(true);
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium my-2 transition transform hover:-translate-y-0.5 active:scale-95"
+          >
+            <span className="text-xl">+</span>
+            <IconActivity size={20} strokeWidth={1.8} />
+            <span>Activity</span>
+          </button>
+
+          {visible === "home_log_button" && (
+            <TooltipBubble position="top" onClose={hideTooltip}>
+              Tap here to log your first movement
+            </TooltipBubble>
+          )}
+        </div>
 
         {/* -------------------------------------------------- */}
         {/* RECENT HISTORY                                     */}
@@ -509,9 +531,10 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         </h2>
 
         <div className="flex flex-col gap-3">
-          {activities.map((a) => {
+          {activities.map((a, idx) => {
             const typeConfig = ACTIVITY_TYPES[a.type] ?? ACTIVITY_TYPES["other"];
             const TypeIcon = typeConfig.Icon;
+            const showAfterLogTooltip = visible === "after_first_log" && idx === 0;
             return (
               <SwipeActions
                 key={a.id}
@@ -520,13 +543,22 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
               >
                 <div
                   className="
-                    rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
+                    relative rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
                     w-full mx-auto
                     max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
                     sm:p-6 md:p-7
                   "
-                  onClick={() => setEditActivity(a)}
+                  onClick={() => {
+                    hideTooltip();
+                    setEditActivity(a);
+                  }}
                 >
+                  {showAfterLogTooltip && (
+                    <TooltipBubble position="top" onClose={hideTooltip}>
+                    Create a preset to make logging this activity faster next time.
+                    </TooltipBubble>
+                  )}
+
                   {/* Icon + Title */}
                   <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
                     <TypeIcon size={24} strokeWidth={1.8} />
@@ -756,6 +788,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
               setShowQuickLog(false);
             }}
             onLogged={async (activityId) => {
+              showTooltip("after_first_log");
               setLastActivityId(activityId);
               setShowToast(true);
               await refreshActivities();

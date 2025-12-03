@@ -17,7 +17,9 @@ export function SelectActivityTypeModal({ open, onClose, onSelect }: Props) {
       </h2>
 
       <div className="grid grid-cols-3 gap-3">
-        {Object.values(ACTIVITY_TYPES).map((t) => {
+        {Object.values(ACTIVITY_TYPES)
+          .filter((t) => t.id !== "any")
+          .map((t) => {
           const Icon = t.Icon;
           return (
             <button

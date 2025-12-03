@@ -1,6 +1,11 @@
+import HeaderLogo from "../components/HeaderLogo";
+
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-movenotes-bg py-10 px-4 text-movenotes-text">
+      <div className="flex justify-center mb-6">
+        <HeaderLogo />
+      </div>
       <div className="max-w-3xl mx-auto bg-movenotes-surface shadow-sm rounded-2xl p-8">
         <h1 className="text-3xl font-semibold mb-3 text-center text-movenotes-primary">
           MoveNotes Privacy Policy
