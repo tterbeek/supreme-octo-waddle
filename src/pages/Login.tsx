@@ -135,7 +135,7 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
         ) : (
           <>
             <p className="mb-2 text-sm text-movenotes-muted text-center">
-              Enter the 6-digit code sent to your email:
+              Enter the 8-digit code sent to your email:
             </p>
             <input
               type="text"

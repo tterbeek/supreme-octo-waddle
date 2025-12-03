@@ -16,6 +16,7 @@ export default function Signup({ onSignup }: SignupProps) {
   const [loading, setLoading] = useState(false);
   const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [consentTerms, setConsentTerms] = useState(false);
+  const [newsletterOptIn, setNewsletterOptIn] = useState(false);
   const navigate = useNavigate();
 
   const isValidEmail = (value: string) =>
@@ -85,6 +86,7 @@ export default function Signup({ onSignup }: SignupProps) {
             accepted_terms: true,
             privacy_policy_version: "v1.0",
             terms_version: "v1.0",
+            newsletter_opt_in: newsletterOptIn,
           },
         ]);
 
@@ -170,6 +172,19 @@ export default function Signup({ onSignup }: SignupProps) {
               </label>
             </div>
 
+            <div className="flex items-start space-x-2 text-sm">
+              <input
+                type="checkbox"
+                id="newsletter"
+                checked={newsletterOptIn}
+                onChange={(e) => setNewsletterOptIn(e.target.checked)}
+                className="mt-1"
+              />
+              <label htmlFor="newsletter">
+                Send me occasional updates & movement inspiration (optional)
+              </label>
+            </div>
+
             <button
               onClick={handleSendOtp}
               disabled={loading}
@@ -181,7 +196,7 @@ export default function Signup({ onSignup }: SignupProps) {
         ) : (
           <div className="flex flex-col space-y-4">
             <p className="text-sm text-movenotes-muted text-center">
-              Enter the 6-digit code we emailed to you.
+              Enter the 8-digit code we emailed to you.
             </p>
             <input
               type="text"
