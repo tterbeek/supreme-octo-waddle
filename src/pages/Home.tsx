@@ -66,7 +66,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     Record<string, "portrait" | "landscape">
   >({});
   const [initialFeedLoaded, setInitialFeedLoaded] = useState(false);
-  const { visible, hideTooltip } = useTooltipManager();
+  const { visible, hideTooltip, showTooltip } = useTooltipManager();
   const [lightbox, setLightbox] = useState<{
     url: string;
     activity: any;
@@ -786,6 +786,9 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
               setShowQuickLog(false);
             }}
             onLogged={async (activityId) => {
+              if (hasDoneOnboarding) {
+                showTooltip("after_first_log");
+              }
               setLastActivityId(activityId);
               setShowToast(true);
               await refreshActivities();
