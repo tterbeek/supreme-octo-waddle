@@ -65,6 +65,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   const [noteImageOrientation, setNoteImageOrientation] = useState<
     Record<string, "portrait" | "landscape">
   >({});
+  const [initialFeedLoaded, setInitialFeedLoaded] = useState(false);
   const { visible, showTooltip, hideTooltip } = useTooltipManager();
   const [lightbox, setLightbox] = useState<{
     url: string;
@@ -171,6 +172,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     setActivities(firstFeed || []);
     setFeedOffset(firstFeed ? firstFeed.length : 0);
     setHasMoreFeed(!!firstFeed && firstFeed.length === FEED_PAGE_SIZE);
+    setInitialFeedLoaded(true);
   }
 
   const loadMoreFeed = async () => {
@@ -212,63 +214,67 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   // --------------------------------------------------
   useEffect(() => {
     const load = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
 
-      setUserId(user.id);
+        setUserId(user.id);
 
-      // 1) Goals
-      const { data: g } = await supabase
-        .from("goals")
-        .select("id, activity_type, metric, period, target, name, updated_at")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false });
-
-      setGoals((g as Goal[]) || []);
-
-      // 2) Goal preferences
-      const { data: prefs } = await supabase
-        .from("goal_preferences")
-        .select("goal_id")
-        .eq("user_id", user.id);
-
-      setSelectedGoals(prefs?.map((p) => p.goal_id) || []);
-
-      if (useRpcGoals) {
-        // 3a) Goal stats from Supabase RPC
-        const { data: stats, error: statsErr } = await supabase.rpc(GOAL_RPC, {
-          user_id: user.id,
-        });
-        if (!statsErr) setGoalStats((stats as GoalStat[]) || []);
-      } else {
-        // 3b) Activities for goals (last 60 days) for client-side calc
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - 60);
-        const cutoffStr = cutoff.toISOString().split("T")[0];
-
-        const { data: goalActs } = await supabase
-          .from("activities")
-          .select("id, user_id, type, date, distance_km, feeling, effort")
+        // 1) Goals
+        const { data: g } = await supabase
+          .from("goals")
+          .select("id, activity_type, metric, period, target, name, updated_at")
           .eq("user_id", user.id)
-          .gte("date", cutoffStr)
-          .order("date", { ascending: false });
+          .order("updated_at", { ascending: false });
 
-        setActivitiesForGoals(goalActs || []);
+        setGoals((g as Goal[]) || []);
+
+        // 2) Goal preferences
+        const { data: prefs } = await supabase
+          .from("goal_preferences")
+          .select("goal_id")
+          .eq("user_id", user.id);
+
+        setSelectedGoals(prefs?.map((p) => p.goal_id) || []);
+
+        if (useRpcGoals) {
+          // 3a) Goal stats from Supabase RPC
+          const { data: stats, error: statsErr } = await supabase.rpc(GOAL_RPC, {
+            user_id: user.id,
+          });
+          if (!statsErr) setGoalStats((stats as GoalStat[]) || []);
+        } else {
+          // 3b) Activities for goals (last 60 days) for client-side calc
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - 60);
+          const cutoffStr = cutoff.toISOString().split("T")[0];
+
+          const { data: goalActs } = await supabase
+            .from("activities")
+            .select("id, user_id, type, date, distance_km, feeling, effort")
+            .eq("user_id", user.id)
+            .gte("date", cutoffStr)
+            .order("date", { ascending: false });
+
+          setActivitiesForGoals(goalActs || []);
+        }
+
+        // 4) First feed page
+        const { data: firstFeed } = await supabase
+          .from("activities")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("date", { ascending: false })
+          .limit(FEED_PAGE_SIZE);
+
+        setActivities(firstFeed || []);
+        setFeedOffset(firstFeed ? firstFeed.length : 0);
+        setHasMoreFeed(!!firstFeed && firstFeed.length === FEED_PAGE_SIZE);
+      } finally {
+        setInitialFeedLoaded(true);
       }
-
-      // 4) First feed page
-      const { data: firstFeed } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false })
-        .limit(FEED_PAGE_SIZE);
-
-      setActivities(firstFeed || []);
-      setFeedOffset(firstFeed ? firstFeed.length : 0);
-      setHasMoreFeed(!!firstFeed && firstFeed.length === FEED_PAGE_SIZE);
     };
 
     load();
@@ -421,13 +427,15 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
-  const showFirstLogPrompt = hasDoneOnboarding && activities.length === 0;
+  const showFirstLogPrompt =
+    hasDoneOnboarding && activities.length === 0 && initialFeedLoaded;
 
   useEffect(() => {
-    if (activities.length === 0) {
+    if (!hasDoneOnboarding) return;
+    if (initialFeedLoaded && activities.length === 0) {
       showTooltip("home_log_button");
     }
-  }, [activities.length, showTooltip]);
+  }, [activities.length, initialFeedLoaded, showTooltip, hasDoneOnboarding]);
 
   // --------------------------------------------------
   // DELETE / UNDO

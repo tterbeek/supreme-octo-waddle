@@ -97,6 +97,9 @@ export default function QuickLogForm2({
 }: QuickLogFormProps) {
   const navigate = useNavigate();
   const { showTooltip } = useTooltipManager();
+  const onboardingDone =
+    typeof window !== "undefined" &&
+    localStorage.getItem("movenotes_onboarding_done") === "true";
   const [presets, setPresets] = useState<Preset[]>([]);
   const [activePreset, setActivePreset] = useState<Preset | null>(null);
 
@@ -238,7 +241,9 @@ export default function QuickLogForm2({
         .eq("id", activePreset.id);
     }
 
-    showTooltip("after_first_log");
+    if (onboardingDone) {
+      showTooltip("after_first_log");
+    }
     ding.play();
     onLogged(newActivityId); // ✅ pass id to Home
 

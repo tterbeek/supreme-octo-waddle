@@ -26,6 +26,9 @@ export default function PresetsPage() {
   >("run");
   const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
   const headerRef = useRef<HTMLDivElement | null>(null);
+  const hasDoneOnboarding =
+    typeof window !== "undefined" &&
+    localStorage.getItem("movenotes_onboarding_done") === "true";
 
 
   // Load presets
@@ -65,10 +68,11 @@ export default function PresetsPage() {
   }, []);
 
   useEffect(() => {
+    if (!hasDoneOnboarding) return;
     if (!hasSeen("presets_info")) {
       showTooltip("presets_info");
     }
-  }, [hasSeen, showTooltip]);
+  }, [hasDoneOnboarding, hasSeen, showTooltip]);
 
   // Update local edit state
   const setField = (

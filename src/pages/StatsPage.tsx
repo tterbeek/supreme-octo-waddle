@@ -18,6 +18,9 @@ export default function StatsPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
+  const hasDoneOnboarding =
+    typeof window !== "undefined" &&
+    localStorage.getItem("movenotes_onboarding_done") === "true";
   const statsHeaderRef = useRef<HTMLDivElement | null>(null);
 
   // --------------------------------------------------
@@ -46,10 +49,11 @@ export default function StatsPage() {
   }, []);
 
   useEffect(() => {
+    if (!hasDoneOnboarding) return;
     if (!hasSeen("stats_trends_info")) {
       showTooltip("stats_trends_info");
     }
-  }, [hasSeen, showTooltip]);
+  }, [hasDoneOnboarding, hasSeen, showTooltip]);
 
   // --------------------------------------------------
   // GROUP GOALS BY PERIOD

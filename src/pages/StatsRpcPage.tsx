@@ -306,6 +306,9 @@ export default function StatsRpcPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
+  const hasDoneOnboarding =
+    typeof window !== "undefined" &&
+    localStorage.getItem("movenotes_onboarding_done") === "true";
   const statsHeaderRef = useRef<HTMLDivElement | null>(null);
   const activityOrder: Record<string, number> = Object.keys(ACTIVITY_TYPES).reduce(
     (acc, key, idx) => {
@@ -443,10 +446,11 @@ export default function StatsRpcPage() {
   }, []);
 
   useEffect(() => {
+    if (!hasDoneOnboarding) return;
     if (!hasSeen("stats_trends_info")) {
       showTooltip("stats_trends_info");
     }
-  }, [hasSeen, showTooltip]);
+  }, [hasDoneOnboarding, hasSeen, showTooltip]);
 
   const sortGoals = (items: GoalStat[]) =>
     [...items].sort((a, b) => {
