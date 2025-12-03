@@ -4,7 +4,6 @@ import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm2";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
-import TooltipBubble from "../components/TooltipBubble";
 import { IconActivity } from "@tabler/icons-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import {
@@ -23,6 +22,7 @@ import AddNoteModal from "../components/AddNoteModal";
 import ActivityEditForm from "../components/ActivityEditForm";
 import GoalProgressCard from "../components/GoalProgressCard";
 import type { Goal } from "../types";
+import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 
 type GoalStat = {
@@ -66,7 +66,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     Record<string, "portrait" | "landscape">
   >({});
   const [initialFeedLoaded, setInitialFeedLoaded] = useState(false);
-  const { visible, showTooltip, hideTooltip } = useTooltipManager();
+  const { visible, hideTooltip } = useTooltipManager();
   const [lightbox, setLightbox] = useState<{
     url: string;
     activity: any;
@@ -430,12 +430,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   const showFirstLogPrompt =
     hasDoneOnboarding && activities.length === 0 && initialFeedLoaded;
 
-  useEffect(() => {
-    if (!hasDoneOnboarding) return;
-    if (initialFeedLoaded && activities.length === 0) {
-      showTooltip("home_log_button");
-    }
-  }, [activities.length, initialFeedLoaded, showTooltip, hasDoneOnboarding]);
+  // Tooltip prompts removed on Home
 
   // --------------------------------------------------
   // DELETE / UNDO
@@ -524,11 +519,6 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
             <span>Activity</span>
           </button>
 
-          {visible === "home_log_button" && (
-            <TooltipBubble position="top" onClose={hideTooltip}>
-              Tap here to log your first movement
-            </TooltipBubble>
-          )}
         </div>
 
         {/* -------------------------------------------------- */}
@@ -563,7 +553,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
                 >
                   {showAfterLogTooltip && (
                     <TooltipBubble position="top" onClose={hideTooltip}>
-                    Create a preset to make logging this activity faster next time.
+                      Create a preset to make logging this activity faster next time.
                     </TooltipBubble>
                   )}
 
@@ -796,7 +786,6 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
               setShowQuickLog(false);
             }}
             onLogged={async (activityId) => {
-              showTooltip("after_first_log");
               setLastActivityId(activityId);
               setShowToast(true);
               await refreshActivities();

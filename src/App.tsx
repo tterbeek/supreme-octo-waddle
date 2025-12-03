@@ -109,7 +109,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {showOnboarding && (
+      {showOnboarding && user && (
         <OnboardingCarousel
           onComplete={completeOnboarding}
           onSkip={completeOnboarding}
