@@ -3,7 +3,7 @@ import { useState } from "react";
 import ModalSheet from "./ModalSheet";
 import { supabase } from "../supabaseClient";
 import type { Goal } from "../types";
-import { Bike, Footprints, Target, CalendarDays, Ruler, Hash } from "lucide-react";
+import { Target, CalendarDays, Ruler, Hash } from "lucide-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 
 interface EditGoalModalProps {
@@ -21,7 +21,7 @@ export default function EditGoalModal({
 }: EditGoalModalProps) {
   const [target, setTarget] = useState(String(goal.target));
   const [name, setName] = useState(goal.name || "");
-  const [metric, setMetric] = useState<Goal["metric"] | "duration">(
+  const [metric] = useState<Goal["metric"] | "duration">(
     (goal.metric as Goal["metric"] | "duration") || "count"
   );
   const [saving, setSaving] = useState(false);

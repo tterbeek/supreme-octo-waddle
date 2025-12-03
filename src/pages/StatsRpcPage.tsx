@@ -6,8 +6,6 @@ import {
   Meh,
   Laugh,
   Smile,
-  Target,
-  Hash,
   AlertCircle,
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
@@ -104,7 +102,6 @@ function GoalStatCard({ stat }: { stat: GoalStat }) {
   const typeConfig =
     ACTIVITY_TYPES[stat.activity_type] ?? ACTIVITY_TYPES["any"];
   const ActivityIcon = typeConfig.Icon;
-  const MetricIcon = stat.metric === "distance" ? Target : Hash;
 
   const ratio = Math.max(0, Math.min(1, Number(stat.progress_ratio) || 0));
   const comparison = stat.comparison_pct === null ? null : Math.round(stat.comparison_pct);
@@ -126,7 +123,7 @@ function GoalStatCard({ stat }: { stat: GoalStat }) {
   return (
     <div className="rounded-xl bg-warm-100 border border-warm-200 shadow-sm p-4">
       <div className="flex items-center gap-2 mb-1">
-        <ActivityIcon size={22} className="text-gray-900" />
+        <ActivityIcon size={22} strokeWidth={1.8} />
         <h3 className="font-semibold text-base text-gray-900">
           {stat.name || typeConfig.label}
         </h3>
@@ -201,7 +198,7 @@ function FallbackCard({ summary }: { summary: FallbackSummary }) {
   return (
     <div className="rounded-xl bg-warm-50 border border-warm-200 shadow-sm p-4">
       <div className="flex items-center gap-2 mb-2">
-        <ActivityIcon size={22} className="text-gray-900" />
+        <ActivityIcon size={22} strokeWidth={1.8} />
         <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
           {summary.activity_type.toUpperCase()} — no goal set
         </h3>

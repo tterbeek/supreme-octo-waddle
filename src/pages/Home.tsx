@@ -7,8 +7,6 @@ import Toast from "../components/Toast";
 import { IconActivity } from "@tabler/icons-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import {
-  Bike,
-  Footprints,
   Zap,
   Frown,
   Meh,
@@ -28,12 +26,12 @@ import type { Goal } from "../types";
 type GoalStat = {
   goal_id: string;
   name: string | null;
-  activity_type: "run" | "ride" | "any";
-  metric: "distance" | "count";
+  activity_type: keyof typeof ACTIVITY_TYPES | "any";
+  metric: "distance" | "duration" | "count";
   period: "week" | "month" | "year";
   target: number;
   current_value: number;
-  unit: "km" | "activities";
+  unit: "km" | "activities" | "min";
   progress_ratio: number;
   comparison_pct: number | null;
 };
@@ -367,7 +365,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     return (
       <div className="rounded-xl bg-warm-100 border border-warm-200 shadow-sm px-3 py-2">
         <div className="flex items-center gap-2 mb-1.5">
-          <ActivityIcon className="w-4 h-4 text-gray-900" />
+          <ActivityIcon size={20} strokeWidth={1.8} />
           <MetricIcon className="w-3.5 h-3.5 text-gray-500" />
           <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
             {stat.name || `${typeConfig.label} ${stat.metric}`}
