@@ -414,6 +414,11 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     );
   };
 
+  const hasDoneOnboarding =
+    typeof window !== "undefined" &&
+    localStorage.getItem("movenotes_onboarding_done") === "true";
+  const showFirstLogPrompt = hasDoneOnboarding && activities.length === 0;
+
   // --------------------------------------------------
   // DELETE / UNDO
   // --------------------------------------------------
@@ -439,6 +444,21 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         {/* -------------------------------------------------- */}
         {/* HOME GOALS SECTION (above QuickLog buttons)       */}
         {/* -------------------------------------------------- */}
+        {showFirstLogPrompt && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-xl mb-4">
+            <p className="font-medium mb-2">Welcome to MoveNotes ✨</p>
+            <p className="text-sm mb-3">
+              Start your movement story by logging your first activity.
+            </p>
+            <button
+              onClick={() => setShowTypeSelector(true)}
+              className="bg-movenotes-primary text-primary-text px-4 py-2 rounded-full text-sm font-medium"
+            >
+              Log my first activity
+            </button>
+          </div>
+        )}
+
         {showGoalSection && (
           <div
             className="bg-warm-100 border border-warm-200 rounded-xl p-4 shadow-sm mt-4 mb-6"

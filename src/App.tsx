@@ -17,12 +17,16 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Sidebar from "./components/Sidebar";
 import Layout from "./components/Layout";
+import OnboardingCarousel from "./components/OnboardingCarousel";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !localStorage.getItem("movenotes_onboarding_done")
+  );
 
 
   // 🌅 Splash logic
@@ -97,8 +101,19 @@ export default function App() {
 
   console.log("[Render] Rendering main app routes");
 
+  const completeOnboarding = () => {
+    localStorage.setItem("movenotes_onboarding_done", "true");
+    setShowOnboarding(false);
+  };
+
   return (
     <BrowserRouter>
+      {showOnboarding && (
+        <OnboardingCarousel
+          onComplete={completeOnboarding}
+          onSkip={completeOnboarding}
+        />
+      )}
     
 
       <AnimatePresence mode="wait">
