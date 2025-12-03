@@ -17,11 +17,18 @@ export default function ModalSheet({
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
   const [mounted, setMounted] = useState(false);
+  const openedAt = useRef<number>(Date.now());
+  const [allowOverlayClose, setAllowOverlayClose] = useState(false);
 
   useEffect(() => {
+    openedAt.current = Date.now();
     setMounted(true);
     setAnimateIn(true);
-    return () => setMounted(false);
+    const timer = setTimeout(() => setAllowOverlayClose(true), 700);
+    return () => {
+      clearTimeout(timer);
+      setMounted(false);
+    };
   }, []);
 
   if (!mounted) return null;
@@ -34,7 +41,12 @@ export default function ModalSheet({
   const modalContent = (
     <div
       className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 overscroll-none"
-      onClick={handleRequestClose}
+      onClick={() => {
+        // avoid closing immediately from the tap that opened the modal
+        const elapsed = Date.now() - openedAt.current;
+        if (elapsed < 200 || !allowOverlayClose) return;
+        handleRequestClose();
+      }}
     >
       <div
         onClick={(e) => e.stopPropagation()}

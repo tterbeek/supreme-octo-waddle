@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import HeaderLogo from "../components/HeaderLogo";
+import { ACTIVITY_TYPES } from "../config/activityTypes";
 
 // Expected Supabase stored procedures:
 // - stats_goal_progress(user_id uuid)
@@ -24,12 +25,12 @@ import HeaderLogo from "../components/HeaderLogo";
 type GoalStat = {
   goal_id: string;
   name: string | null;
-  activity_type: "run" | "ride" | "any";
-  metric: "distance" | "count";
+  activity_type: keyof typeof ACTIVITY_TYPES | "any";
+  metric: "distance" | "duration" | "count";
   period: "week" | "month" | "year";
   target: number;
   current_value: number;
-  unit: "km" | "activities";
+  unit: "km" | "activities" | "min";
   progress_ratio: number;
   comparison_pct: number | null;
 };
@@ -100,17 +101,14 @@ function parseActivityDate(d: string | Date): Date {
 }
 
 function GoalStatCard({ stat }: { stat: GoalStat }) {
-  const ActivityIcon =
-    stat.activity_type === "run"
-      ? Footprints
-      : stat.activity_type === "ride"
-      ? Bike
-      : Target;
-
+  const typeConfig =
+    ACTIVITY_TYPES[stat.activity_type] ?? ACTIVITY_TYPES["any"];
+  const ActivityIcon = typeConfig.Icon;
   const MetricIcon = stat.metric === "distance" ? Target : Hash;
 
   const ratio = Math.max(0, Math.min(1, Number(stat.progress_ratio) || 0));
   const comparison = stat.comparison_pct === null ? null : Math.round(stat.comparison_pct);
+  const progressPct = Math.round(ratio * 100);
 
   const comparisonClass =
     comparison === null
@@ -127,19 +125,36 @@ function GoalStatCard({ stat }: { stat: GoalStat }) {
 
   return (
     <div className="rounded-xl bg-warm-100 border border-warm-200 shadow-sm p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <ActivityIcon className="w-5 h-5 text-gray-900" />
-        <MetricIcon className="w-4 h-4 text-gray-500" />
-        <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
-          {stat.name || `${stat.activity_type} ${stat.metric}`}
+      <div className="flex items-center gap-2 mb-1">
+        <ActivityIcon size={22} className="text-gray-900" />
+        <h3 className="font-semibold text-base text-gray-900">
+          {stat.name || typeConfig.label}
         </h3>
       </div>
 
-      <div className="text-base text-gray-900 font-medium">
-        {Math.round(stat.current_value)} / {Math.round(stat.target)}{" "}
-        {stat.unit}
+      <div className="text-sm text-gray-600 mb-1">
+        {stat.metric === "distance" && (
+          <span>
+            {stat.current_value} km / {stat.target} km
+          </span>
+        )}
+        {stat.metric === "duration" && (
+          <span>
+            {stat.current_value} min / {stat.target} min
+          </span>
+        )}
+        {stat.metric === "count" && (
+          <span>
+            {stat.current_value}{" "}
+            {stat.current_value === 1 ? "activity" : "activities"} / {stat.target}{" "}
+            {stat.target === 1 ? "activity" : "activities"}
+          </span>
+        )}
       </div>
 
+      <div className="text-xs text-gray-500 mb-1">
+        {progressPct}% toward goal
+      </div>
       <div className="flex gap-1 mt-1">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
@@ -153,21 +168,20 @@ function GoalStatCard({ stat }: { stat: GoalStat }) {
         ))}
       </div>
 
-      {comparison !== null && (
-        <p
-          className={`text-sm mt-2 ${comparisonClass}`}
-        >
-          {comparison === 0
-            ? "no change from previous period"
-            : `${comparison >= 0 ? "↑" : "↓"} ${comparison}% vs previous period`}
-        </p>
+      {stat.comparison_pct != null && (
+        <div className={`text-xs text-gray-500 mt-2 ${comparisonClass}`}>
+          {stat.comparison_pct > 0 ? "+" : ""}
+          {stat.comparison_pct.toFixed(1)}% compared to previous period
+        </div>
       )}
     </div>
   );
 }
 
 function FallbackCard({ summary }: { summary: FallbackSummary }) {
-  const ActivityIcon = summary.activity_type === "run" ? Footprints : Bike;
+  const typeConfig =
+    ACTIVITY_TYPES[summary.activity_type] ?? ACTIVITY_TYPES["any"];
+  const ActivityIcon = typeConfig.Icon;
   const comparison =
     summary.change_pct === null ? null : Math.round(summary.change_pct);
 
@@ -187,7 +201,7 @@ function FallbackCard({ summary }: { summary: FallbackSummary }) {
   return (
     <div className="rounded-xl bg-warm-50 border border-warm-200 shadow-sm p-4">
       <div className="flex items-center gap-2 mb-2">
-        <ActivityIcon className="w-5 h-5 text-gray-900" />
+        <ActivityIcon size={22} className="text-gray-900" />
         <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
           {summary.activity_type.toUpperCase()} — no goal set
         </h3>
@@ -292,11 +306,14 @@ export default function StatsRpcPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const activityOrder: Record<GoalStat["activity_type"], number> = {
-    run: 0,
-    ride: 1,
-    any: 2,
-  };
+  const activityOrder: Record<string, number> = Object.keys(ACTIVITY_TYPES).reduce(
+    (acc, key, idx) => {
+      acc[key] = idx;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+  activityOrder["any"] = activityOrder["any"] ?? Number.MAX_SAFE_INTEGER;
 
   useEffect(() => {
     const load = async () => {

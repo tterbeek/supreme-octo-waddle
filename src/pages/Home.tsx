@@ -354,13 +354,15 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     const ratio = Math.max(0, Math.min(1, Number(stat.progress_ratio) || 0));
     const comparison =
       stat.comparison_pct === null ? null : Math.round(stat.comparison_pct);
-    const ActivityIcon =
-      stat.activity_type === "run"
-        ? Footprints
-        : stat.activity_type === "ride"
-        ? Bike
-        : Target;
-    const MetricIcon = stat.metric === "distance" ? Target : Hash;
+    const typeConfig =
+      ACTIVITY_TYPES[stat.activity_type] ?? ACTIVITY_TYPES["any"];
+    const ActivityIcon = typeConfig?.Icon || Target;
+    const MetricIcon =
+      stat.metric === "distance"
+        ? Target
+        : stat.metric === "duration"
+        ? Hash
+        : Hash;
 
     return (
       <div className="rounded-xl bg-warm-100 border border-warm-200 shadow-sm px-3 py-2">
@@ -368,13 +370,26 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
           <ActivityIcon className="w-4 h-4 text-gray-900" />
           <MetricIcon className="w-3.5 h-3.5 text-gray-500" />
           <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
-            {stat.name || `${stat.activity_type} ${stat.metric}`}
+            {stat.name || `${typeConfig.label} ${stat.metric}`}
           </h3>
         </div>
 
         <div className="text-base text-gray-900 font-medium">
-          {Math.round(stat.current_value)} / {Math.round(stat.target)}{" "}
-          {stat.unit}
+          {stat.metric === "distance" && (
+            <>
+              {Math.round(stat.current_value)} / {Math.round(stat.target)} km
+            </>
+          )}
+          {stat.metric === "duration" && (
+            <>
+              {Math.round(stat.current_value)} / {Math.round(stat.target)} min
+            </>
+          )}
+          {stat.metric === "count" && (
+            <>
+              {Math.round(stat.current_value)} / {Math.round(stat.target)} activities
+            </>
+          )}
         </div>
 
         <div className="flex gap-1 mt-1">

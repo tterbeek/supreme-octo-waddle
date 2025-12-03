@@ -15,24 +15,29 @@ export default function SwipeActions({
   let isScrolling = false;
 
   const onTouchStart = (e: TouchEvent) => {
+    e.stopPropagation();
     startY = e.touches[0].clientY;
     isScrolling = false;
   };
 
   const onTouchMove = (e: TouchEvent) => {
+    e.stopPropagation();
     const dy = Math.abs(e.touches[0].clientY - startY);
     if (dy > 6) {
       isScrolling = true; // user is scrolling
     }
   };
 
-  const onTouchEnd = () => {
+  const onTouchEnd = (e: TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault(); // prevent follow-up synthetic click from bubbling to overlays
     if (!isScrolling) {
       onEdit(); // treated as a tap
     }
   };
 
-  const onClick = (_e: MouseEvent) => {
+  const onClick = (e: MouseEvent) => {
+    e.stopPropagation();
     onEdit(); // desktop click
   };
 

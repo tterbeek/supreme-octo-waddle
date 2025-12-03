@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "./ModalSheet";
 import type { Goal } from "../types";
+import { ACTIVITY_TYPES } from "../config/activityTypes";
 
 interface AddGoalModalProps {
   onClose: () => void;
@@ -12,18 +13,28 @@ interface AddGoalModalProps {
 }
 
 export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGoals }: AddGoalModalProps) {
-  const [activityType, setActivityType] = useState<Goal["activity_type"]>("run");
-  const [metric, setMetric] = useState<Goal["metric"]>("distance");
+  const getDefaultMetric = (typeId: string): Goal["metric"] | "duration" => {
+    const cfg = ACTIVITY_TYPES[typeId];
+    if (cfg?.defaultFields.includes("distance_km")) return "distance";
+    if (cfg?.defaultFields.includes("duration_min")) return "duration";
+    return "count";
+  };
+
+  const [activityType, setActivityType] = useState<string>("run");
+  const [metric, setMetric] = useState<Goal["metric"] | "duration">(
+    getDefaultMetric("run")
+  );
   const [period, setPeriod] = useState<Goal["period"]>("week");
   const [target, setTarget] = useState("");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
   const autoName = () => {
-    const act = activityType === "any" ? "Activity" : activityType === "run" ? "Run" : "Ride";
+    const typeLabel = ACTIVITY_TYPES[activityType]?.label || "Activity";
     const per = period === "week" ? "Weekly" : period === "month" ? "Monthly" : "Yearly";
-    const what = metric === "distance" ? "Distance" : "Count";
-    return `${per} ${act} ${what}`;
+    const what =
+      metric === "distance" ? "Distance" : metric === "duration" ? "Duration" : "Count";
+    return `${per} ${typeLabel} ${what}`;
   };
 
 const save = async () => {
@@ -67,26 +78,72 @@ const save = async () => {
     <ModalSheet onClose={onClose}>
       <h2 className="text-lg font-semibold mb-4 text-center">Add Goal</h2>
 
-      <label className="text-sm text-gray-600">Activity Type</label>
-      <select
-        className="w-full border rounded p-2 mb-3"
-        value={activityType}
-        onChange={(e) => setActivityType(e.target.value as Goal["activity_type"])}
-      >
-        <option value="run">Run</option>
-        <option value="ride">Ride</option>
-        <option value="any">Any</option>
-      </select>
+      {/* Activity type selector */}
+      <div className="flex gap-3 overflow-x-auto pb-3 mb-3">
+        {Object.values(ACTIVITY_TYPES).map((t) => {
+          const Icon = t.Icon;
+          return (
+            <button
+              key={t.id}
+              onClick={() => {
+                setActivityType(t.id);
+                let metricsForNewType: Array<Goal["metric"] | "duration"> = [];
+                const cfg = ACTIVITY_TYPES[t.id];
+                if (t.id === "any") {
+                  metricsForNewType = ["count"];
+                } else {
+                  if (cfg?.defaultFields.includes("distance_km")) metricsForNewType.push("distance");
+                  if (cfg?.defaultFields.includes("duration_min"))
+                    metricsForNewType.push("duration" as Goal["metric"]);
+                  metricsForNewType.push("count");
+                }
+                if (!metricsForNewType.includes(metric)) {
+                  setMetric(metricsForNewType[0]);
+                }
+              }}
+              className={`flex flex-col items-center p-2 rounded-xl border ${
+                activityType === t.id
+                  ? "border-amber-400 bg-amber-100"
+                  : "border-gray-200 bg-white"
+              }`}
+            >
+              <Icon size={22} />
+              <span className="text-xs mt-1">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
-      <label className="text-sm text-gray-600">Metric</label>
-      <select
-        className="w-full border rounded p-2 mb-3"
-        value={metric}
-        onChange={(e) => setMetric(e.target.value as Goal["metric"])}
-      >
-        <option value="distance">Distance (km)</option>
-        <option value="count">Activity Count</option>
-      </select>
+      {/* Metric selector */}
+      <label className="block text-sm mb-1">Metric</label>
+      <div className="flex gap-2 mb-3">
+        {(() => {
+          const typeConfig = ACTIVITY_TYPES[activityType];
+          let metricsForType: Array<Goal["metric"] | "duration"> = [];
+          if (activityType === "any") {
+            metricsForType = ["count"];
+          } else {
+            if (typeConfig?.defaultFields.includes("distance_km")) metricsForType.push("distance");
+            if (typeConfig?.defaultFields.includes("duration_min"))
+              metricsForType.push("duration" as Goal["metric"]);
+            metricsForType.push("count");
+          }
+          return metricsForType.map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMetric(m)}
+              className={`px-3 py-2 rounded-md border ${
+                metric === m ? "bg-amber-200 border-amber-400" : "bg-white border-gray-300"
+              }`}
+            >
+              {m === "distance" && "Distance"}
+              {m === "duration" && "Duration"}
+              {m === "count" && "Count"}
+            </button>
+          ));
+        })()}
+      </div>
 
       <label className="text-sm text-gray-600">Period</label>
       <select
@@ -100,7 +157,8 @@ const save = async () => {
       </select>
 
       <label className="text-sm text-gray-600">
-        {metric === "distance" ? "Target Distance" : "Target Count"}
+        Target{" "}
+        {metric === "distance" ? "(km)" : metric === "duration" ? "(min)" : "(count)"}
       </label>
       <input
         className="w-full border rounded p-2 mb-3"

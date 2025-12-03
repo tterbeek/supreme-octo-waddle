@@ -12,8 +12,17 @@ export type Preset = {
 export type Goal = {
   id: string;
   user_id: string;
-  activity_type: "run" | "ride" | "any";
-  metric: "distance" | "count";
+  activity_type:
+    | "run"
+    | "ride"
+    | "walk"
+    | "strength"
+    | "yoga"
+    | "hike"
+    | "swim"
+    | "other"
+    | "any";
+  metric: "distance" | "duration" | "count";
   period: "week" | "month" | "year";
   target: number;
   name: string | null;

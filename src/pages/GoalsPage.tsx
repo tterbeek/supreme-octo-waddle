@@ -7,6 +7,7 @@ import AddGoalModal from "../components/AddGoalModal";
 import EditGoalModal from "../components/EditGoalModal";
 import type { Goal } from "../types";
 import { Target, Star } from "lucide-react";
+import { ACTIVITY_TYPES } from "../config/activityTypes";
 
 export default function GoalsPage() {
   const navigate = useNavigate();
@@ -57,16 +58,19 @@ const periodOrder: Record<"week" | "month" | "year", number> = {
   year: 3,
 };
 
-const typeOrder: Record<"run" | "ride" | "any", number> = {
-  any: 1,
-  ride: 2,
-  run: 3,
-};
+const typeOrder: Record<string, number> = Object.keys(ACTIVITY_TYPES).reduce(
+  (acc, id, idx) => {
+    acc[id] = idx + 1;
+    return acc;
+  },
+  {} as Record<string, number>
+);
+typeOrder["any"] = Number.MAX_SAFE_INTEGER; // legacy "any" goes last
 
 const sortedGoals = [...goals].sort((a, b) => {
   const pDiff = periodOrder[a.period] - periodOrder[b.period];
   if (pDiff !== 0) return pDiff;
-  return typeOrder[a.activity_type] - typeOrder[b.activity_type];
+  return (typeOrder[a.activity_type] ?? 999) - (typeOrder[b.activity_type] ?? 999);
 });
 
 const toggleStar = async (goalId: string) => {
@@ -142,6 +146,12 @@ const toggleStar = async (goalId: string) => {
             e.stopPropagation();    // prevent triggering Swipe or opening modal
             toggleStar(g.id);
           }}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            toggleStar(g.id);
+          }}
           className="absolute top-2 right-2"
         >
           <Star
@@ -159,10 +169,20 @@ const toggleStar = async (goalId: string) => {
         </div>
 
         {/* TARGET */}
-        <div className="text-gray-700 text-sm mt-1">
-          {g.metric === "distance"
-            ? `${g.target} km`
-            : `${g.target} activities`}
+        <div className="text-gray-700 text-sm mt-1 flex items-center justify-center gap-2">
+          {(() => {
+            const typeConfig =
+              ACTIVITY_TYPES[g.activity_type] ?? ACTIVITY_TYPES["any"];
+            const Icon = typeConfig?.Icon;
+            return Icon ? <Icon size={18} strokeWidth={1.7} /> : null;
+          })()}
+          {g.metric === "distance" && <span>{g.target} km</span>}
+          {g.metric === "duration" && <span>{g.target} min</span>}
+          {g.metric === "count" && <span>{g.target} activities</span>}
+          {!["distance", "duration", "count"].includes(g.metric as string) && (
+            <span>{g.target}</span>
+          )}
+          <span className="uppercase text-[11px] text-gray-500">{g.activity_type}</span>
         </div>
       </div>
     </SwipeActions>

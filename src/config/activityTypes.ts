@@ -10,6 +10,7 @@ import {
   IconTrekking,
   IconSwimming,
   IconDots,
+  IconSparkles,
 } from "@tabler/icons-react";
 
 // Lucide Icons (used for certain types if needed)
@@ -26,6 +27,13 @@ export interface ActivityTypeConfig {
 }
 
 export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
+  any: {
+    id: "any",
+    label: "All Activities",
+    Icon: IconSparkles,
+    defaultFields: [],
+    optionalFields: [],
+  },
   run: {
     id: "run",
     label: "Run",
@@ -65,8 +73,8 @@ export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
     id: "hike",
     label: "Hike",
     Icon: IconTrekking,
-    defaultFields: ["duration_min"],
-    optionalFields: ["distance_km"],
+    defaultFields: ["distance_km"],
+    optionalFields: ["duration_min"],
   },
   swim: {
     id: "swim",
