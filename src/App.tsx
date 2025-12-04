@@ -19,6 +19,7 @@ import Sidebar from "./components/Sidebar";
 import Layout from "./components/Layout";
 import OnboardingCarousel from "./components/OnboardingCarousel";
 import SettingsPage from "./pages/SettingsPage";
+import AboutPage from "./pages/AboutPage";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -131,6 +132,7 @@ export default function App() {
   {/* 🌿 Public routes (always visible) */}
   <Route path="/terms" element={<Terms />} />
   <Route path="/privacy" element={<Privacy />} />
+  <Route path="/about" element={<AboutPage />} />
 
   {/* 🔐 Auth routes */}
   {!user ? (

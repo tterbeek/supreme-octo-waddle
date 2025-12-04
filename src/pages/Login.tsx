@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import PublicTopNav from "../components/PublicTopNav";
 
 export default function Login({ onLogin }: { onLogin?: (session: any) => void }) {
   const [email, setEmail] = useState("");
@@ -65,7 +66,8 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-movenotes-bg text-movenotes-text">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-movenotes-bg text-movenotes-text relative">
+      <PublicTopNav />
       <div className="w-full max-w-md p-6 bg-movenotes-surface shadow-sm rounded-2xl">
 <h1 className="text-2xl text-center mb-6 tracking-tight">
   <span className="font-nunito text-movenotes-primary mr-1">
