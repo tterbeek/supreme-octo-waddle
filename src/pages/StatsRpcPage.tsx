@@ -1,18 +1,79 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bike,
-  Footprints,
-  Frown,
-  Meh,
-  Laugh,
-  Smile,
-  AlertCircle,
-} from "lucide-react";
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+} from "recharts";
+import { AlertCircle } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import HeaderLogo from "../components/HeaderLogo";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
+import { useNavigate } from "react-router-dom";
+import {
+  startOfWeek as dfStartOfWeek,
+  format,
+  subWeeks,
+} from "date-fns";
+
+// Pacing message library
+const PACING_MESSAGES = {
+  goalReached: [
+    "Goal reached—great job!",
+    "You hit this goal—amazing work!",
+    "Target met—nicely done!",
+  ],
+  onTrack: [
+    "You’re on track for this period.",
+    "Right on pace—keep going.",
+    "Nice rhythm—you’re where you need to be.",
+  ],
+  nearPace: [
+    "You’re close to pace—keep it going.",
+    "Almost on pace—one more session will help.",
+    "Close to pace—small pushes will get you there.",
+  ],
+  plentyTime: [
+    "Plenty of time left—add a little more when you can.",
+    "Early in the period—light steps now, more later.",
+    "You’ve got time—sprinkle in a bit more movement.",
+  ],
+};
+
+const pickMessage = (list: string[]) =>
+  list[Math.floor(Math.random() * list.length)];
+
+// Progress pacing helper: compares progress vs elapsed time in period
+const getPeriodElapsedRatio = (
+  period: "week" | "month" | "year",
+  now = new Date()
+) => {
+  const { startCurrent, endCurrent } = periodBounds(period, now);
+  const total = endCurrent.getTime() - startCurrent.getTime();
+  const elapsed = Math.max(
+    0,
+    Math.min(total, now.getTime() - startCurrent.getTime())
+  );
+  return total > 0 ? elapsed / total : 1;
+};
+
+const getPacingMessage = (
+  progressRatio: number,
+  period: "week" | "month" | "year"
+) => {
+  if (progressRatio >= 1) return pickMessage(PACING_MESSAGES.goalReached);
+
+  const elapsed = getPeriodElapsedRatio(period);
+  // Allow a small buffer so users aren't penalized for minor timing differences
+  if (progressRatio >= elapsed * 0.9) return pickMessage(PACING_MESSAGES.onTrack);
+  if (progressRatio >= elapsed * 0.6)
+    return pickMessage(PACING_MESSAGES.nearPace);
+  return pickMessage(PACING_MESSAGES.plentyTime);
+};
 
 // Expected Supabase stored procedures:
 // - stats_goal_progress(user_id uuid)
@@ -35,32 +96,17 @@ type GoalStat = {
   comparison_pct: number | null;
 };
 
-type TrendStat = {
-  activity_type: "run" | "ride";
-  total_distance: number;
-  weekly_avg_distance: number;
-  trend_pct: number | null;
-  avg_feeling: number | null;
-};
-
-type FallbackSummary = {
-  period: "week" | "month" | "year";
-  activity_type: "run" | "ride";
-  total_distance: number;
-  change_pct: number | null;
+type Activity = {
+  type: keyof typeof ACTIVITY_TYPES;
+  date: string;
+  distance_km: number | null;
+  duration_min: number | null;
 };
 
 const GOAL_RPC = "stats_goal_progress";
-const TREND_RPC = "stats_trends_90_days";
 
-function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay(); // 0=Sun
-  const diff = day === 0 ? -6 : 1 - day; // Monday start
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+const startOfWeek = (date: Date): Date =>
+  dfStartOfWeek(date, { weekStartsOn: 1 });
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -100,350 +146,94 @@ function parseActivityDate(d: string | Date): Date {
   return typeof d === "string" ? new Date(d + "T00:00:00") : new Date(d);
 }
 
-function GoalStatCard({ stat }: { stat: GoalStat }) {
-  const typeConfig =
-    ACTIVITY_TYPES[stat.activity_type] ?? ACTIVITY_TYPES["any"];
-  const ActivityIcon = typeConfig.Icon;
-
-  const ratio = Math.max(0, Math.min(1, Number(stat.progress_ratio) || 0));
-  const comparison = stat.comparison_pct === null ? null : Math.round(stat.comparison_pct);
-  const progressPct = Math.round(ratio * 100);
-
-  const comparisonClass =
-    comparison === null
-      ? ""
-      : comparison === 0
-      ? "text-gray-500"
-      : comparison >= 0
-      ? "text-green-600"
-      : comparison >= -5
-      ? "text-gray-500"
-      : comparison >= -15
-      ? "text-yellow-500"
-      : "text-red-600";
-
-  return (
-    <div className="rounded-xl bg-warm-100 border border-warm-200 shadow-sm p-4">
-      <div className="flex items-center gap-2 mb-1">
-        <ActivityIcon size={22} strokeWidth={1.8} />
-        <h3 className="font-semibold text-base text-gray-900">
-          {stat.name || typeConfig.label}
-        </h3>
-      </div>
-
-      <div className="text-sm text-gray-600 mb-1">
-        {stat.metric === "distance" && (
-          <span>
-            {stat.current_value} km / {stat.target} km
-          </span>
-        )}
-        {stat.metric === "duration" && (
-          <span>
-            {stat.current_value} min / {stat.target} min
-          </span>
-        )}
-        {stat.metric === "count" && (
-          <span>
-            {stat.current_value}{" "}
-            {stat.current_value === 1 ? "activity" : "activities"} / {stat.target}{" "}
-            {stat.target === 1 ? "activity" : "activities"}
-          </span>
-        )}
-      </div>
-
-      <div className="text-xs text-gray-500 mb-1">
-        {progressPct}% toward goal
-      </div>
-      <div className="flex gap-1 mt-1">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className={`w-2.5 h-2.5 rounded-full ${
-              i < Math.floor(ratio * 5)
-                ? "bg-movenotes-accent"
-                : "bg-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-
-      {stat.comparison_pct != null && (
-        <div className={`text-xs text-gray-500 mt-2 ${comparisonClass}`}>
-          {stat.comparison_pct > 0 ? "+" : ""}
-          {stat.comparison_pct.toFixed(1)}% compared to previous period
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FallbackCard({ summary }: { summary: FallbackSummary }) {
-  const typeConfig =
-    ACTIVITY_TYPES[summary.activity_type] ?? ACTIVITY_TYPES["any"];
-  const ActivityIcon = typeConfig.Icon;
-  const comparison =
-    summary.change_pct === null ? null : Math.round(summary.change_pct);
-
-  const comparisonClass =
-    comparison === null
-      ? ""
-      : comparison === 0
-      ? "text-gray-500"
-      : comparison >= 0
-      ? "text-green-600"
-      : comparison >= -5
-      ? "text-gray-500"
-      : comparison >= -15
-      ? "text-yellow-500"
-      : "text-red-600";
-
-  return (
-    <div className="rounded-xl bg-warm-50 border border-warm-200 shadow-sm p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <ActivityIcon size={22} strokeWidth={1.8} />
-        <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
-          {summary.activity_type.toUpperCase()} — no goal set
-        </h3>
-      </div>
-
-      <p className="text-base text-gray-900 font-medium">
-        {Math.round(summary.total_distance)} km this period
-      </p>
-
-      {comparison !== null && (
-        <p className={`text-sm mt-2 ${comparisonClass}`}>
-          {comparison === 0
-            ? "no change from previous period"
-            : `${comparison >= 0 ? "↑" : "↓"} ${comparison}% vs previous period`}
-        </p>
-      )}
-
-      {comparison === null && (
-        <p className="text-sm mt-2 text-gray-500">
-          No previous period data for comparison
-        </p>
-      )}
-    </div>
-  );
-}
-
-function TrendCard({ trend }: { trend: TrendStat }) {
-  const hasData = (trend.total_distance || 0) > 0;
-  const comparison =
-    trend.trend_pct === null ? null : Math.round(trend.trend_pct);
-
-  const comparisonClass =
-    comparison === null
-      ? ""
-      : comparison === 0
-      ? "text-gray-500"
-      : comparison >= 0
-      ? "text-green-600"
-      : comparison >= -5
-      ? "text-gray-500"
-      : comparison >= -15
-      ? "text-yellow-500"
-      : "text-red-600";
-
-  const FeelingIcon =
-    trend.avg_feeling === null
-      ? Meh
-      : trend.avg_feeling <= 1.5
-      ? Frown
-      : trend.avg_feeling <= 2.5
-      ? Meh
-      : trend.avg_feeling <= 3.5
-      ? Smile
-      : Laugh;
-
-  return (
-    <div className="bg-warm-100 border border-warm-200 rounded-xl p-4 shadow-sm">
-      <div className="flex items-center gap-2 mb-2">
-        {trend.activity_type === "run" ? (
-          <Footprints className="w-5 h-5 text-gray-900" />
-        ) : (
-          <Bike className="w-5 h-5 text-gray-900" />
-        )}
-        <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
-          {trend.activity_type.toUpperCase()}
-        </h3>
-      </div>
-
-      {!hasData ? (
-        <p className="text-sm text-gray-500 italic">Not enough data yet</p>
-      ) : (
-        <>
-          <p className="text-base text-gray-900 font-medium">
-            {Math.round(trend.total_distance)} km total
-            <span className="text-sm text-gray-600 ml-1">
-              · {Math.round(trend.weekly_avg_distance)} km / week avg
-            </span>
-          </p>
-
-          <div className="flex justify-center mt-2">
-            <FeelingIcon className="w-6 h-6 text-movenotes-accent" />
-          </div>
-
-          {comparison !== null && (
-            <p className={`text-sm mt-2 text-center ${comparisonClass}`}>
-              {comparison === 0
-                ? "no change from previous period"
-                : `${comparison >= 0 ? "↑" : "↓"} ${comparison}% vs previous 90 days`}
-            </p>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
 export default function StatsRpcPage() {
   const [goalStats, setGoalStats] = useState<GoalStat[]>([]);
-  const [trendStats, setTrendStats] = useState<TrendStat[]>([]);
-  const [fallbackSummaries, setFallbackSummaries] = useState<FallbackSummary[]>(
-    []
-  );
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const PERIODS = ["all", "week", "month", "year"] as const;
+  type Period = (typeof PERIODS)[number];
+  const PERIOD_ORDER: Record<Exclude<Period, "all">, number> = {
+    week: 1,
+    month: 2,
+    year: 3,
+  };
+  const [periodFilter, setPeriodFilter] = useState<Period>("all");
+  const [activeTab, setActiveTab] = useState<"snapshot" | "trends">("snapshot");
   const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
   const statsHeaderRef = useRef<HTMLDivElement | null>(null);
-  const activityOrder: Record<string, number> = Object.keys(ACTIVITY_TYPES).reduce(
-    (acc, key, idx) => {
-      acc[key] = idx;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-  activityOrder["any"] = activityOrder["any"] ?? Number.MAX_SAFE_INTEGER;
+  const navigate = useNavigate();
+
+  const fetchStats = async (_period: Period) => {
+    setLoading(true);
+    setError(null);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      setError(userError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!user) {
+      setError("You need to be signed in to view stats.");
+      setLoading(false);
+      return;
+    }
+
+    const now = new Date();
+    const earliest = startOfYear(now);
+    earliest.setFullYear(earliest.getFullYear() - 1); // need previous year for comparisons
+    const earliestStr = earliest.toISOString().split("T")[0];
+
+    const [goalsRes, actsRes] = await Promise.all([
+      supabase.rpc(GOAL_RPC, { user_id: user.id }),
+      supabase
+        .from("activities")
+        .select("type, date, distance_km, duration_min")
+        .eq("user_id", user.id)
+        .gte("date", earliestStr),
+    ]);
+
+    if (goalsRes.error) {
+      setError(
+        `Could not load goal stats (${GOAL_RPC}): ${goalsRes.error.message}`
+      );
+      setLoading(false);
+      return;
+    }
+
+    if (actsRes.error) {
+      setError(
+        `Could not load activity history: ${actsRes.error.message}`
+      );
+      setLoading(false);
+      return;
+    }
+
+    setGoalStats((goalsRes.data as GoalStat[]) || []);
+
+    const acts = (actsRes.data || []) as Activity[];
+    setActivities(acts);
+
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        setError(userError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!user) {
-        setError("You need to be signed in to view stats.");
-        setLoading(false);
-        return;
-      }
-
-      const now = new Date();
-      const earliest = startOfYear(now);
-      earliest.setFullYear(earliest.getFullYear() - 1); // need previous year for comparisons
-      const earliestStr = earliest.toISOString().split("T")[0];
-
-      const [goalsRes, trendsRes, actsRes] = await Promise.all([
-        supabase.rpc(GOAL_RPC, { user_id: user.id }),
-        supabase.rpc(TREND_RPC, { user_id: user.id }),
-        supabase
-          .from("activities")
-          .select("type, date, distance_km")
-          .eq("user_id", user.id)
-          .gte("date", earliestStr),
-      ]);
-
-      if (goalsRes.error) {
-        setError(
-          `Could not load goal stats (${GOAL_RPC}): ${goalsRes.error.message}`
-        );
-        setLoading(false);
-        return;
-      }
-
-      if (trendsRes.error) {
-        setError(
-          `Could not load trend stats (${TREND_RPC}): ${trendsRes.error.message}`
-        );
-        setLoading(false);
-        return;
-      }
-
-      if (actsRes.error) {
-        setError(
-          `Could not load activity history for fallbacks: ${actsRes.error.message}`
-        );
-        setLoading(false);
-        return;
-      }
-
-      setGoalStats((goalsRes.data as GoalStat[]) || []);
-      setTrendStats((trendsRes.data as TrendStat[]) || []);
-
-      const acts = (actsRes.data || []) as {
-        type: "run" | "ride";
-        date: string;
-        distance_km: number;
-      }[];
-
-      const computeFallback = (
-        period: "week" | "month" | "year",
-        activity_type: "run" | "ride"
-      ): FallbackSummary | null => {
-        const { startCurrent, endCurrent, startPrev, endPrev } = periodBounds(
-          period,
-          now
-        );
-
-        const inRange = (d: Date, s: Date, e: Date) => d >= s && d < e;
-
-        const ofType = acts.filter((a) => a.type === activity_type);
-        const currentTotal = ofType
-          .filter((a) =>
-            inRange(parseActivityDate(a.date), startCurrent, endCurrent)
-          )
-          .reduce((sum, a) => sum + Number(a.distance_km || 0), 0);
-        if (currentTotal <= 0) return null; // no activity, no fallback needed
-
-        const prevTotal = ofType
-          .filter((a) =>
-            inRange(parseActivityDate(a.date), startPrev, endPrev)
-          )
-          .reduce((sum, a) => sum + Number(a.distance_km || 0), 0);
-
-        const change_pct =
-          prevTotal > 0 ? (currentTotal / prevTotal - 1) * 100 : null;
-
-        return {
-          period,
-          activity_type,
-          total_distance: currentTotal,
-          change_pct,
-        };
-      };
-
-      const fallback: FallbackSummary[] = [];
-      (["week", "month", "year"] as const).forEach((period) => {
-        (["run", "ride"] as const).forEach((activity_type) => {
-          const hasGoal = goalsRes.data?.some(
-            (g: GoalStat) =>
-              g.period === period && g.activity_type === activity_type
-          );
-          if (hasGoal) return;
-          const summary = computeFallback(period, activity_type);
-          if (summary) fallback.push(summary);
-        });
-      });
-
-      setFallbackSummaries(fallback);
-      setLoading(false);
-    };
-
-    load();
+    fetchStats(periodFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    fetchStats(periodFilter);
+  }, [periodFilter]);
 
   useEffect(() => {
     if (!hasDoneOnboarding) return;
@@ -452,35 +242,63 @@ export default function StatsRpcPage() {
     }
   }, [hasDoneOnboarding, hasSeen, showTooltip]);
 
-  const sortGoals = (items: GoalStat[]) =>
-    [...items].sort((a, b) => {
-      const aOrder = activityOrder[a.activity_type] ?? 99;
-      const bOrder = activityOrder[b.activity_type] ?? 99;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return (a.name || "").localeCompare(b.name || "");
+  let filteredGoals = goalStats ?? [];
+  if (periodFilter !== "all") {
+    filteredGoals = filteredGoals.filter((g) => g.period === periodFilter);
+  }
+  filteredGoals = filteredGoals.sort((a, b) => {
+    const aOrder = PERIOD_ORDER[a.period];
+    const bOrder = PERIOD_ORDER[b.period];
+    return aOrder - bOrder;
+  });
+
+  const trends = useMemo(() => {
+    if (!activities.length) return {} as Record<string, Array<{ week: string; value: number }>>;
+
+    const now = new Date();
+    const weeks = Array.from({ length: 12 }).map((_, i) =>
+      dfStartOfWeek(subWeeks(now, 11 - i), { weekStartsOn: 1 })
+    );
+
+    const result: Record<string, Array<{ week: string; value: number }>> = {};
+
+    Object.keys(ACTIVITY_TYPES).forEach((type) => {
+      const cfg = ACTIVITY_TYPES[type as keyof typeof ACTIVITY_TYPES];
+      if (!cfg) return;
+
+      const rows = weeks.map((w) => ({
+        week: format(w, "dd MMM"),
+        value: 0,
+      }));
+
+      let hasRecent = false;
+
+      activities.forEach((a) => {
+        if (a.type !== type) return;
+
+        const metric = cfg.defaultFields.includes("distance_km")
+          ? Number(a.distance_km || 0)
+          : Number(a.duration_min || 0);
+
+        const aDate = parseActivityDate(a.date);
+
+        weeks.forEach((wk, i) => {
+          const end = new Date(wk);
+          end.setDate(end.getDate() + 7);
+          if (aDate >= wk && aDate < end) {
+            rows[i].value += metric;
+            if (metric > 0) hasRecent = true;
+          }
+        });
+      });
+
+      if (hasRecent) {
+        result[type] = rows;
+      }
     });
 
-  const weeklyGoals = sortGoals(goalStats.filter((g) => g.period === "week"));
-  const monthlyGoals = sortGoals(goalStats.filter((g) => g.period === "month"));
-  const yearlyGoals = sortGoals(goalStats.filter((g) => g.period === "year"));
-
-  const sortSummaries = (items: FallbackSummary[]) =>
-    [...items].sort((a, b) => {
-      const aOrder = activityOrder[a.activity_type] ?? 99;
-      const bOrder = activityOrder[b.activity_type] ?? 99;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return 0;
-    });
-
-  const weeklyFallbacks = sortSummaries(
-    fallbackSummaries.filter((f) => f.period === "week")
-  );
-  const monthlyFallbacks = sortSummaries(
-    fallbackSummaries.filter((f) => f.period === "month")
-  );
-  const yearlyFallbacks = sortSummaries(
-    fallbackSummaries.filter((f) => f.period === "year")
-  );
+    return result;
+  }, [activities]);
 
   return (
     <div className="min-h-screen bg-movenotes-bg p-2">
@@ -499,92 +317,210 @@ export default function StatsRpcPage() {
           )}
         </div>
 
-        {loading && (
-          <p className="text-sm text-gray-500 text-center">Loading stats…</p>
-        )}
+        {/* Top-level tabs */}
+        <div className="flex justify-center gap-10 mb-6 mt-2">
+          {["snapshot", "trends"].map((tab) => {
+            const active = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab as "snapshot" | "trends")}
+                className="relative pb-1 text-base"
+              >
+                <span
+                  className={
+                    active
+                      ? "text-movenotes-primary font-semibold"
+                      : "text-movenotes-muted"
+                  }
+                >
+                  {tab === "snapshot" ? "Goal Tracking" : "Trends"}
+                </span>
 
-        {error && (
-          <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
-            <AlertCircle className="w-4 h-4 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold">Unable to load stats</p>
-              <p className="text-sm">{error}</p>
-            </div>
-          </div>
-        )}
+                {active && (
+                  <span className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-movenotes-primary rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-        {!loading && !error && (
+        {activeTab === "snapshot" && (
           <>
-            {goalStats.length === 0 && (
-              <p className="text-sm text-gray-500">No goals found.</p>
-            )}
-
-            {(weeklyGoals.length > 0 || weeklyFallbacks.length > 0) && (
-              <>
-                <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-6 mb-3 border-b border-amber-300/50 pb-1">
-                  WEEK
-                </h2>
-                <div className="flex flex-col gap-4">
-                  {weeklyGoals.map((g) => (
-                    <GoalStatCard key={g.goal_id} stat={g} />
-                  ))}
-                  {weeklyFallbacks.map((f, idx) => (
-                    <FallbackCard key={`fallback-week-${f.activity_type}-${idx}`} summary={f} />
-                  ))}
-                </div>
-              </>
-            )}
-
-            {(monthlyGoals.length > 0 || monthlyFallbacks.length > 0) && (
-              <>
-                <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-6 mb-3 border-b border-amber-300/50 pb-1">
-                  MONTH
-                </h2>
-                <div className="flex flex-col gap-4">
-                  {monthlyGoals.map((g) => (
-                    <GoalStatCard key={g.goal_id} stat={g} />
-                  ))}
-                  {monthlyFallbacks.map((f, idx) => (
-                    <FallbackCard key={`fallback-month-${f.activity_type}-${idx}`} summary={f} />
-                  ))}
-                </div>
-              </>
-            )}
-
-            {(yearlyGoals.length > 0 || yearlyFallbacks.length > 0) && (
-              <>
-                <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-6 mb-3 border-b border-amber-300/50 pb-1">
-                  YEAR
-                </h2>
-                <div className="flex flex-col gap-4">
-                  {yearlyGoals.map((g) => (
-                    <GoalStatCard key={g.goal_id} stat={g} />
-                  ))}
-                  {yearlyFallbacks.map((f, idx) => (
-                    <FallbackCard key={`fallback-year-${f.activity_type}-${idx}`} summary={f} />
-                  ))}
-                </div>
-              </>
-            )}
-
-            <h2 className="text-lg font-bold text-amber-600 tracking-wide mt-8 mb-3 border-b border-amber-300/50 pb-1">
-              LAST 90 DAYS TREND (DB)
-            </h2>
-            <div className="flex flex-col gap-4">
-              {(["run", "ride"] as const).map((type) => {
-                const stat = trendStats.find(
-                  (t) => t.activity_type === type
-                ) || {
-                  activity_type: type,
-                  total_distance: 0,
-                  weekly_avg_distance: 0,
-                  trend_pct: null,
-                  avg_feeling: null,
-                };
-
-                return <TrendCard key={type} trend={stat} />;
-              })}
+            <div className="flex justify-center gap-2 mb-6">
+              {PERIODS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriodFilter(p)}
+                  className={`px-4 py-2 rounded-full ${
+                    periodFilter === p
+                      ? "bg-movenotes-primary text-primary-text"
+                      : "bg-movenotes-surface border border-movenotes-border text-movenotes-text"
+                  }`}
+                >
+                  {p === "all"
+                    ? "All"
+                    : p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
             </div>
+
+            {filteredGoals
+              .map((goal) => {
+                const cfg = ACTIVITY_TYPES[goal.activity_type];
+                const Icon = cfg?.Icon;
+                const unit =
+                  goal.metric === "distance"
+                    ? "km"
+                    : goal.metric === "duration"
+                    ? "min"
+                    : "activities";
+                const progressValue = Number(goal.current_value || 0);
+                const targetValue = Number(goal.target || 0);
+                const ratio =
+                  targetValue > 0
+                    ? Math.max(0, Math.min(1, progressValue / targetValue))
+                    : 0;
+
+                return (
+                  <div
+                    key={goal.goal_id}
+                    className="p-5 mb-4 rounded-xl border border-movenotes-border bg-movenotes-surface shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {Icon && (
+                        <span className="text-movenotes-primary">
+                          <Icon size={20} />
+                        </span>
+                      )}
+                      <h3 className="font-semibold text-movenotes-text">
+                        {goal.name || cfg?.label}
+                      </h3>
+                    </div>
+
+                    <p className="text-sm text-movenotes-muted mb-2">
+                      {progressValue} / {targetValue} {unit}
+                    </p>
+
+                    <div className="flex gap-1 mb-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            i < Math.min(5, Math.round(ratio * 5))
+                              ? "bg-movenotes-primary"
+                              : "bg-movenotes-border"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    <p className="text-xs text-movenotes-accent">
+                      {getPacingMessage(ratio, goal.period)}
+                    </p>
+                  </div>
+                );
+              })}
+
+            {filteredGoals.length === 0 && (
+              <div className="text-center mt-10 text-movenotes-muted">
+                <p className="mb-3">You haven't set any goals for this period.</p>
+                <p className="text-sm mb-6">
+                  Start with one small, achievable goal.
+                  <br />
+                  Simple goals help build consistency without pressure.
+                </p>
+
+                <button
+                  onClick={() => navigate("/goals")}
+                  className="px-4 py-2 rounded-full bg-movenotes-primary text-primary-text"
+                >
+                  Create a Goal
+                </button>
+              </div>
+            )}
+
+            <div className="text-center mt-8">
+              <button
+                onClick={() => setActiveTab("trends")}
+                className="text-movenotes-accent underline text-sm"
+              >
+                See all activity stats →
+              </button>
+            </div>
+          </>
+        )}
+
+        {activeTab === "trends" && (
+          <>
+            {loading && (
+              <p className="text-sm text-gray-500 text-center">Loading stats…</p>
+            )}
+
+            {error && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
+                <AlertCircle className="w-4 h-4 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold">Unable to load stats</p>
+                  <p className="text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {!loading && !error && (
+              <div className="space-y-10 mt-6">
+                <h2 className="text-xl font-semibold text-movenotes-primary mb-2 text-center">
+                  Your movement over time
+                </h2>
+                <p className="text-center text-movenotes-muted text-sm mb-6">
+                  Weekly trends for each activity you've logged recently.
+                </p>
+
+                {Object.keys(trends).length === 0 && (
+                  <p className="text-center text-movenotes-muted mt-8">
+                    Not enough activity yet to show trends 🌱
+                  </p>
+                )}
+
+                {Object.entries(trends).map(([type, rows]) => {
+                  const cfg = ACTIVITY_TYPES[type as keyof typeof ACTIVITY_TYPES];
+                  const Icon = cfg.Icon;
+                  return (
+                    <div
+                      key={type}
+                      className="rounded-xl border border-movenotes-border p-6 bg-movenotes-surface shadow-sm"
+                    >
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-movenotes-primary">
+                          <Icon size={20} />
+                        </span>
+                        <h3 className="text-lg font-semibold text-movenotes-text">
+                          {cfg.label} —{" "}
+                          {cfg.defaultFields.includes("distance_km")
+                            ? "Distance (km)"
+                            : "Duration (min)"}
+                        </h3>
+                      </div>
+
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={rows}>
+                          <XAxis dataKey="week" stroke="#888" fontSize={12} />
+                          <YAxis stroke="#888" fontSize={12} />
+                          <RechartsTooltip />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#5A7A69"
+                            strokeWidth={3}
+                            dot={true}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
       </div>

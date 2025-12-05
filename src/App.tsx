@@ -7,7 +7,6 @@ import Signup from "./pages/Signup";
 import PresetsPage from "./pages/PresetsPage";
 import AddPresetPage from "./pages/AddPresetPage";
 import EditPresetPage from "./pages/EditPresetPage";
-import StatsPage from "./pages/StatsPage";
 import StatsRpcPage from "./pages/StatsRpcPage";
 import GoalsPage from "./pages/GoalsPage";
 import AnimatedLogo from "./components/AnimatedLogo";
@@ -202,15 +201,6 @@ export default function App() {
   element={
     <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
       <StatsRpcPage />
-    </Layout>
-  }
-/>
-
-<Route
-  path="/stats-legacy"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <StatsPage />
     </Layout>
   }
 />
