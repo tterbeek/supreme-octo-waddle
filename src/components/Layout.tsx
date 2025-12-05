@@ -1,7 +1,9 @@
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Sidebar from "./Sidebar";
 import HeaderLogo from "./HeaderLogo";
 import HamburgerButton from "../components/HamburgerButton";
+import { usePwaInstallBanner } from "../hooks/usePwaInstallBanner";
+import PwaInstallBanner from "./PwaInstallBanner";
 
 export default function Layout({
   children,
@@ -12,6 +14,9 @@ export default function Layout({
   menuOpen: boolean;
   setMenuOpen: (v: boolean) => void;
 }) {
+  const { showBanner, handleInstallClick, handleDismiss } =
+    usePwaInstallBanner();
+
   return (
     <div className="relative min-h-screen bg-movenotes-bg">
       
@@ -41,6 +46,13 @@ export default function Layout({
 
       {/* Global sidebar */}
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      {showBanner && (
+        <PwaInstallBanner
+          onInstall={handleInstallClick}
+          onDismiss={handleDismiss}
+        />
+      )}
     </div>
   );
 }

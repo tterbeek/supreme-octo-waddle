@@ -6,15 +6,7 @@ import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
 import { IconActivity } from "@tabler/icons-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
-import {
-  Zap,
-  Frown,
-  Meh,
-  Smile,
-  Laugh,
-  Target,
-  Hash,
-} from "lucide-react";
+import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import SwipeActions from "../components/SwipeActions";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
@@ -126,18 +118,29 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
       return (a.name || "").localeCompare(b.name || "");
     });
 
-  const comparisonClass = (comparison: number | null) => {
-    if (comparison === null) return "";
-    if (comparison === 0) return "text-gray-500";
-    if (comparison >= 0) return "text-green-600";
-    if (comparison >= -5) return "text-gray-500";
-    if (comparison >= -15) return "text-yellow-500";
-    return "text-red-600";
-  };
-
   // --------------------------------------------------
   // HELPERS
   // --------------------------------------------------
+
+  const sortActivitiesByDateAndCreated = (items: any[]) =>
+    [...items].sort((a, b) => {
+      const dateDiff =
+        new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateDiff !== 0) return dateDiff;
+
+      const bCreated =
+        (b.created_at && new Date(b.created_at).getTime()) ||
+        (b.inserted_at && new Date(b.inserted_at).getTime()) ||
+        (b.updated_at && new Date(b.updated_at).getTime()) ||
+        0;
+      const aCreated =
+        (a.created_at && new Date(a.created_at).getTime()) ||
+        (a.inserted_at && new Date(a.inserted_at).getTime()) ||
+        (a.updated_at && new Date(a.updated_at).getTime()) ||
+        0;
+
+      return bCreated - aCreated;
+    });
 
   async function refreshActivities() {
     if (!userId) return;
@@ -167,9 +170,10 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
       .select("*")
       .eq("user_id", userId)
       .order("date", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(FEED_PAGE_SIZE);
 
-    setActivities(firstFeed || []);
+    setActivities(sortActivitiesByDateAndCreated(firstFeed || []));
     setFeedOffset(firstFeed ? firstFeed.length : 0);
     setHasMoreFeed(!!firstFeed && firstFeed.length === FEED_PAGE_SIZE);
     setInitialFeedLoaded(true);
@@ -190,6 +194,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
       .select("*")
       .eq("user_id", userId)
       .order("date", { ascending: false })
+      .order("created_at", { ascending: false })
       .range(offset, offset + FEED_PAGE_SIZE - 1);
 
     if (!more || more.length === 0) {
@@ -197,7 +202,9 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
       return;
     }
 
-    setActivities((prev) => [...prev, ...more]);
+    setActivities((prev) =>
+      sortActivitiesByDateAndCreated([...prev, ...more])
+    );
     setFeedOffset((prev) => prev + more.length);
 
     if (more.length < FEED_PAGE_SIZE) {
@@ -267,9 +274,10 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
           .select("*")
           .eq("user_id", user.id)
           .order("date", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(FEED_PAGE_SIZE);
 
-        setActivities(firstFeed || []);
+        setActivities(sortActivitiesByDateAndCreated(firstFeed || []));
         setFeedOffset(firstFeed ? firstFeed.length : 0);
         setHasMoreFeed(!!firstFeed && firstFeed.length === FEED_PAGE_SIZE);
       } finally {
@@ -358,72 +366,6 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     };
   }, [activities]);
 
-  const GoalStatCardHome = ({ stat }: { stat: GoalStat }) => {
-    const ratio = Math.max(0, Math.min(1, Number(stat.progress_ratio) || 0));
-    const comparison =
-      stat.comparison_pct === null ? null : Math.round(stat.comparison_pct);
-    const typeConfig =
-      ACTIVITY_TYPES[stat.activity_type] ?? ACTIVITY_TYPES["any"];
-    const ActivityIcon = typeConfig?.Icon || Target;
-    const MetricIcon =
-      stat.metric === "distance"
-        ? Target
-        : stat.metric === "duration"
-        ? Hash
-        : Hash;
-
-    return (
-      <div className="rounded-xl bg-warm-100 border border-warm-200 shadow-sm px-3 py-2">
-        <div className="flex items-center gap-2 mb-1.5">
-          <ActivityIcon size={20} strokeWidth={1.8} />
-          <MetricIcon className="w-3.5 h-3.5 text-gray-500" />
-          <h3 className="font-semibold text-gray-800 text-sm tracking-wide">
-            {stat.name || `${typeConfig.label} ${stat.metric}`}
-          </h3>
-        </div>
-
-        <div className="text-base text-gray-900 font-medium">
-          {stat.metric === "distance" && (
-            <>
-              {Math.round(stat.current_value)} / {Math.round(stat.target)} km
-            </>
-          )}
-          {stat.metric === "duration" && (
-            <>
-              {Math.round(stat.current_value)} / {Math.round(stat.target)} min
-            </>
-          )}
-          {stat.metric === "count" && (
-            <>
-              {Math.round(stat.current_value)} / {Math.round(stat.target)} activities
-            </>
-          )}
-        </div>
-
-        <div className="flex gap-1 mt-1">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-2.5 h-2.5 rounded-full ${
-                i < Math.floor(ratio * 5)
-                  ? "bg-movenotes-accent"
-                  : "bg-gray-300"
-              }`}
-            />
-          ))}
-        </div>
-
-        {comparison !== null && (
-          <p className={`text-sm mt-1 ${comparisonClass(comparison)}`}>
-            {comparison === 0
-              ? "no change from previous period"
-              : `${comparison >= 0 ? "↑" : "↓"} ${comparison}% vs previous`}
-          </p>
-        )}
-      </div>
-    );
-  };
-
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
@@ -438,7 +380,9 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
 
   const undoDelete = async () => {
     if (!lastDeletedRef.current) return;
-    setActivities((prev) => [lastDeletedRef.current, ...prev]);
+    setActivities((prev) =>
+      sortActivitiesByDateAndCreated([lastDeletedRef.current, ...prev])
+    );
     await supabase.from("activities").insert(lastDeletedRef.current);
     lastDeletedRef.current = null;
     setShowUndoToast(false);
@@ -484,14 +428,16 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
             <div className={goalGridClass}>
               {useRpcGoals
                 ? displayedGoalStats.map((g) => (
-                    <GoalStatCardHome key={g.goal_id} stat={g} />
+                    <GoalProgressCard
+                      key={g.goal_id}
+                      goal={{ ...g, progress_current: g.current_value }}
+                    />
                   ))
                 : displayedLegacyGoals.map((g) => (
                     <GoalProgressCard
                       key={g.id}
                       goal={g}
                       activities={activitiesForGoals}
-                      compact
                     />
                   ))}
             </div>

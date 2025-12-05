@@ -14,66 +14,8 @@ import { ACTIVITY_TYPES } from "../config/activityTypes";
 import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useNavigate } from "react-router-dom";
-import {
-  startOfWeek as dfStartOfWeek,
-  format,
-  subWeeks,
-} from "date-fns";
-
-// Pacing message library
-const PACING_MESSAGES = {
-  goalReached: [
-    "Goal reached—great job!",
-    "You hit this goal—amazing work!",
-    "Target met—nicely done!",
-  ],
-  onTrack: [
-    "You’re on track for this period.",
-    "Right on pace—keep going.",
-    "Nice rhythm—you’re where you need to be.",
-  ],
-  nearPace: [
-    "You’re close to pace—keep it going.",
-    "Almost on pace—one more session will help.",
-    "Close to pace—small pushes will get you there.",
-  ],
-  plentyTime: [
-    "Plenty of time left—add a little more when you can.",
-    "Early in the period—light steps now, more later.",
-    "You’ve got time—sprinkle in a bit more movement.",
-  ],
-};
-
-const pickMessage = (list: string[]) =>
-  list[Math.floor(Math.random() * list.length)];
-
-// Progress pacing helper: compares progress vs elapsed time in period
-const getPeriodElapsedRatio = (
-  period: "week" | "month" | "year",
-  now = new Date()
-) => {
-  const { startCurrent, endCurrent } = periodBounds(period, now);
-  const total = endCurrent.getTime() - startCurrent.getTime();
-  const elapsed = Math.max(
-    0,
-    Math.min(total, now.getTime() - startCurrent.getTime())
-  );
-  return total > 0 ? elapsed / total : 1;
-};
-
-const getPacingMessage = (
-  progressRatio: number,
-  period: "week" | "month" | "year"
-) => {
-  if (progressRatio >= 1) return pickMessage(PACING_MESSAGES.goalReached);
-
-  const elapsed = getPeriodElapsedRatio(period);
-  // Allow a small buffer so users aren't penalized for minor timing differences
-  if (progressRatio >= elapsed * 0.9) return pickMessage(PACING_MESSAGES.onTrack);
-  if (progressRatio >= elapsed * 0.6)
-    return pickMessage(PACING_MESSAGES.nearPace);
-  return pickMessage(PACING_MESSAGES.plentyTime);
-};
+import { startOfWeek as dfStartOfWeek, format, subWeeks } from "date-fns";
+import GoalProgressCard from "../components/GoalProgressCard";
 
 // Expected Supabase stored procedures:
 // - stats_goal_progress(user_id uuid)
@@ -252,26 +194,55 @@ export default function StatsRpcPage() {
     return aOrder - bOrder;
   });
 
+  type TrendRow = { week: string; value: number; isFuture?: boolean };
+  type TrendInfo = {
+    rows: TrendRow[];
+    missingPrimary: boolean;
+    primaryLabel: string;
+  };
+
   const trends = useMemo(() => {
-    if (!activities.length) return {} as Record<string, Array<{ week: string; value: number }>>;
+    if (!activities.length) return {} as Record<string, TrendInfo>;
 
     const now = new Date();
     const weeks = Array.from({ length: 12 }).map((_, i) =>
       dfStartOfWeek(subWeeks(now, 11 - i), { weekStartsOn: 1 })
     );
 
-    const result: Record<string, Array<{ week: string; value: number }>> = {};
+    const result: Record<string, TrendInfo> = {};
 
     Object.keys(ACTIVITY_TYPES).forEach((type) => {
       const cfg = ACTIVITY_TYPES[type as keyof typeof ACTIVITY_TYPES];
       if (!cfg) return;
 
-      const rows = weeks.map((w) => ({
-        week: format(w, "dd MMM"),
-        value: 0,
-      }));
+      const primaryMetric = cfg.defaultFields.includes("distance_km")
+        ? "distance_km"
+        : cfg.defaultFields.includes("duration_min")
+        ? "duration_min"
+        : null;
+      const primaryLabel =
+        primaryMetric === "distance_km"
+          ? "distance"
+          : primaryMetric === "duration_min"
+          ? "duration"
+          : "activity";
+
+      const rows = weeks.map((w) => {
+        const end = new Date(w);
+        end.setDate(end.getDate() + 7);
+
+        // mark future/ongoing week so we can hide it
+        const isFuture = end > now;
+
+        return {
+          week: format(w, "dd MMM"),
+          value: 0,
+          isFuture,
+        };
+      });
 
       let hasRecent = false;
+      let missingPrimary = false;
 
       activities.forEach((a) => {
         if (a.type !== type) return;
@@ -288,12 +259,35 @@ export default function StatsRpcPage() {
           if (aDate >= wk && aDate < end) {
             rows[i].value += metric;
             if (metric > 0) hasRecent = true;
+
+            const primaryMissing =
+              primaryMetric === "distance_km"
+                ? a.distance_km == null
+                : primaryMetric === "duration_min"
+                ? a.duration_min == null
+                : false;
+            if (primaryMissing) missingPrimary = true;
           }
         });
       });
 
       if (hasRecent) {
-        result[type] = rows;
+        // trim trailing future/ongoing week (keep only fully finished weeks)
+        let trimmed = rows;
+        for (let j = rows.length - 1; j >= 0; j -= 1) {
+          const r = rows[j];
+          if (r.isFuture) {
+            trimmed = rows.slice(0, j);
+          } else {
+            break;
+          }
+        }
+
+        result[type] = {
+          rows: trimmed,
+          missingPrimary,
+          primaryLabel,
+        };
       }
     });
 
@@ -365,62 +359,12 @@ export default function StatsRpcPage() {
               ))}
             </div>
 
-            {filteredGoals
-              .map((goal) => {
-                const cfg = ACTIVITY_TYPES[goal.activity_type];
-                const Icon = cfg?.Icon;
-                const unit =
-                  goal.metric === "distance"
-                    ? "km"
-                    : goal.metric === "duration"
-                    ? "min"
-                    : "activities";
-                const progressValue = Number(goal.current_value || 0);
-                const targetValue = Number(goal.target || 0);
-                const ratio =
-                  targetValue > 0
-                    ? Math.max(0, Math.min(1, progressValue / targetValue))
-                    : 0;
-
-                return (
-                  <div
-                    key={goal.goal_id}
-                    className="p-5 mb-4 rounded-xl border border-movenotes-border bg-movenotes-surface shadow-sm"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      {Icon && (
-                        <span className="text-movenotes-primary">
-                          <Icon size={20} />
-                        </span>
-                      )}
-                      <h3 className="font-semibold text-movenotes-text">
-                        {goal.name || cfg?.label}
-                      </h3>
-                    </div>
-
-                    <p className="text-sm text-movenotes-muted mb-2">
-                      {progressValue} / {targetValue} {unit}
-                    </p>
-
-                    <div className="flex gap-1 mb-2">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            i < Math.min(5, Math.round(ratio * 5))
-                              ? "bg-movenotes-primary"
-                              : "bg-movenotes-border"
-                          }`}
-                        />
-                      ))}
-                    </div>
-
-                    <p className="text-xs text-movenotes-accent">
-                      {getPacingMessage(ratio, goal.period)}
-                    </p>
-                  </div>
-                );
-              })}
+            {filteredGoals.map((goal) => (
+              <GoalProgressCard
+                key={goal.goal_id}
+                goal={{ ...goal, progress_current: goal.current_value }}
+              />
+            ))}
 
             {filteredGoals.length === 0 && (
               <div className="text-center mt-10 text-movenotes-muted">
@@ -482,7 +426,8 @@ export default function StatsRpcPage() {
                   </p>
                 )}
 
-                {Object.entries(trends).map(([type, rows]) => {
+                {Object.entries(trends).map(([type, trend]) => {
+                  const rows = trend.rows;
                   const cfg = ACTIVITY_TYPES[type as keyof typeof ACTIVITY_TYPES];
                   const Icon = cfg.Icon;
                   return (
@@ -516,6 +461,13 @@ export default function StatsRpcPage() {
                           />
                         </LineChart>
                       </ResponsiveContainer>
+
+                      {trend.missingPrimary && (
+                        <p className="text-xs text-movenotes-muted mt-3">
+                          For {cfg.label}, Trends use {trend.primaryLabel} so the graph stays meaningful.
+                          A few entries this period used only other details, so they aren’t shown here—your movement still counts.
+                        </p>
+                      )}
                     </div>
                   );
                 })}

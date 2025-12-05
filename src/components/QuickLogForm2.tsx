@@ -4,6 +4,7 @@ import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import ModalSheet from "./ModalSheet";
+import TooltipBubble from "./TooltipBubble";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 
@@ -111,6 +112,15 @@ export default function QuickLogForm2({
   const [effort, setEffort] = useState<number>(3);
   const [showOptionalDistance, setShowOptionalDistance] = useState(false);
   const [showOptionalDuration, setShowOptionalDuration] = useState(false);
+  const [showMetricTooltip, setShowMetricTooltip] = useState(false);
+  const [metricTooltip, setMetricTooltip] = useState("");
+  const [metricTooltipAcknowledged, setMetricTooltipAcknowledged] = useState(false);
+  const [tooltipAlreadySeen, setTooltipAlreadySeen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const key = `metric_tooltip_seen_${initialType}`;
+    return localStorage.getItem(key) === "true";
+  });
+  const tooltipSeenKey = `metric_tooltip_seen_${initialType}`;
 
   const [activityType] = useState(initialType);
   const typeConfig = ACTIVITY_TYPES[activityType];
@@ -182,6 +192,26 @@ export default function QuickLogForm2({
   };
 
   const save = async () => {
+    // Guard: ensure default metric is present
+    const needsDistance = typeConfig.defaultFields.includes("distance_km");
+    const needsDuration = typeConfig.defaultFields.includes("duration_min");
+
+    if (needsDistance && !distance && !metricTooltipAcknowledged && !tooltipAlreadySeen) {
+      setMetricTooltip(
+        `Tip for ${typeConfig.label}\nTrends use distance for ${typeConfig.label}.\nSince this entry doesn’t include distance, it won’t appear in your Trends graph. Close to save anyway.`
+      );
+      setShowMetricTooltip(true);
+      return;
+    }
+
+    if (needsDuration && !duration && !metricTooltipAcknowledged && !tooltipAlreadySeen) {
+      setMetricTooltip(
+        `Tip for ${typeConfig.label}\nTrends use duration for ${typeConfig.label}.\nSince this entry doesn’t include duration, it won’t appear in your Trends graph. Close to save anyway.`
+      );
+      setShowMetricTooltip(true);
+      return;
+    }
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -371,12 +401,29 @@ export default function QuickLogForm2({
         </div>
 
         {/* Save */}
-        <button
-          onClick={save}
-          className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
-        >
-          Save
-        </button>
+        <div className="relative">
+          <button
+            onClick={save}
+            className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
+          >
+            Save
+          </button>
+
+          {showMetricTooltip && (
+            <TooltipBubble
+              position="top"
+              onClose={() => {
+                setShowMetricTooltip(false);
+                setMetricTooltipAcknowledged(true);
+                localStorage.setItem(tooltipSeenKey, "true");
+              }}
+            >
+              <p className="text-sm text-gray-800 whitespace-pre-line">
+                {metricTooltip}
+              </p>
+            </TooltipBubble>
+          )}
+        </div>
       </ModalSheet>
 
       {/* SECOND SHEET: ALL PRESETS */}
