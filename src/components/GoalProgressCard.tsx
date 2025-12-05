@@ -51,10 +51,6 @@ export default function GoalProgressCard({
   const target =
     metric === "distance" ? Math.round(targetRaw) : targetRaw;
 
-  const pct =
-    targetRaw > 0
-      ? Math.min(100, Math.round((progressRaw / targetRaw) * 100))
-      : 0;
   const filledDots = Math.max(
     0,
     Math.min(

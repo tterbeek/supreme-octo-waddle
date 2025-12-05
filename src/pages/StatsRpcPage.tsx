@@ -47,41 +47,8 @@ type Activity = {
 
 const GOAL_RPC = "stats_goal_progress";
 
-const startOfWeek = (date: Date): Date =>
-  dfStartOfWeek(date, { weekStartsOn: 1 });
-
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
 function startOfYear(date: Date): Date {
   return new Date(date.getFullYear(), 0, 1);
-}
-
-function periodBounds(
-  period: "week" | "month" | "year",
-  now = new Date()
-) {
-  const startCurrent =
-    period === "week"
-      ? startOfWeek(now)
-      : period === "month"
-      ? startOfMonth(now)
-      : startOfYear(now);
-
-  const endCurrent = new Date(startCurrent);
-  if (period === "week") endCurrent.setDate(startCurrent.getDate() + 7);
-  else if (period === "month") endCurrent.setMonth(startCurrent.getMonth() + 1);
-  else endCurrent.setFullYear(startCurrent.getFullYear() + 1);
-
-  const startPrev = new Date(startCurrent);
-  if (period === "week") startPrev.setDate(startPrev.getDate() - 7);
-  else if (period === "month") startPrev.setMonth(startPrev.getMonth() - 1);
-  else startPrev.setFullYear(startPrev.getFullYear() - 1);
-
-  const endPrev = new Date(startCurrent);
-
-  return { startCurrent, endCurrent, startPrev, endPrev };
 }
 
 function parseActivityDate(d: string | Date): Date {

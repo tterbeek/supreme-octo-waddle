@@ -115,7 +115,7 @@ export default function QuickLogForm2({
   const [showMetricTooltip, setShowMetricTooltip] = useState(false);
   const [metricTooltip, setMetricTooltip] = useState("");
   const [metricTooltipAcknowledged, setMetricTooltipAcknowledged] = useState(false);
-  const [tooltipAlreadySeen, setTooltipAlreadySeen] = useState(() => {
+  const [tooltipAlreadySeen] = useState(() => {
     if (typeof window === "undefined") return false;
     const key = `metric_tooltip_seen_${initialType}`;
     return localStorage.getItem(key) === "true";
