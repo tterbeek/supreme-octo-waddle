@@ -14,6 +14,19 @@ export function usePwaInstallBanner() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
 
+  const setFromPromptEvent = useCallback(
+    (
+      bipEvent: BeforeInstallPromptEvent,
+      opts: { alreadyDismissed: boolean; alreadyInstalled: boolean }
+    ) => {
+      setDeferredPrompt(bipEvent);
+      if (!opts.alreadyDismissed && !opts.alreadyInstalled) {
+        setShowBanner(true);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -30,14 +43,19 @@ export function usePwaInstallBanner() {
       return;
     }
 
+    // If an early listener captured the event, use it immediately.
+    const cached = (window as any).__mn_bip_event as
+      | BeforeInstallPromptEvent
+      | undefined;
+    if (cached) {
+      setFromPromptEvent(cached, { alreadyDismissed, alreadyInstalled });
+    }
+
     function handleBeforeInstallPrompt(e: Event) {
       e.preventDefault();
       const bipEvent = e as BeforeInstallPromptEvent;
-      setDeferredPrompt(bipEvent);
-
-      if (!alreadyDismissed && !alreadyInstalled) {
-        setShowBanner(true);
-      }
+      setFromPromptEvent(bipEvent, { alreadyDismissed, alreadyInstalled });
+      (window as any).__mn_bip_event = bipEvent;
     }
 
     function handleAppInstalled() {
@@ -46,8 +64,18 @@ export function usePwaInstallBanner() {
       setDeferredPrompt(null);
     }
 
+    function handleCachedReady() {
+      const ev = (window as any).__mn_bip_event as
+        | BeforeInstallPromptEvent
+        | undefined;
+      if (ev) {
+        setFromPromptEvent(ev, { alreadyDismissed, alreadyInstalled });
+      }
+    }
+
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
+    window.addEventListener("mn-bip-ready", handleCachedReady);
 
     return () => {
       window.removeEventListener(
@@ -55,8 +83,9 @@ export function usePwaInstallBanner() {
         handleBeforeInstallPrompt
       );
       window.removeEventListener("appinstalled", handleAppInstalled);
+      window.removeEventListener("mn-bip-ready", handleCachedReady);
     };
-  }, []);
+  }, [setFromPromptEvent]);
 
   const handleInstallClick = useCallback(async () => {
     if (!deferredPrompt) return;

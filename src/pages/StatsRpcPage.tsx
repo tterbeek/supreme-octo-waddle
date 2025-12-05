@@ -268,9 +268,6 @@ export default function StatsRpcPage() {
           className="mb-4 relative flex items-center justify-center"
           ref={statsHeaderRef}
         >
-          <h1 className="text-lg font-bold text-gray-600 text-center">
-            Stats
-          </h1>
           {visible === "stats_trends_info" && (
             <TooltipBubble position="bottom" onClose={hideTooltip}>
               Your stats update automatically as you log activities.

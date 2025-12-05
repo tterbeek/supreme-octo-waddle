@@ -1,6 +1,6 @@
 import HeaderLogo from "../components/HeaderLogo";
 import PublicTopNav from "../components/PublicTopNav";
-import { IconRun, IconCamera, IconChartBar } from "@tabler/icons-react";
+import { IconRun, IconCamera, IconChartBar, IconBrandAndroid, IconBrandApple } from "@tabler/icons-react";
 
 
 export default function AboutPage() {
@@ -139,6 +139,42 @@ export default function AboutPage() {
       </figcaption>
     </figure>
 
+  </div>
+</section>
+
+{/* PWA install (compact) */}
+<section className="mb-10">
+  <h2 className="text-xl font-semibold text-movenotes-primary mb-3 flex items-center gap-2">
+    <span>Install MoveNotes on your home screen</span>
+  </h2>
+
+  <p className="text-sm text-movenotes-muted leading-relaxed mb-4">
+    MoveNotes is a web app you can install on your phone, so it opens full-screen
+    and feels like a native app.
+  </p>
+
+  <div className="space-y-3 text-sm text-movenotes-muted">
+
+    {/* Android */}
+    <div className="flex items-start gap-2">
+      <IconBrandAndroid size={18} className="mt-0.5 text-movenotes-accent" />
+      <p>
+        <span className="font-medium text-movenotes-text">Android (Chrome)</span>{" "}
+        – Open MoveNotes in Chrome → tap the <strong>⋮</strong> menu →{" "}
+        <strong>Add to Home screen</strong> → <strong>Install</strong>.
+      </p>
+    </div>
+
+    {/* iPhone */}
+    <div className="flex items-start gap-2">
+      <IconBrandApple size={18} className="mt-0.5 text-movenotes-accent" />
+      <p>
+        <span className="font-medium text-movenotes-text">iPhone (Safari)</span>{" "}
+        – Open MoveNotes in Safari → tap the{" "}
+        <strong>Share</strong> button → <strong>Add to Home Screen</strong> →{" "}
+        <strong>Add</strong>.
+      </p>
+    </div>
   </div>
 </section>
 

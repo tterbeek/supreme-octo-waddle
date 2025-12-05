@@ -130,7 +130,16 @@ const toggleStar = async (goalId: string) => {
       {loading ? (
         <p className="text-gray-500">Loading…</p>
       ) : goals.length === 0 ? (
-        <p className="text-gray-500 italic">No goals yet.</p>
+        <div className="text-center px-6 py-10">
+          <h3 className="text-lg font-semibold text-movenotes-primary mb-3">
+            Set your first goal
+          </h3>
+          <p className="text-movenotes-muted leading-relaxed max-w-md mx-auto mb-6">
+            A goal gives your movement a bit of shape. It’s not about hitting
+            numbers — it’s about creating a rhythm and seeing how your habits
+            evolve over time.
+          </p>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
   {sortedGoals.map((g) => (
