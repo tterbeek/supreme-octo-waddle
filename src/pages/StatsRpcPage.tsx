@@ -164,7 +164,7 @@ export default function StatsRpcPage() {
   type TrendRow = {
     week: string; // ISO start-of-week (for uniqueness)
     weekLabel: string; // display end-of-week (Sunday)
-    value: number;
+    value: number | null;
     isFuture?: boolean;
   };
   type TrendInfo = {
