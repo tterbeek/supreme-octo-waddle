@@ -26,6 +26,7 @@ export default function TooltipBubble({
       className={`absolute ${positionClasses} z-50 pointer-events-auto`}
       onClick={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
     >
       <div className="relative bg-white text-gray-900 text-sm p-3 rounded-xl shadow-lg border border-warm-200 max-w-xs animate-fadeIn">
         {children}
