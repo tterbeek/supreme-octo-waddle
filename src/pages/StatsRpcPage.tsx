@@ -164,7 +164,8 @@ export default function StatsRpcPage() {
   type TrendRow = {
     week: string; // ISO start-of-week (for uniqueness)
     weekLabel: string; // display end-of-week (Sunday)
-    value: number | null;
+    value: number | null; // solid line (completed weeks)
+    currentValue?: number | null; // dotted line for in-progress current week
     isFuture?: boolean;
   };
   type TrendInfo = {
@@ -177,6 +178,8 @@ export default function StatsRpcPage() {
     if (!activities.length) return {} as Record<string, TrendInfo>;
 
     const now = new Date();
+    const currentWeekStart = dfStartOfWeek(now, { weekStartsOn: 1 });
+    const lookbackStart = subWeeks(currentWeekStart, 9); // show up to 9 past weeks (excluding current)
     const result: Record<string, TrendInfo> = {};
 
     Object.keys(ACTIVITY_TYPES).forEach((type) => {
@@ -195,19 +198,38 @@ export default function StatsRpcPage() {
           ? "duration"
           : "activity";
 
-      // Aggregate by week start
       const weekTotals = new Map<string, number>();
+      let currentWeekValue: number | null = null;
       let missingPrimary = false;
 
       activities.forEach((a) => {
         if (a.type !== type) return;
+        const actDate = parseActivityDate(a.date);
+        const wkStart = dfStartOfWeek(actDate, { weekStartsOn: 1 });
+        const metric =
+          primaryMetric === "distance_km"
+            ? Number(a.distance_km || 0)
+            : primaryMetric === "duration_min"
+            ? Number(a.duration_min || 0)
+            : 0;
 
-        const metric = cfg.defaultFields.includes("distance_km")
-          ? Number(a.distance_km || 0)
-          : Number(a.duration_min || 0);
+        // current week gets dotted line
+        if (wkStart >= currentWeekStart) {
+          currentWeekValue = (currentWeekValue || 0) + metric;
+          const primaryMissing =
+            primaryMetric === "distance_km"
+              ? a.distance_km == null
+              : primaryMetric === "duration_min"
+              ? a.duration_min == null
+              : false;
+          if (primaryMissing) missingPrimary = true;
+          return;
+        }
 
-        const wk = dfStartOfWeek(parseActivityDate(a.date), { weekStartsOn: 1 });
-        const key = wk.toISOString().slice(0, 10);
+        // only last 9 weeks window
+        if (wkStart < lookbackStart) return;
+
+        const key = wkStart.toISOString().slice(0, 10);
         weekTotals.set(key, (weekTotals.get(key) || 0) + metric);
 
         const primaryMissing =
@@ -219,74 +241,59 @@ export default function StatsRpcPage() {
         if (primaryMissing) missingPrimary = true;
       });
 
-      if (weekTotals.size === 0) {
-        return;
+      if (weekTotals.size === 0) return;
+
+      // keep only weeks with data (no leading empties)
+      let keys = Array.from(weekTotals.keys()).sort();
+      // if more than 9 weeks with data, keep latest 9
+      if (keys.length > 9) {
+        keys = keys.slice(keys.length - 9);
       }
 
-      // Determine window based only on recent weeks (max 9-week window)
-      const sortedKeys = Array.from(weekTotals.keys()).sort();
-      const lastWeek = dfStartOfWeek(
-        parseActivityDate(sortedKeys[sortedKeys.length - 1]),
-        { weekStartsOn: 1 }
-      );
-
-      // Drop any data older than 8 weeks before the last week (keeps at most 9 weeks span).
-      const minAllowed = subWeeks(lastWeek, 8);
-      const recentKeys = sortedKeys.filter((k) => {
-        const wk = dfStartOfWeek(parseActivityDate(k), { weekStartsOn: 1 });
-        return wk >= minAllowed;
-      });
-      if (recentKeys.length === 0) return;
-
-      const firstWeek = dfStartOfWeek(parseActivityDate(recentKeys[0]), {
-        weekStartsOn: 1,
-      });
-
-      const endWindow = subWeeks(lastWeek, -1); // one future week
-
-      const windowWeeks: Date[] = [];
-
-      let cursor = firstWeek;
-      while (cursor <= endWindow) {
-        windowWeeks.push(new Date(cursor));
-        cursor = subWeeks(cursor, -1);
-      }
-
-      // cap to max 9 weeks by trimming oldest
-      while (windowWeeks.length > 9) {
-        windowWeeks.shift();
-      }
-
-      const rows: TrendRow[] = windowWeeks.map((w) => {
-        const key = w.toISOString().slice(0, 10);
-        const weekEnd = new Date(w);
+      const rows: TrendRow[] = keys.map((key) => {
+        const wkStart = parseActivityDate(key);
+        const weekEnd = new Date(wkStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
-        const weekLabel = format(weekEnd, "dd MMM");
-        const raw = weekTotals.get(key);
-        // Show points only when data exists; otherwise leave a gap (null) so the line
-        // doesn’t sit on zero for weeks with no activity.
-        const value =
-          w > lastWeek
-            ? null
-            : raw != null && raw > 0
-            ? raw
-            : null;
-
         return {
           week: key,
-          weekLabel,
-          value,
-          isFuture: w > lastWeek,
+          weekLabel: format(weekEnd, "dd MMM"),
+          value: weekTotals.get(key) ?? 0,
+          currentValue: null,
+          isFuture: false,
         };
       });
 
-      const hasCompletedWeek = rows.some((r, idx) => {
-        const start = windowWeeks[idx];
-        const end = new Date(start);
-        end.setDate(end.getDate() + 7);
-        return end <= now && r.value != null && r.value > 0;
-      });
-      if (!hasCompletedWeek) return;
+      // Append current week as dotted line (if within window)
+      if (currentWeekValue !== null) {
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        const currentRow: TrendRow = {
+          week: currentWeekStart.toISOString().slice(0, 10),
+          weekLabel: format(weekEnd, "dd MMM"),
+          value: null,
+          currentValue: currentWeekValue,
+          isFuture: false,
+        };
+        rows.push(currentRow);
+        // keep at most 9 rows (drop oldest if needed)
+        while (rows.length > 9) {
+          rows.shift();
+        }
+
+        // Seed the dotted line with the last completed week so a dashed segment shows.
+        const lastCompletedIdx = rows
+          .map((r, idx) => ({ idx, hasValue: r.value != null }))
+          .filter((r) => r.hasValue)
+          .map((r) => r.idx)
+          .pop();
+        if (lastCompletedIdx != null) {
+          rows[lastCompletedIdx].currentValue = rows[lastCompletedIdx].value ?? 0;
+          rows[rows.length - 1].currentValue = currentWeekValue;
+        }
+      }
+
+      const hasDataWeek = rows.length > 0;
+      if (!hasDataWeek) return;
 
       result[type] = {
         rows,
@@ -459,6 +466,15 @@ export default function StatsRpcPage() {
                             stroke="#5A7A69"
                             strokeWidth={3}
                             dot={true}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="currentValue"
+                            stroke="#5A7A69"
+                            strokeWidth={3}
+                            strokeDasharray="4 4"
+                            dot={{ r: 3 }}
+                            connectNulls
                           />
                         </LineChart>
                       </ResponsiveContainer>

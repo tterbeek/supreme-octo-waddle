@@ -34,6 +34,9 @@ export default function GoalProgressCard({
         0
     ) || 0;
 
+  const ratio =
+    Number(goal.progress_ratio ?? goal.progressRatio ?? 0) || 0;
+
   // Legacy fallback: compute from activities if not provided
   if (progressRaw === 0 && Array.isArray(activities) && goal) {
     try {
@@ -46,10 +49,20 @@ export default function GoalProgressCard({
 
   const metric = goal.metric || goal.goal_metric;
 
-  const progress =
+  // Display values: distance rounded, count floored (no phantom 1), others raw.
+  let progress =
     metric === "distance" ? Math.round(progressRaw) : progressRaw;
-  const target =
+  let target =
     metric === "distance" ? Math.round(targetRaw) : targetRaw;
+
+  if (metric === "count") {
+    progress = Math.max(0, Math.floor(progressRaw));
+    target = Math.max(0, Math.floor(targetRaw));
+    if (ratio <= 0 && progress > 0) {
+      // Clamp a phantom count that shouldn't exist.
+      progress = 0;
+    }
+  }
 
   const filledDots = Math.max(
     0,
