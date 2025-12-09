@@ -25,6 +25,7 @@ export default function AddNoteModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [visible, setVisible] = useState(true);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const writingSoundRef = useRef<HTMLAudioElement | null>(null);
 
   // 🛑 Tracks whether the user has interacted with the modal
   const userInteracted = useRef(false);
@@ -36,6 +37,8 @@ export default function AddNoteModal({
 
   // ⏳ Auto-close only if NO interaction
   useEffect(() => {
+    writingSoundRef.current = new Audio("/sounds/writing.mp3");
+
     const t = setTimeout(() => {
       if (!userInteracted.current) {
         console.log("[AddNoteModal] Auto-closing (no interaction)");
@@ -139,6 +142,13 @@ export default function AddNoteModal({
       setUploadProgress(100);
       setSaving(false);
       setUploading(false);
+
+      if (writingSoundRef.current) {
+        writingSoundRef.current.currentTime = 0;
+        writingSoundRef.current.play().catch(() => {
+          /* ignore autoplay blocks */
+        });
+      }
 
       setVisible(false);
       setTimeout(onSave, 400);
