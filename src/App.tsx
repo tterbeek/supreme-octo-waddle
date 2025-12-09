@@ -19,6 +19,8 @@ import Layout from "./components/Layout";
 import OnboardingCarousel from "./components/OnboardingCarousel";
 import SettingsPage from "./pages/SettingsPage";
 import AboutPage from "./pages/AboutPage";
+import { AdminRoute } from "./components/AdminRoute";
+import { AdminDashboard } from "./pages/AdminDashboard";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -229,6 +231,15 @@ export default function App() {
     <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
       <SettingsPage />
     </Layout>
+  }
+/>
+
+<Route
+  path="/admin"
+  element={
+    <AdminRoute>
+      <AdminDashboard />
+    </AdminRoute>
   }
 />
 
