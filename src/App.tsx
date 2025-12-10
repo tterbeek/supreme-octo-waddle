@@ -8,7 +8,6 @@ import PresetsPage from "./pages/PresetsPage";
 import AddPresetPage from "./pages/AddPresetPage";
 import EditPresetPage from "./pages/EditPresetPage";
 import StatsRpcPage from "./pages/StatsRpcPage";
-import GoalsPage from "./pages/GoalsPage";
 import AnimatedLogo from "./components/AnimatedLogo";
 import { motion, AnimatePresence } from "framer-motion";
 import type { User } from "@supabase/supabase-js";
@@ -212,15 +211,6 @@ export default function App() {
   element={
     <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
       <StatsRpcPage />
-    </Layout>
-  }
-/>
-
-<Route
-  path="/goals"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <GoalsPage />
     </Layout>
   }
 />

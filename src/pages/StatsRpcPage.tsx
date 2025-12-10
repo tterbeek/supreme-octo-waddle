@@ -7,15 +7,17 @@ import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
 } from "recharts";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Target } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import HeaderLogo from "../components/HeaderLogo";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
-import { useNavigate } from "react-router-dom";
 import { startOfWeek as dfStartOfWeek, format, subWeeks } from "date-fns";
 import GoalProgressCard from "../components/GoalProgressCard";
+import AddGoalModal from "../components/AddGoalModal";
+import EditGoalModal from "../components/EditGoalModal";
+import type { Goal } from "../types";
 
 // Expected Supabase stored procedures:
 // - stats_goal_progress(user_id uuid)
@@ -57,17 +59,27 @@ function parseActivityDate(d: string | Date): Date {
 
 export default function StatsRpcPage() {
   const [goalStats, setGoalStats] = useState<GoalStat[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [starredGoalIds, setStarredGoalIds] = useState<string[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const PERIODS = ["all", "week", "month", "year"] as const;
-  type Period = (typeof PERIODS)[number];
-  const PERIOD_ORDER: Record<Exclude<Period, "all">, number> = {
+  const [showAddGoal, setShowAddGoal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const PERIOD_ORDER: Record<"week" | "month" | "year", number> = {
     week: 1,
     month: 2,
     year: 3,
   };
-  const [periodFilter, setPeriodFilter] = useState<Period>("all");
+  const TYPE_ORDER: Record<string, number> = Object.keys(ACTIVITY_TYPES).reduce(
+    (acc, id, idx) => {
+      acc[id] = idx + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+  TYPE_ORDER["any"] = Number.MAX_SAFE_INTEGER;
+  const [userId, setUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"snapshot" | "trends">(() => {
     if (typeof window === "undefined") return "snapshot";
     const saved = localStorage.getItem("stats_active_tab");
@@ -78,14 +90,13 @@ export default function StatsRpcPage() {
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
   const statsHeaderRef = useRef<HTMLDivElement | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     localStorage.setItem("stats_active_tab", activeTab);
   }, [activeTab]);
 
-  const fetchStats = async (_period: Period) => {
+  const fetchStats = async () => {
     setLoading(true);
     setError(null);
 
@@ -105,24 +116,34 @@ export default function StatsRpcPage() {
       setLoading(false);
       return;
     }
+    setUserId(user.id);
 
     const now = new Date();
     const earliest = startOfYear(now);
     earliest.setFullYear(earliest.getFullYear() - 1); // need previous year for comparisons
     const earliestStr = earliest.toISOString().split("T")[0];
 
-    const [goalsRes, actsRes] = await Promise.all([
+    const [rpcRes, actsRes, rawGoalsRes, prefsRes] = await Promise.all([
       supabase.rpc(GOAL_RPC, { user_id: user.id }),
       supabase
         .from("activities")
         .select("type, date, distance_km, duration_min")
         .eq("user_id", user.id)
         .gte("date", earliestStr),
+      supabase
+        .from("goals")
+        .select("id, user_id, activity_type, metric, period, target, name, updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false }),
+      supabase
+        .from("goal_preferences")
+        .select("goal_id")
+        .eq("user_id", user.id),
     ]);
 
-    if (goalsRes.error) {
+    if (rpcRes.error) {
       setError(
-        `Could not load goal stats (${GOAL_RPC}): ${goalsRes.error.message}`
+        `Could not load goal stats (${GOAL_RPC}): ${rpcRes.error.message}`
       );
       setLoading(false);
       return;
@@ -136,7 +157,36 @@ export default function StatsRpcPage() {
       return;
     }
 
-    setGoalStats((goalsRes.data as GoalStat[]) || []);
+    const statsData = (rpcRes.data as GoalStat[]) || [];
+    setGoalStats(statsData);
+
+    const rawGoals = (rawGoalsRes.data as Goal[]) || [];
+    const fallbackGoals =
+      statsData?.map((g) => ({
+        id: g.goal_id,
+        user_id: user.id,
+        activity_type: g.activity_type as Goal["activity_type"],
+        metric: g.metric as Goal["metric"],
+        period: g.period,
+        target: g.target,
+        name: g.name,
+        updated_at: undefined,
+        created_at: undefined,
+      })) || [];
+    const combinedGoals =
+      rawGoals.length > 0 ? rawGoals : fallbackGoals;
+
+    if (rawGoalsRes.error) {
+      console.error("Could not load goals", rawGoalsRes.error);
+    }
+    setGoals(combinedGoals);
+
+    if (prefsRes.error) {
+      console.error("Could not load goal preferences", prefsRes.error);
+      setStarredGoalIds([]);
+    } else {
+      setStarredGoalIds((prefsRes.data || []).map((p) => p.goal_id));
+    }
 
     const acts = (actsRes.data || []) as Activity[];
     setActivities(acts);
@@ -145,13 +195,9 @@ export default function StatsRpcPage() {
   };
 
   useEffect(() => {
-    fetchStats(periodFilter);
+    fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    fetchStats(periodFilter);
-  }, [periodFilter]);
 
   useEffect(() => {
     if (!hasDoneOnboarding) return;
@@ -160,15 +206,58 @@ export default function StatsRpcPage() {
     }
   }, [hasDoneOnboarding, hasSeen, showTooltip]);
 
-  let filteredGoals = goalStats ?? [];
-  if (periodFilter !== "all") {
-    filteredGoals = filteredGoals.filter((g) => g.period === periodFilter);
-  }
-  filteredGoals = filteredGoals.sort((a, b) => {
-    const aOrder = PERIOD_ORDER[a.period];
-    const bOrder = PERIOD_ORDER[b.period];
-    return aOrder - bOrder;
+  const sortedGoals = (goalStats ?? []).slice().sort((a, b) => {
+    const pDiff = PERIOD_ORDER[a.period] - PERIOD_ORDER[b.period];
+    if (pDiff !== 0) return pDiff;
+    const tA = TYPE_ORDER[a.activity_type] ?? 999;
+    const tB = TYPE_ORDER[b.activity_type] ?? 999;
+    return tA - tB;
   });
+
+  const buildGoalForEditing = (goalStat: GoalStat): Goal => {
+    const found = goals.find((g) => g.id === goalStat.goal_id);
+    if (found) return found;
+    return {
+      id: goalStat.goal_id,
+      user_id: userId || "",
+      activity_type: goalStat.activity_type as Goal["activity_type"],
+      metric: goalStat.metric as Goal["metric"],
+      period: goalStat.period,
+      target: goalStat.target,
+      name: goalStat.name,
+    };
+  };
+
+  const toggleStar = async (goalId: string) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const isStarred = starredGoalIds.includes(goalId);
+
+    if (isStarred) {
+      await supabase
+        .from("goal_preferences")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("goal_id", goalId);
+
+      setStarredGoalIds((prev) => prev.filter((id) => id !== goalId));
+    } else {
+      if (starredGoalIds.length >= 2) {
+        alert("You can select up to 2 goals to show on the home screen.");
+        return;
+      }
+
+      await supabase.from("goal_preferences").insert({
+        user_id: user.id,
+        goal_id: goalId,
+      });
+
+      setStarredGoalIds((prev) => [...prev, goalId]);
+    }
+  };
 
   type TrendRow = {
     week: string; // ISO start-of-week (for uniqueness)
@@ -358,48 +447,42 @@ export default function StatsRpcPage() {
 
         {activeTab === "snapshot" && (
           <>
-            <div className="flex justify-center gap-2 mb-6">
-              {PERIODS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriodFilter(p)}
-                  className={`px-4 py-2 rounded-full ${
-                    periodFilter === p
-                      ? "bg-movenotes-primary text-primary-text"
-                      : "bg-movenotes-surface border border-movenotes-border text-movenotes-text"
-                  }`}
-                >
-                  {p === "all"
-                    ? "All"
-                    : p.charAt(0).toUpperCase() + p.slice(1)}
-                </button>
-              ))}
-            </div>
-
-            {filteredGoals.map((goal) => (
+            {sortedGoals.map((goal) => (
               <GoalProgressCard
                 key={goal.goal_id}
-                goal={{ ...goal, progress_current: goal.current_value }}
+                goal={{
+                  ...goal,
+                  id: goal.goal_id,
+                  progress_current: goal.current_value,
+                }}
+                onClick={() => setEditingGoal(buildGoalForEditing(goal))}
+                showStar
+                starred={starredGoalIds.includes(goal.goal_id)}
+                onToggleStar={() => toggleStar(goal.goal_id)}
               />
             ))}
 
-            {filteredGoals.length === 0 && (
+            {sortedGoals.length === 0 && (
               <div className="text-center mt-10 text-movenotes-muted">
-                <p className="mb-3">You haven't set any goals for this period.</p>
+                <p className="mb-3">You haven't set any goals yet.</p>
                 <p className="text-sm mb-6">
                   Start with one small, achievable goal.
                   <br />
                   Simple goals help build consistency without pressure.
                 </p>
-
-                <button
-                  onClick={() => navigate("/goals")}
-                  className="px-4 py-2 rounded-full bg-movenotes-primary text-primary-text"
-                >
-                  Create a Goal
-                </button>
               </div>
             )}
+
+            <button
+              onClick={() => setShowAddGoal(true)}
+              className="w-full flex items-center justify-center gap-2 
+                   bg-amber-300 border border-amber-400 text-primary-text 
+                   py-3 rounded-full text-lg font-medium my-4"
+            >
+              <span className="text-xl">+</span>
+              <Target className="w-5 h-5" />
+              <span>Goal</span>
+            </button>
 
             <div className="text-center mt-8">
               <button
@@ -502,6 +585,30 @@ export default function StatsRpcPage() {
           </>
         )}
       </div>
+
+      {showAddGoal && (
+        <AddGoalModal
+          onClose={() => setShowAddGoal(false)}
+          onAdded={() => fetchStats()}
+          existingGoals={goals}
+          onDuplicate={(goal) => setEditingGoal(goal)}
+        />
+      )}
+
+      {editingGoal && (
+        <EditGoalModal
+          goal={editingGoal}
+          onClose={() => setEditingGoal(null)}
+          onUpdated={() => fetchStats()}
+          onDeleted={(id) => {
+            setEditingGoal(null);
+            setGoals((prev) => prev.filter((g) => g.id !== id));
+            setGoalStats((prev) => prev.filter((g) => g.goal_id !== id));
+            setStarredGoalIds((prev) => prev.filter((gid) => gid !== id));
+            fetchStats();
+          }}
+        />
+      )}
 
       <HeaderLogo withTagline delay={0.2} />
     </div>

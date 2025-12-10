@@ -1,6 +1,7 @@
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import type { Goal } from "../types";
 import { computeGoalProgress } from "../lib/goalEngine";
+import { Star } from "lucide-react";
 
 type ActivityForProgress = {
   type: string;
@@ -12,14 +13,23 @@ type ActivityForProgress = {
 type GoalProgressCardProps = {
   goal: any; // supports RPC rows and legacy Goal objects
   activities?: ActivityForProgress[];
+  onClick?: () => void;
+  onToggleStar?: () => void;
+  starred?: boolean;
+  showStar?: boolean;
 };
 
 export default function GoalProgressCard({
   goal,
   activities,
+  onClick,
+  onToggleStar,
+  starred = false,
+  showStar = false,
 }: GoalProgressCardProps) {
   const cfg = ACTIVITY_TYPES[goal.activity_type] ?? ACTIVITY_TYPES["any"];
   const Icon = cfg?.Icon;
+  const clickable = typeof onClick === "function";
 
   // Support multiple goal shapes: RPC rows, legacy Goal, etc.
   const targetRaw =
@@ -123,8 +133,23 @@ export default function GoalProgressCard({
     ],
   };
 
-  const pickMessage = (list: string[]) =>
-    list[Math.floor(Math.random() * list.length)];
+  const stablePick = (list: string[], seed: string) => {
+    if (!list.length) return "";
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = (hash + seed.charCodeAt(i)) % 2147483647;
+    }
+    return list[hash % list.length];
+  };
+
+  const messageSeed =
+    (goal.id as string) ||
+    (goal.goal_id as string) ||
+    (goal.name as string) ||
+    (goal.activity_type as string) ||
+    "goal";
+  const daySeed = new Date().toISOString().slice(0, 10);
+  const dailySeed = `${messageSeed}-${daySeed}`;
 
   const startOfWeek = (d: Date) => {
     const date = new Date(d);
@@ -175,27 +200,27 @@ export default function GoalProgressCard({
     period?: "week" | "month" | "year"
   ) => {
     if (!period) return null;
-    if (ratio >= 1) return pickMessage(PACING_MESSAGES.goalReached);
+    if (ratio >= 1) return stablePick(PACING_MESSAGES.goalReached, dailySeed);
 
     const elapsed = getPeriodElapsedRatio(period);
     const early = elapsed < 0.33;
     const late = elapsed > 0.66;
 
     if (ratio >= elapsed * 0.9) {
-      if (early) return pickMessage(PACING_MESSAGES.onTrackEarly);
-      if (late) return pickMessage(PACING_MESSAGES.onTrackLate);
-      return pickMessage(PACING_MESSAGES.onTrackMid);
+      if (early) return stablePick(PACING_MESSAGES.onTrackEarly, dailySeed);
+      if (late) return stablePick(PACING_MESSAGES.onTrackLate, dailySeed);
+      return stablePick(PACING_MESSAGES.onTrackMid, dailySeed);
     }
 
     if (ratio >= elapsed * 0.6) {
       return late
-        ? pickMessage(PACING_MESSAGES.nearPaceLate)
-        : pickMessage(PACING_MESSAGES.nearPaceEarly);
+        ? stablePick(PACING_MESSAGES.nearPaceLate, dailySeed)
+        : stablePick(PACING_MESSAGES.nearPaceEarly, dailySeed);
     }
 
     return late
-      ? pickMessage(PACING_MESSAGES.gentleLate)
-      : pickMessage(PACING_MESSAGES.gentleEarly);
+      ? stablePick(PACING_MESSAGES.gentleLate, dailySeed)
+      : stablePick(PACING_MESSAGES.gentleEarly, dailySeed);
   };
 
   const pacingMessage = getPacingMessage(
@@ -204,7 +229,21 @@ export default function GoalProgressCard({
   );
 
   return (
-    <div className="p-4 rounded-xl border border-movenotes-border bg-movenotes-surface shadow-sm mb-3">
+    <div
+      className={`relative p-4 rounded-xl border border-movenotes-border bg-movenotes-surface shadow-sm mb-3 ${
+        clickable ? "cursor-pointer transition active:scale-[0.99]" : ""
+      }`}
+      onClick={onClick}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (!clickable) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {Icon && <Icon size={20} strokeWidth={1.8} />}
@@ -212,11 +251,31 @@ export default function GoalProgressCard({
             {goal.name || cfg?.label || "Goal"}
           </span>
         </div>
-        {goal.period && (
-          <span className="text-xs text-movenotes-muted capitalize">
-            {goal.period}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {goal.period && (
+            <span className="text-xs text-movenotes-muted capitalize relative top-[2px]">
+              {goal.period}
+            </span>
+          )}
+          {showStar && (
+            <button
+              className="w-5 h-5"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleStar?.();
+              }}
+              aria-pressed={starred}
+            >
+              <Star
+                className={`w-5 h-5 ${
+                  starred
+                    ? "text-movenotes-accent fill-movenotes-accent"
+                    : "text-gray-400"
+                }`}
+              />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="text-lg font-semibold mb-1">{valueLabel}</div>

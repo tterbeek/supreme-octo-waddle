@@ -4,7 +4,7 @@ import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm2";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
-import { IconActivity } from "@tabler/icons-react";
+import { IconActivity, IconSearch } from "@tabler/icons-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import SwipeActions from "../components/SwipeActions";
@@ -43,6 +43,8 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
 
   // Feed activities (recent history list)
   const [activities, setActivities] = useState<any[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Activities used for goals (last 60 days)
   const [activitiesForGoals, setActivitiesForGoals] = useState<any[]>([]);
@@ -331,6 +333,22 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
       ? "grid grid-cols-1 gap-3"
       : "grid grid-cols-1 sm:grid-cols-2 gap-3";
 
+  const toggleSearch = () => {
+    if (searchOpen) {
+      setSearchTerm("");
+    }
+    setSearchOpen(!searchOpen);
+  };
+
+  const normalizedSearch = searchTerm.toLowerCase();
+  const filteredActivities = activities.filter((a) => {
+    return (
+      a.title?.toLowerCase().includes(normalizedSearch) ||
+      a.notes?.toLowerCase().includes(normalizedSearch) ||
+      a.type?.toLowerCase().includes(normalizedSearch)
+    );
+  });
+
   // --------------------------------------------------
   // SIGNED URLS FOR NOTE IMAGES (feeds)
   // --------------------------------------------------
@@ -417,31 +435,32 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         )}
 
         {showGoalSection && (
-          <div
-            className="bg-warm-100 border border-warm-200 rounded-xl p-4 shadow-sm mt-4 mb-6"
-            onClick={() => navigate(useRpcGoals ? "/stats" : "/stats-legacy")}
-          >
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">
-              Your Goals
+          <>
+            <h2 className="text-sm font-medium text-gray-500 mb-2 mt-4">
+              Your Progress
             </h2>
-
-            <div className={goalGridClass}>
-              {useRpcGoals
-                ? displayedGoalStats.map((g) => (
-                    <GoalProgressCard
-                      key={g.goal_id}
-                      goal={{ ...g, progress_current: g.current_value }}
-                    />
-                  ))
-                : displayedLegacyGoals.map((g) => (
-                    <GoalProgressCard
-                      key={g.id}
-                      goal={g}
-                      activities={activitiesForGoals}
-                    />
-                  ))}
+            <div
+              className="mb-4"
+              onClick={() => navigate(useRpcGoals ? "/stats" : "/stats-legacy")}
+            >
+              <div className={goalGridClass}>
+                {useRpcGoals
+                  ? displayedGoalStats.map((g) => (
+                      <GoalProgressCard
+                        key={g.goal_id}
+                        goal={{ ...g, progress_current: g.current_value }}
+                      />
+                    ))
+                  : displayedLegacyGoals.map((g) => (
+                      <GoalProgressCard
+                        key={g.id}
+                        goal={g}
+                        activities={activitiesForGoals}
+                      />
+                    ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* -------------------------------------------------- */}
@@ -470,12 +489,46 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         {/* -------------------------------------------------- */}
         {/* RECENT HISTORY                                     */}
         {/* -------------------------------------------------- */}
-        <h2 className="text-sm font-medium text-gray-500 mt-6 mb-2">
-          Recent Activity
-        </h2>
+        <div className="flex items-center justify-between px-4 mt-6 gap-2">
+          <h2 className="text-sm font-medium text-gray-700">
+            Recent Activity
+          </h2>
+          <div
+            className="flex items-center justify-end transition-all duration-200"
+            style={{ width: searchOpen ? "55%" : "36px" }}
+          >
+            {searchOpen ? (
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  className="w-full rounded-full border border-warm-200 bg-warm-100 px-4 py-2 text-sm shadow-sm pr-8"
+                  placeholder="Search…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
+                />
+                <button
+                  onClick={toggleSearch}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-gray-600 hover:text-gray-800"
+                  aria-label="Close search"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={toggleSearch}
+                className="p-2 rounded-full hover:bg-warm-100 transition"
+                aria-label="Open search"
+              >
+                <IconSearch size={18} strokeWidth={1.8} />
+              </button>
+            )}
+          </div>
+        </div>
 
-        <div className="flex flex-col gap-3">
-          {activities.map((a, idx) => {
+        <div className="flex flex-col gap-3 mt-2">
+          {filteredActivities.map((a, idx) => {
             const typeConfig = ACTIVITY_TYPES[a.type] ?? ACTIVITY_TYPES["other"];
             const TypeIcon = typeConfig.Icon;
             const showAfterLogTooltip = visible === "after_first_log" && idx === 0;

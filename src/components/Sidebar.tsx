@@ -43,11 +43,7 @@ export default function Sidebar({
           </Link>
 
           <Link to="/stats" onClick={onClose} className="hover:underline">
-            Statistics
-          </Link>
-
-          <Link to="/goals" onClick={onClose} className="hover:underline">
-            Manage Goals
+            Movement Insights
           </Link>
 
           <Link to="/presets" onClick={onClose} className="hover:underline">
