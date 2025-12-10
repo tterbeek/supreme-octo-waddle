@@ -68,13 +68,22 @@ export default function StatsRpcPage() {
     year: 3,
   };
   const [periodFilter, setPeriodFilter] = useState<Period>("all");
-  const [activeTab, setActiveTab] = useState<"snapshot" | "trends">("snapshot");
+  const [activeTab, setActiveTab] = useState<"snapshot" | "trends">(() => {
+    if (typeof window === "undefined") return "snapshot";
+    const saved = localStorage.getItem("stats_active_tab");
+    return saved === "trends" ? "trends" : "snapshot";
+  });
   const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
   const statsHeaderRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("stats_active_tab", activeTab);
+  }, [activeTab]);
 
   const fetchStats = async (_period: Period) => {
     setLoading(true);
