@@ -110,6 +110,9 @@ export default function QuickLogForm2({
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [title, setTitle] = useState("");
   const [effort, setEffort] = useState<number>(3);
+  const [saveAsPreset, setSaveAsPreset] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [presetNameTouched, setPresetNameTouched] = useState(false);
   const [showOptionalDistance, setShowOptionalDistance] = useState(false);
   const [showOptionalDuration, setShowOptionalDuration] = useState(false);
   const [showMetricTooltip, setShowMetricTooltip] = useState(false);
@@ -168,6 +171,12 @@ export default function QuickLogForm2({
     load();
   }, [activityType]);
 
+  useEffect(() => {
+    if (!presetNameTouched) {
+      setPresetName(title);
+    }
+  }, [title, presetNameTouched]);
+
   const usePreset = (preset: Preset) => {
     setActivePreset(preset);
     setDistance(
@@ -187,6 +196,8 @@ export default function QuickLogForm2({
     setDistance("");
     setDuration("");
     setTitle(""); // ✅ clear title
+    setPresetName("");
+    setPresetNameTouched(false);
     setShowOptionalDistance(false);
     setShowOptionalDuration(false);
   };
@@ -264,6 +275,22 @@ export default function QuickLogForm2({
       return;
     }
 
+    if (saveAsPreset && presetName.trim()) {
+      const { error: presetError } = await supabase.from("presets").insert([
+        {
+          user_id: user.id,
+          type: activityType,
+          name: presetName.trim(),
+          distance_km: distanceValue,
+          duration_min: durationValue,
+          effort: effortValue,
+        },
+      ]);
+      if (presetError) {
+        console.error("[QuickLogForm] Error saving preset:", presetError.message);
+      }
+    }
+
     if (activePreset) {
       await supabase
         .from("presets")
@@ -300,13 +327,24 @@ export default function QuickLogForm2({
               onClick={() => usePreset(p)}
               className={`px-3 py-1 rounded-full text-sm border transition whitespace-nowrap ${
                 activePreset?.id === p.id
-                  ? "bg-amber-300 border-amber-400 text-primary-text"
-                  : "border-gray-300 text-gray-600"
+                ? "bg-amber-300 border-amber-400 text-primary-text"
+                : "border-gray-300 text-gray-600"
               }`}
             >
               {p.name}
             </button>
           ))}
+
+          <button
+            onClick={useCustom}
+            className={`px-3 py-1 rounded-full text-sm border transition whitespace-nowrap ${
+              activePreset === null
+                ? "bg-amber-50 border-amber-300 text-gray-800"
+                : "border-gray-300 text-gray-600"
+            }`}
+          >
+            Custom
+          </button>
 
           {/* More… */}
           {filteredPresets.length > 3 && (
@@ -397,6 +435,42 @@ export default function QuickLogForm2({
           <FeelingSelector value={feeling} onChange={setFeeling} />
           {["run", "ride", "swim", "hike"].includes(activityType) && (
             <EffortSelector value={effort} onChange={setEffort} />
+          )}
+        </div>
+
+        <div className="mt-6 mb-5 space-y-3">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={saveAsPreset}
+              className="accent-movenotes-primary"
+              onChange={() => {
+                const next = !saveAsPreset;
+                setSaveAsPreset(next);
+                if (next && !presetNameTouched && !presetName) {
+                  setPresetName(title || "");
+                }
+              }}
+            />
+            <span className="text-sm text-gray-700">Save activity as preset</span>
+          </label>
+
+          {saveAsPreset && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                Preset name
+              </label>
+              <input
+                type="text"
+                className="w-full rounded border px-3 py-2 text-sm"
+                placeholder="e.g. Morning 5k loop"
+                value={presetName}
+                onChange={(e) => {
+                  setPresetName(e.target.value);
+                  setPresetNameTouched(true);
+                }}
+              />
+            </div>
           )}
         </div>
 
