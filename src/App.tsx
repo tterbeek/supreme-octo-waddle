@@ -20,6 +20,7 @@ import SettingsPage from "./pages/SettingsPage";
 import AboutPage from "./pages/AboutPage";
 import { AdminRoute } from "./components/AdminRoute";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import IntroPage from "./pages/IntroPage";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -137,7 +138,7 @@ export default function App() {
   {/* 🔐 Auth routes */}
   {!user ? (
     <>
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<IntroPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
     </>
