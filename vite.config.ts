@@ -10,6 +10,8 @@ VitePWA({
   workbox: {
     clientsClaim: true,   // 🔥 take control without reload
     skipWaiting: true,    // 🔥 activate new SW immediately
+    cleanupOutdatedCaches: true, // remove old hashed bundles
+    navigateFallback: "/index.html", // SPA fallback to avoid NOT_FOUND after idle
   },
   manifest: {
     name: "MoveNotes",
