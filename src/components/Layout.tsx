@@ -22,7 +22,7 @@ export default function Layout({
       
       {/* 🔥 Global hamburger - pinned to viewport left */}
 <div className="fixed top-4 left-4 z-60">
-  <HamburgerButton open={menuOpen} onClick={() => setMenuOpen((v) => !v)} />
+  <HamburgerButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} />
 </div>
 
 

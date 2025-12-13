@@ -8,7 +8,6 @@ import { IconActivity, IconSearch } from "@tabler/icons-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import SwipeActions from "../components/SwipeActions";
-import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import AddNoteModal from "../components/AddNoteModal";
 import ActivityEditForm from "../components/ActivityEditForm";
