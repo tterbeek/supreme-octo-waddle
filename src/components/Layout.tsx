@@ -21,8 +21,8 @@ export default function Layout({
     <div className="relative min-h-screen bg-movenotes-bg">
       
       {/* 🔥 Global hamburger - pinned to viewport left */}
-<div className="fixed top-4 left-4 z-50">
-  <HamburgerButton open={menuOpen} onClick={() => setMenuOpen(true)} />
+<div className="fixed top-4 left-4 z-60">
+  <HamburgerButton open={menuOpen} onClick={() => setMenuOpen((v) => !v)} />
 </div>
 
 

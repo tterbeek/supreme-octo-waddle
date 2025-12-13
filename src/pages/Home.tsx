@@ -93,8 +93,6 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   const [editActivity, setEditActivity] = useState<any | null>(null);
 
   // Sidebar
-  const [menuOpen, setMenuOpen] = useState(false);
-
   // Delete / undo
   const lastDeletedRef = useRef<any | null>(null);
 
@@ -874,7 +872,6 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
           />
         )}
 
-        <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
       </div>
     </div>
   );

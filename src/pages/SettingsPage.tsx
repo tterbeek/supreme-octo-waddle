@@ -1,5 +1,6 @@
 // src/pages/SettingsPage.tsx
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { Download, LogOut, Trash2, FileText } from "lucide-react";
 
@@ -95,6 +96,15 @@ export default function SettingsPage() {
     <div className="p-6 max-w-lg mx-auto">
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">Settings</h1>
 
+      {/* MANAGE PRESETS */}
+      <Link
+        to="/presets"
+        className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
+      >
+        <FileText className="w-5 h-5 text-movenotes-primary" />
+        <span>Manage Presets</span>
+      </Link>
+
       {/* EXPORT */}
       <button
         onClick={handleExport}
@@ -109,9 +119,9 @@ export default function SettingsPage() {
       <button
         onClick={handleDeleteAccount}
         disabled={deleting}
-        className="w-full flex items-center gap-3 bg-red-50 border border-red-200 px-4 py-3 rounded-xl mb-4 text-red-700 active:scale-95 disabled:opacity-70"
+        className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 text-movenotes-text active:scale-95 disabled:opacity-70"
       >
-        <Trash2 className="w-5 h-5" />
+        <Trash2 className="w-5 h-5 text-movenotes-primary" />
         <span>{deleting ? "Opening mail…" : "Request Account Deletion"}</span>
       </button>
 
