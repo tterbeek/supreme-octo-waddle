@@ -6,11 +6,12 @@ import {
   IconBike,
   IconWalk,
   IconBarbell,
-  IconYoga,
   IconTrekking,
   IconSwimming,
   IconDots,
   IconSparkles,
+  IconPlant2,
+  IconZzz,
 } from "@tabler/icons-react";
 
 // Lucide Icons (used for certain types if needed)
@@ -65,7 +66,7 @@ export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
   yoga: {
     id: "yoga",
     label: "Yoga",
-    Icon: IconYoga,
+    Icon: IconPlant2,
     defaultFields: ["duration_min"],
     optionalFields: [],
   },
@@ -83,6 +84,13 @@ export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
     // UPDATED: duration is default, distance optional
     defaultFields: ["duration_min"],
     optionalFields: ["distance_km"],
+  },
+    restore: {
+    id: "restore",
+    label: "Restore",
+    Icon: IconZzz,
+    defaultFields: [],
+    optionalFields: [],
   },
   other: {
     id: "other",

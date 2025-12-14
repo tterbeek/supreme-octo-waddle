@@ -1,12 +1,13 @@
 // src/components/OnboardingCarousel.tsx
 import { useState } from "react";
+
 import {
   IconRun,
   IconWalk,
-  IconYoga,
   IconCamera,
   IconChevronLeft,
   IconChevronRight,
+  IconPlant2,
 } from "@tabler/icons-react";
 
 type OnboardingCarouselProps = {
@@ -37,7 +38,7 @@ export default function OnboardingCarousel({
     {
       title: "Reflect through notes",
       body: "Add moments, memories, and photos. Your movement story becomes meaningful over time.",
-      Icon: IconYoga,
+      Icon: IconPlant2,
     },
     {
       title: "Stay motivated",
