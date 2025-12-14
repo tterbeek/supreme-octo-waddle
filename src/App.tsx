@@ -18,6 +18,7 @@ import Layout from "./components/Layout";
 import OnboardingCarousel from "./components/OnboardingCarousel";
 import SettingsPage from "./pages/SettingsPage";
 import AboutPage from "./pages/AboutPage";
+import ActivityPreferencesPage from "./pages/ActivityPreferencesPage";
 import { AdminRoute } from "./components/AdminRoute";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import IntroPage from "./pages/IntroPage";
@@ -221,6 +222,15 @@ export default function App() {
   element={
     <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
       <SettingsPage />
+    </Layout>
+  }
+/>
+
+<Route
+  path="/settings/activity-preferences"
+  element={
+    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+      <ActivityPreferencesPage />
     </Layout>
   }
 />

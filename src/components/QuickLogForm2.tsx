@@ -7,6 +7,10 @@ import ModalSheet from "./ModalSheet";
 import TooltipBubble from "./TooltipBubble";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { useTooltipManager } from "../hooks/useTooltipManager";
+import {
+  resolveActivityFields,
+  type ActivityPreference,
+} from "../lib/resolveActivityFields";
 
 type QuickLogFormProps = {
   initialType?: string;
@@ -91,6 +95,28 @@ function EffortSelector({ value, onChange }: EffortSelectorProps) {
   );
 }
 
+async function fetchActivityPreference(
+  userId: string,
+  activityType: string
+) {
+  const { data, error } = await supabase
+    .from("activity_preferences")
+    .select("activity_type, default_metric")
+    .eq("user_id", userId)
+    .eq("activity_type", activityType)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "[QuickLogForm] Error fetching activity preference:",
+      error.message
+    );
+    return undefined;
+  }
+
+  return data ?? undefined;
+}
+
 export default function QuickLogForm2({
   initialType = "run",
   onClose,
@@ -127,6 +153,11 @@ export default function QuickLogForm2({
 
   const [activityType] = useState(initialType);
   const typeConfig = ACTIVITY_TYPES[activityType];
+  const [preference, setPreference] = useState<ActivityPreference | undefined>();
+  const { defaultFields, optionalFields } = resolveActivityFields(
+    activityType,
+    preference
+  );
 
   const ding = new Audio("/sounds/ding.mp3");
 
@@ -137,6 +168,7 @@ export default function QuickLogForm2({
   useEffect(() => {
     setShowOptionalDistance(false);
     setShowOptionalDuration(false);
+    setPreference(undefined);
     const load = async () => {
       const {
         data: { user },
@@ -166,6 +198,12 @@ export default function QuickLogForm2({
         setTitle(first.name ?? "");
         setEffort(first.effort ?? 3);
       }
+
+      const preferenceData = await fetchActivityPreference(
+        user.id,
+        activityType
+      );
+      setPreference(preferenceData);
     };
 
     load();
@@ -204,8 +242,8 @@ export default function QuickLogForm2({
 
   const save = async () => {
     // Guard: ensure default metric is present
-    const needsDistance = typeConfig.defaultFields.includes("distance_km");
-    const needsDuration = typeConfig.defaultFields.includes("duration_min");
+    const needsDistance = defaultFields.includes("distance_km");
+    const needsDuration = defaultFields.includes("duration_min");
 
     if (needsDistance && !distance && !metricTooltipAcknowledged && !tooltipAlreadySeen) {
       setMetricTooltip(
@@ -230,13 +268,13 @@ export default function QuickLogForm2({
     if (!user) return;
 
     const distanceValue =
-      (typeConfig.defaultFields.includes("distance_km") ||
+      (defaultFields.includes("distance_km") ||
         showOptionalDistance) && distance
         ? Number(distance)
         : null;
 
     const durationValue =
-      (typeConfig.defaultFields.includes("duration_min") ||
+      (defaultFields.includes("duration_min") ||
         showOptionalDuration) && duration
         ? Number(duration)
         : null;
@@ -376,7 +414,7 @@ export default function QuickLogForm2({
         />
 
         {/* DISTANCE FIELD */}
-        {(typeConfig.defaultFields.includes("distance_km") ||
+        {(defaultFields.includes("distance_km") ||
           showOptionalDistance) && (
           <div className="form-group mb-4">
             <label className="text-sm text-gray-600">Distance (km)</label>
@@ -391,8 +429,8 @@ export default function QuickLogForm2({
         )}
 
         {/* OPTIONAL DISTANCE BUTTON */}
-        {!typeConfig.defaultFields.includes("distance_km") &&
-          typeConfig.optionalFields.includes("distance_km") &&
+        {!defaultFields.includes("distance_km") &&
+          optionalFields.includes("distance_km") &&
           !showOptionalDistance && (
             <button
               type="button"
@@ -401,10 +439,10 @@ export default function QuickLogForm2({
             >
               + Add distance
             </button>
-          )}
+        )}
 
         {/* DURATION FIELD */}
-        {(typeConfig.defaultFields.includes("duration_min") ||
+        {(defaultFields.includes("duration_min") ||
           showOptionalDuration) && (
           <div className="form-group mb-4">
             <label className="text-sm text-gray-600">Duration (min)</label>
@@ -419,8 +457,8 @@ export default function QuickLogForm2({
         )}
 
         {/* OPTIONAL DURATION BUTTON */}
-        {!typeConfig.defaultFields.includes("duration_min") &&
-          typeConfig.optionalFields.includes("duration_min") &&
+        {!defaultFields.includes("duration_min") &&
+          optionalFields.includes("duration_min") &&
           !showOptionalDuration && (
             <button
               type="button"

@@ -1,7 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../supabaseClient";
 import { Zap, Frown, Meh, Smile, Laugh, Trash2, Camera } from "lucide-react";
-import { ACTIVITY_TYPES } from "../config/activityTypes";
+import {
+  resolveActivityFields,
+  type ActivityPreference,
+} from "../lib/resolveActivityFields";
+import { resolveEditFields } from "../lib/resolveEditActivityFields";
 
 const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
@@ -12,6 +16,22 @@ type ActivityEditFormProps = {
   onDeleted: () => void;
 };
 
+async function fetchActivityPreference(userId: string, activityType: string) {
+  const { data, error } = await supabase
+    .from("activity_preferences")
+    .select("activity_type, default_metric")
+    .eq("user_id", userId)
+    .eq("activity_type", activityType)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[EditActivity] Error fetching activity preference:", error.message);
+    return undefined;
+  }
+
+  return data ?? undefined;
+}
+
 export default function ActivityEditForm({
   activity,
   onClose,
@@ -21,14 +41,12 @@ export default function ActivityEditForm({
   const [title, setTitle] = useState(activity.title || "");
   const [distance, setDistance] = useState(activity.distance_km || "");
   const activityType = activity.type;
-  const typeConfig = ACTIVITY_TYPES[activityType];
-  const [showOptionalDistance, setShowOptionalDistance] = useState(
-    activity.distance_km != null && !typeConfig.defaultFields.includes("distance_km")
-  );
+  const [preference, setPreference] = useState<ActivityPreference | undefined>();
+  const baseFields = resolveActivityFields(activityType, preference);
+  const { defaultFields, optionalFields } = resolveEditFields(baseFields, activity);
+  const [showOptionalDistance, setShowOptionalDistance] = useState(false);
   const [duration, setDuration] = useState(activity.duration_min || "");
-  const [showOptionalDuration, setShowOptionalDuration] = useState(
-    activity.duration_min != null && !typeConfig.defaultFields.includes("duration_min")
-  );
+  const [showOptionalDuration, setShowOptionalDuration] = useState(false);
   const [date, setDate] = useState(activity.date || "");
   const [rating, setRating] = useState(activity.feeling || 3);
   const [effort, setEffort] = useState(activity.effort || 3);
@@ -54,6 +72,36 @@ export default function ActivityEditForm({
     return () => {};
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setShowOptionalDistance(false);
+    setShowOptionalDuration(false);
+
+    const loadPreference = async () => {
+      setPreference(undefined);
+
+      if (activityType === "restore") return;
+
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error || !user || cancelled) return;
+
+      const pref = await fetchActivityPreference(user.id, activityType);
+      if (!cancelled) {
+        setPreference(pref);
+      }
+    };
+
+    loadPreference();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityType]);
+
   const handleSave = async () => {
     setSaving(true);
     setUploadError(null);
@@ -61,13 +109,13 @@ export default function ActivityEditForm({
     const deletePaths: string[] = [];
 
     const distanceValue =
-      (typeConfig.defaultFields.includes("distance_km") || showOptionalDistance) &&
+      (defaultFields.includes("distance_km") || showOptionalDistance) &&
       distance
         ? Number(distance)
         : null;
 
     const durationValue =
-      (typeConfig.defaultFields.includes("duration_min") || showOptionalDuration) &&
+      (defaultFields.includes("duration_min") || showOptionalDuration) &&
       duration
         ? Number(duration)
         : null;
@@ -305,7 +353,7 @@ export default function ActivityEditForm({
       />
 
         {/* DISTANCE FIELD (default or optional) */}
-        {(typeConfig.defaultFields.includes("distance_km") || showOptionalDistance) && (
+        {(defaultFields.includes("distance_km") || showOptionalDistance) && (
           <>
             <label className="text-sm text-gray-600">Distance (km)</label>
             <input
@@ -318,8 +366,8 @@ export default function ActivityEditForm({
         )}
 
         {/* OPTIONAL DISTANCE BUTTON */}
-        {!typeConfig.defaultFields.includes("distance_km") &&
-          typeConfig.optionalFields.includes("distance_km") &&
+        {!defaultFields.includes("distance_km") &&
+          optionalFields.includes("distance_km") &&
           !showOptionalDistance && (
             <button
               type="button"
@@ -328,10 +376,10 @@ export default function ActivityEditForm({
             >
               + Add distance
             </button>
-          )}
+        )}
 
         {/* DURATION FIELD (default or optional) */}
-        {(typeConfig.defaultFields.includes("duration_min") || showOptionalDuration) && (
+        {(defaultFields.includes("duration_min") || showOptionalDuration) && (
           <>
             <label className="text-sm text-gray-600">Duration (min)</label>
             <input
@@ -344,8 +392,8 @@ export default function ActivityEditForm({
         )}
 
         {/* OPTIONAL DURATION BUTTON */}
-        {!typeConfig.defaultFields.includes("duration_min") &&
-          typeConfig.optionalFields.includes("duration_min") &&
+        {!defaultFields.includes("duration_min") &&
+          optionalFields.includes("duration_min") &&
           !showOptionalDuration && (
             <button
               type="button"

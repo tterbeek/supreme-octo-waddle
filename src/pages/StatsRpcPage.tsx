@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LineChart,
   Line,
@@ -13,11 +13,14 @@ import HeaderLogo from "../components/HeaderLogo";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
-import { startOfWeek as dfStartOfWeek, format, subWeeks } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import GoalProgressCard from "../components/GoalProgressCard";
 import AddGoalModal from "../components/AddGoalModal";
 import EditGoalModal from "../components/EditGoalModal";
 import type { Goal } from "../types";
+
+const TRENDS_META_RPC = "stats_activity_trend_meta";
+const TRENDS_SERIES_RPC = "stats_activity_trend_series";
 
 // Expected Supabase stored procedures:
 // - stats_goal_progress(user_id uuid)
@@ -40,32 +43,88 @@ type GoalStat = {
   comparison_pct: number | null;
 };
 
-type Activity = {
-  type: keyof typeof ACTIVITY_TYPES;
-  date: string;
-  distance_km: number | null;
-  duration_min: number | null;
+type TrendMeta = {
+  activity_type: keyof typeof ACTIVITY_TYPES;
+  has_distance: boolean;
+  has_duration: boolean;
+  default_metric: "distance" | "duration" | null;
 };
 
+type TrendPoint = {
+  week_start: string;
+  value: number;
+};
+
+const isSchemaCacheError = (err: any) =>
+  typeof err?.message === "string" &&
+  err.message.toLowerCase().includes("schema cache");
+
+async function fetchTrendMeta(userId: string) {
+  const { data, error } = await supabase.rpc(TRENDS_META_RPC, {
+    target_user: userId,
+    weeks_back: 9,
+  });
+  if (!error) return data as TrendMeta[];
+
+  if (isSchemaCacheError(error)) {
+    const { data: fallbackData, error: fallbackError } = await supabase.rpc(
+      TRENDS_META_RPC,
+      {
+        p_target_user: userId,
+        p_weeks_back: 9,
+      }
+    );
+    if (!fallbackError) return fallbackData as TrendMeta[];
+  }
+
+  throw error;
+}
+
+async function fetchTrendSeries(
+  userId: string,
+  activityType: string,
+  metric: "distance" | "duration"
+) {
+  const { data, error } = await supabase.rpc(TRENDS_SERIES_RPC, {
+    target_user: userId,
+    activity_type: activityType,
+    metric,
+    weeks_back: 9,
+  });
+  if (!error) return data as TrendPoint[];
+
+  if (isSchemaCacheError(error)) {
+    const { data: fallbackData, error: fallbackError } = await supabase.rpc(
+      TRENDS_SERIES_RPC,
+      {
+        p_target_user: userId,
+        p_activity_type: activityType,
+        p_metric: metric,
+        p_weeks_back: 9,
+      }
+    );
+    if (!fallbackError) return fallbackData as TrendPoint[];
+  }
+
+  throw error;
+}
+
 const GOAL_RPC = "stats_goal_progress";
-
-function startOfYear(date: Date): Date {
-  return new Date(date.getFullYear(), 0, 1);
-}
-
-function parseActivityDate(d: string | Date): Date {
-  return typeof d === "string" ? new Date(d + "T00:00:00") : new Date(d);
-}
 
 export default function StatsRpcPage() {
   const [goalStats, setGoalStats] = useState<GoalStat[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [starredGoalIds, setStarredGoalIds] = useState<string[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [trendMeta, setTrendMeta] = useState<TrendMeta[]>([]);
+  const [trendData, setTrendData] = useState<Record<string, TrendPoint[]>>({});
+  const [selectedMetric, setSelectedMetric] = useState<
+    Record<string, "distance" | "duration">
+  >({});
+  const [trendsLoading, setTrendsLoading] = useState(false);
   const PERIOD_ORDER: Record<"week" | "month" | "year", number> = {
     week: 1,
     month: 2,
@@ -112,29 +171,19 @@ export default function StatsRpcPage() {
     }
 
     if (!user) {
-      setError("You need to be signed in to view stats.");
-      setLoading(false);
-      return;
-    }
-    setUserId(user.id);
+    setError("You need to be signed in to view stats.");
+    setLoading(false);
+    return;
+  }
+  setUserId(user.id);
 
-    const now = new Date();
-    const earliest = startOfYear(now);
-    earliest.setFullYear(earliest.getFullYear() - 1); // need previous year for comparisons
-    const earliestStr = earliest.toISOString().split("T")[0];
-
-    const [rpcRes, actsRes, rawGoalsRes, prefsRes] = await Promise.all([
-      supabase.rpc(GOAL_RPC, { user_id: user.id }),
-      supabase
-        .from("activities")
-        .select("type, date, distance_km, duration_min")
-        .eq("user_id", user.id)
-        .gte("date", earliestStr),
-      supabase
-        .from("goals")
-        .select("id, user_id, activity_type, metric, period, target, name, updated_at")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false }),
+  const [rpcRes, rawGoalsRes, prefsRes] = await Promise.all([
+    supabase.rpc(GOAL_RPC, { user_id: user.id }),
+    supabase
+      .from("goals")
+      .select("id, user_id, activity_type, metric, period, target, name, updated_at")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
       supabase
         .from("goal_preferences")
         .select("goal_id")
@@ -144,14 +193,6 @@ export default function StatsRpcPage() {
     if (rpcRes.error) {
       setError(
         `Could not load goal stats (${GOAL_RPC}): ${rpcRes.error.message}`
-      );
-      setLoading(false);
-      return;
-    }
-
-    if (actsRes.error) {
-      setError(
-        `Could not load activity history: ${actsRes.error.message}`
       );
       setLoading(false);
       return;
@@ -187,9 +228,6 @@ export default function StatsRpcPage() {
     } else {
       setStarredGoalIds((prefsRes.data || []).map((p) => p.goal_id));
     }
-
-    const acts = (actsRes.data || []) as Activity[];
-    setActivities(acts);
 
     setLoading(false);
   };
@@ -259,149 +297,115 @@ export default function StatsRpcPage() {
     }
   };
 
-  type TrendRow = {
-    week: string; // ISO start-of-week (for uniqueness)
-    weekLabel: string; // display end-of-week (Sunday)
-    value: number | null; // solid line (completed weeks)
-    currentValue?: number | null; // dotted line for in-progress current week
-    isFuture?: boolean;
-  };
-  type TrendInfo = {
-    rows: TrendRow[];
-    missingPrimary: boolean;
-    primaryLabel: string;
-  };
+  const canToggle = (meta: TrendMeta) => meta.has_distance && meta.has_duration;
 
-  const trends = useMemo(() => {
-    if (!activities.length) return {} as Record<string, TrendInfo>;
+  useEffect(() => {
+    if (activeTab !== "trends" || !userId) return;
 
-    const now = new Date();
-    const currentWeekStart = dfStartOfWeek(now, { weekStartsOn: 1 });
-    const lookbackStart = subWeeks(currentWeekStart, 9); // show up to 9 past weeks (excluding current)
-    const result: Record<string, TrendInfo> = {};
+    setTrendsLoading(true);
+    fetchTrendMeta(userId)
+      .then((data) => {
+        setTrendMeta(data || []);
+        setError(null);
+      })
+      .catch((err: any) => {
+        console.error("[Trends] Meta fetch error:", err?.message || err);
+        setError(err?.message || "Could not load trends.");
+      })
+      .finally(() => setTrendsLoading(false));
+  }, [activeTab, userId]);
 
-    Object.keys(ACTIVITY_TYPES).forEach((type) => {
-      const cfg = ACTIVITY_TYPES[type as keyof typeof ACTIVITY_TYPES];
-      if (!cfg) return;
+  useEffect(() => {
+    if (!trendMeta.length || !userId) return;
 
-      const primaryMetric = cfg.defaultFields.includes("distance_km")
-        ? "distance_km"
-        : cfg.defaultFields.includes("duration_min")
-        ? "duration_min"
-        : null;
-      const primaryLabel =
-        primaryMetric === "distance_km"
-          ? "distance"
-          : primaryMetric === "duration_min"
-          ? "duration"
-          : "activity";
-
-      const weekTotals = new Map<string, number>();
-      let currentWeekValue: number | null = null;
-      let missingPrimary = false;
-
-      activities.forEach((a) => {
-        if (a.type !== type) return;
-        const actDate = parseActivityDate(a.date);
-        const wkStart = dfStartOfWeek(actDate, { weekStartsOn: 1 });
-        const metric =
-          primaryMetric === "distance_km"
-            ? Number(a.distance_km || 0)
-            : primaryMetric === "duration_min"
-            ? Number(a.duration_min || 0)
-            : 0;
-
-        // current week gets dotted line
-        if (wkStart >= currentWeekStart) {
-          currentWeekValue = (currentWeekValue || 0) + metric;
-          const primaryMissing =
-            primaryMetric === "distance_km"
-              ? a.distance_km == null
-              : primaryMetric === "duration_min"
-              ? a.duration_min == null
-              : false;
-          if (primaryMissing) missingPrimary = true;
-          return;
-        }
-
-        // only last 9 weeks window
-        if (wkStart < lookbackStart) return;
-
-        const key = wkStart.toISOString().slice(0, 10);
-        weekTotals.set(key, (weekTotals.get(key) || 0) + metric);
-
-        const primaryMissing =
-          primaryMetric === "distance_km"
-            ? a.distance_km == null
-            : primaryMetric === "duration_min"
-            ? a.duration_min == null
-            : false;
-        if (primaryMissing) missingPrimary = true;
-      });
-
-      if (weekTotals.size === 0) return;
-
-      // keep only weeks with data (no leading empties)
-      let keys = Array.from(weekTotals.keys()).sort();
-      // if more than 9 weeks with data, keep latest 9
-      if (keys.length > 9) {
-        keys = keys.slice(keys.length - 9);
-      }
-
-      const rows: TrendRow[] = keys.map((key) => {
-        const wkStart = parseActivityDate(key);
-        const weekEnd = new Date(wkStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        return {
-          week: key,
-          weekLabel: format(weekEnd, "dd MMM"),
-          value: weekTotals.get(key) ?? 0,
-          currentValue: null,
-          isFuture: false,
-        };
-      });
-
-      // Append current week as dotted line (if within window)
-      if (currentWeekValue !== null) {
-        const weekEnd = new Date(currentWeekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        const currentRow: TrendRow = {
-          week: currentWeekStart.toISOString().slice(0, 10),
-          weekLabel: format(weekEnd, "dd MMM"),
-          value: null,
-          currentValue: currentWeekValue,
-          isFuture: false,
-        };
-        rows.push(currentRow);
-        // keep at most 9 rows (drop oldest if needed)
-        while (rows.length > 9) {
-          rows.shift();
-        }
-
-        // Seed the dotted line with the last completed week so a dashed segment shows.
-        const lastCompletedIdx = rows
-          .map((r, idx) => ({ idx, hasValue: r.value != null }))
-          .filter((r) => r.hasValue)
-          .map((r) => r.idx)
-          .pop();
-        if (lastCompletedIdx != null) {
-          rows[lastCompletedIdx].currentValue = rows[lastCompletedIdx].value ?? 0;
-          rows[rows.length - 1].currentValue = currentWeekValue;
-        }
-      }
-
-      const hasDataWeek = rows.length > 0;
-      if (!hasDataWeek) return;
-
-      result[type] = {
-        rows,
-        missingPrimary,
-        primaryLabel,
-      };
+    trendMeta.forEach((meta) => {
+      if (!meta.default_metric) return;
+      setSelectedMetric((prev) =>
+        prev[meta.activity_type]
+          ? prev
+          : { ...prev, [meta.activity_type]: meta.default_metric as "distance" | "duration" }
+      );
     });
 
-    return result;
-  }, [activities]);
+    const missing = trendMeta.filter(
+      (meta) =>
+        meta.default_metric &&
+        !trendData[`${meta.activity_type}:${meta.default_metric}`]
+    );
+
+    if (!missing.length) return;
+
+    let cancelled = false;
+    setTrendsLoading(true);
+
+    const loadSeries = async () => {
+      try {
+        await Promise.all(
+          missing.map(async (meta) => {
+            if (!meta.default_metric) return;
+            const series = await fetchTrendSeries(
+              userId,
+              meta.activity_type,
+              meta.default_metric
+            );
+            if (cancelled) return;
+            setTrendData((prev) => ({
+              ...prev,
+              [`${meta.activity_type}:${meta.default_metric}`]: series,
+            }));
+          })
+        );
+      } catch (err: any) {
+        if (!cancelled) {
+          console.error("[Trends] Series fetch error:", err?.message || err);
+          setError(err?.message || "Could not load trend data.");
+        }
+      } finally {
+        if (!cancelled) {
+          setTrendsLoading(false);
+        }
+      }
+    };
+
+    loadSeries();
+
+    return () => {
+      cancelled = true;
+    };
+    // trendData is intentionally included to avoid refetching loaded series
+  }, [trendMeta, trendData, userId]);
+
+  const onToggleMetric = async (
+    activityType: string,
+    metric: "distance" | "duration"
+  ) => {
+    if (!userId) return;
+
+    setSelectedMetric((prev) => ({ ...prev, [activityType]: metric }));
+
+    const key = `${activityType}:${metric}`;
+    if (trendData[key]) return;
+
+    try {
+      setTrendsLoading(true);
+      const series = await fetchTrendSeries(userId, activityType, metric);
+      setTrendData((prev) => ({ ...prev, [key]: series }));
+    } catch (err: any) {
+      console.error("[Trends] Series fetch error:", err?.message || err);
+      setError(err?.message || "Could not load trend data.");
+    } finally {
+      setTrendsLoading(false);
+    }
+  };
+
+  const metasWithDefault = trendMeta.filter((meta) => meta.default_metric);
+
+  const hasTrendRows = metasWithDefault.some((meta) => {
+    const activeMetric =
+      selectedMetric[meta.activity_type] ?? (meta.default_metric as "distance" | "duration");
+    const key = `${meta.activity_type}:${activeMetric}`;
+    return (trendData[key]?.length || 0) > 0;
+  });
 
   return (
     <div className="min-h-screen bg-movenotes-bg p-2">
@@ -497,8 +501,8 @@ export default function StatsRpcPage() {
 
         {activeTab === "trends" && (
           <>
-            {loading && (
-              <p className="text-sm text-gray-500 text-center">Loading stats…</p>
+            {(loading || trendsLoading) && (
+              <p className="text-sm text-gray-500 text-center">Loading trends…</p>
             )}
 
             {error && (
@@ -511,7 +515,7 @@ export default function StatsRpcPage() {
               </div>
             )}
 
-            {!loading && !error && (
+            {!error && (
               <div className="space-y-10 mt-6">
                 <h2 className="text-xl font-semibold text-movenotes-primary mb-2 text-center">
                   Your movement over time
@@ -520,48 +524,134 @@ export default function StatsRpcPage() {
                   Weekly trends for each activity you've logged recently.
                 </p>
 
-                {Object.keys(trends).length === 0 && (
+                {!hasTrendRows && !trendsLoading && (
                   <p className="text-center text-movenotes-muted mt-8">
                     Not enough activity yet to show trends 🌱
                   </p>
                 )}
 
-                {Object.entries(trends).map(([type, trend]) => {
-                  const rows = trend.rows;
-                  const cfg = ACTIVITY_TYPES[type as keyof typeof ACTIVITY_TYPES];
+                {metasWithDefault.map((meta) => {
+                  if (!meta.default_metric) return null;
+                  const cfg = ACTIVITY_TYPES[meta.activity_type];
                   const Icon = cfg.Icon;
+                  const activeMetric =
+                    selectedMetric[meta.activity_type] ?? meta.default_metric;
+                  const key = `${meta.activity_type}:${activeMetric}`;
+                  const series = trendData[key] || [];
+                  if (!series.length) return null;
+
+                  const currentWeekStr = format(
+                    startOfWeek(new Date(), { weekStartsOn: 1 }),
+                    "yyyy-MM-dd"
+                  );
+
+                  const rows = series.map((point) => {
+                    const start = new Date(point.week_start + "T00:00:00");
+                    const end = new Date(start);
+                    end.setDate(end.getDate() + 6);
+                    const isCurrent = point.week_start === currentWeekStr;
+                    return {
+                      week: point.week_start,
+                      weekLabel: format(end, "dd MMM"),
+                      value: point.value,
+                      isCurrent,
+                    };
+                  });
+
+                  const currentIdx = rows.findIndex((r) => r.isCurrent);
+                  const lastCompletedIdx = rows
+                    .map((r, idx) => ({ idx, isCurrent: r.isCurrent }))
+                    .filter((r) => !r.isCurrent)
+                    .map((r) => r.idx)
+                    .pop();
+
+                  const rowsWithLines = rows.map((row, idx) => {
+                    const isCurrent = row.isCurrent;
+                    const isLastCompleted = idx === lastCompletedIdx;
+                    const valueSolid = isCurrent ? null : row.value;
+                    const valueCurrent =
+                      isCurrent || (isLastCompleted && currentIdx !== -1)
+                        ? row.value
+                        : null;
+
+                    return {
+                      ...row,
+                      valueSolid,
+                      valueCurrent,
+                    };
+                  });
+
+                  const showToggle = canToggle(meta);
+
                   return (
                     <div
-                      key={type}
+                      key={meta.activity_type}
                       className="rounded-xl border border-movenotes-border p-6 bg-movenotes-surface shadow-sm"
                     >
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-movenotes-primary">
-                          <Icon size={20} />
-                        </span>
-                        <h3 className="text-lg font-semibold text-movenotes-text">
-                          {cfg.label} —{" "}
-                          {cfg.defaultFields.includes("distance_km")
-                            ? "Distance (km)"
-                            : "Duration (min)"}
-                        </h3>
+                      <div className="flex flex-col items-center gap-3 mb-3 text-center">
+                        <div className="flex items-center gap-2">
+                          <span className="text-movenotes-primary">
+                            <Icon size={20} />
+                          </span>
+                          <h3 className="text-lg font-semibold text-movenotes-text">
+                            {cfg.label} —{" "}
+                            {activeMetric === "distance" ? "Distance (km)" : "Duration (min)"}
+                          </h3>
+                        </div>
+
+                        {showToggle && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => onToggleMetric(meta.activity_type, "distance")}
+                              className={`px-3 py-1.5 text-xs rounded-full border transition ${
+                                activeMetric === "distance"
+                                  ? "bg-movenotes-primary text-primary-text border-movenotes-primary"
+                                  : "border-warm-200 text-gray-700"
+                              }`}
+                            >
+                              Distance
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onToggleMetric(meta.activity_type, "duration")}
+                              className={`px-3 py-1.5 text-xs rounded-full border transition ${
+                                activeMetric === "duration"
+                                  ? "bg-movenotes-primary text-primary-text border-movenotes-primary"
+                                  : "border-warm-200 text-gray-700"
+                              }`}
+                            >
+                              Duration
+                            </button>
+                          </div>
+                        )}
                       </div>
 
+                      {showToggle && (
+                        <p className="text-xs text-movenotes-muted mb-3 text-center">
+                          This graph shows only the entries where this metric was logged.
+                        </p>
+                      )}
+
+                      {!showToggle && (
+                        <div className="mb-3" />
+                      )}
+
                       <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={rows}>
+                        <LineChart data={rowsWithLines}>
                           <XAxis dataKey="weekLabel" stroke="#888" fontSize={12} />
                           <YAxis stroke="#888" fontSize={12} />
                           <RechartsTooltip />
                           <Line
                             type="monotone"
-                            dataKey="value"
+                            dataKey="valueSolid"
                             stroke="#5A7A69"
                             strokeWidth={3}
                             dot={true}
                           />
                           <Line
                             type="monotone"
-                            dataKey="currentValue"
+                            dataKey="valueCurrent"
                             stroke="#5A7A69"
                             strokeWidth={3}
                             strokeDasharray="4 4"
@@ -570,13 +660,6 @@ export default function StatsRpcPage() {
                           />
                         </LineChart>
                       </ResponsiveContainer>
-
-                      {trend.missingPrimary && (
-                        <p className="text-xs text-movenotes-muted mt-3">
-                          For {cfg.label}, Trends use {trend.primaryLabel} so the graph stays meaningful.
-                          A few entries this period used only other details, so they aren’t shown here—your movement still counts.
-                        </p>
-                      )}
                     </div>
                   );
                 })}

@@ -105,6 +105,15 @@ export default function SettingsPage() {
         <span>Manage Presets</span>
       </Link>
 
+      {/* ACTIVITY PREFERENCES */}
+      <Link
+        to="/settings/activity-preferences"
+        className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
+      >
+        <FileText className="w-5 h-5 text-movenotes-primary" />
+        <span>Activity Preferences</span>
+      </Link>
+
       {/* EXPORT */}
       <button
         onClick={handleExport}
