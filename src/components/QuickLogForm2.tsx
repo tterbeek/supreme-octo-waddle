@@ -13,7 +13,6 @@ import {
 } from "../lib/resolveActivityFields";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance, kmToMiles, milesToKm } from "../lib/units";
-import type { ReactNode } from "react";
 
 type QuickLogFormProps = {
   initialType?: string;
