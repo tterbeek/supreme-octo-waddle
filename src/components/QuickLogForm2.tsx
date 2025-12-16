@@ -1,123 +1,19 @@
-import { useEffect, useState } from "react";
-import type { Preset } from "../types";
-import { supabase } from "../supabaseClient";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
 import ModalSheet from "./ModalSheet";
 import TooltipBubble from "./TooltipBubble";
-import { ACTIVITY_TYPES } from "../config/activityTypes";
-import { useTooltipManager } from "../hooks/useTooltipManager";
-import {
-  resolveActivityFields,
-  type ActivityPreference,
-} from "../lib/resolveActivityFields";
+import FeelingSelector from "./quick-log/FeelingSelector";
+import EffortSelector from "./quick-log/EffortSelector";
+import { useTooltipManager, type TooltipKey } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
-import { formatDistance, kmToMiles, milesToKm } from "../lib/units";
+import { formatDistance } from "../lib/units";
+import { useQuickLogForm } from "../hooks/useQuickLogForm";
 
 type QuickLogFormProps = {
   initialType?: string;
   onClose: () => void;
   onLogged: (activityId: string) => void; // ✅ returns activity id
 };
-
-type FeelingSelectorProps = {
-  value: number;
-  onChange: (value: number) => void;
-};
-
-function FeelingSelector({ value, onChange }: FeelingSelectorProps) {
-  return (
-    <div className="w-full">
-      <label className="block text-sm text-gray-600 mb-2 text-center">
-        Feeling
-      </label>
-      <div className="flex justify-between w-full max-w-sm mx-auto">
-        {[
-          { Icon: Frown, value: 1 },
-          { Icon: Meh, value: 2 },
-          { Icon: Smile, value: 3 },
-          { Icon: Laugh, value: 4 },
-        ].map(({ Icon, value: val }) => {
-          const active = value === val;
-          return (
-            <button
-              key={val}
-              type="button"
-              onClick={() => onChange(val)}
-              className={`transition transform active:scale-95 ${
-                active ? "scale-110" : "opacity-70"
-              }`}
-            >
-              <Icon
-                className={`w-7 h-7 ${
-                  active ? "text-movenotes-accent" : "text-gray-300"
-                }`}
-              />
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-type EffortSelectorProps = {
-  value: number;
-  onChange: (value: number) => void;
-};
-
-function EffortSelector({ value, onChange }: EffortSelectorProps) {
-  return (
-    <div className="w-full">
-      <label className="block text-sm text-gray-600 mb-2 text-center">
-        Effort
-      </label>
-      <div className="flex justify-between w-full max-w-sm mx-auto">
-        {[1, 2, 3, 4, 5].map((val) => {
-          const active = val <= value;
-          return (
-            <button
-              key={val}
-              type="button"
-              onClick={() => onChange(val)}
-              className={`transition transform active:scale-95 ${
-                value === val ? "scale-110" : ""
-              }`}
-            >
-              <Zap
-                className={`w-5 h-5 ${
-                  active ? "text-movenotes-accent" : "text-gray-300"
-                }`}
-              />
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-async function fetchActivityPreference(
-  userId: string,
-  activityType: string
-) {
-  const { data, error } = await supabase
-    .from("activity_preferences")
-    .select("activity_type, default_metric")
-    .eq("user_id", userId)
-    .eq("activity_type", activityType)
-    .maybeSingle();
-
-  if (error) {
-    console.error(
-      "[QuickLogForm] Error fetching activity preference:",
-      error.message
-    );
-    return undefined;
-  }
-
-  return data ?? undefined;
-}
 
 export default function QuickLogForm2({
   initialType = "run",
@@ -129,285 +25,56 @@ export default function QuickLogForm2({
   const onboardingDone =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
-  const [presets, setPresets] = useState<Preset[]>([]);
-  const [activePreset, setActivePreset] = useState<Preset | null>(null);
-
-  const [distanceKm, setDistanceKm] = useState<number | null>(null);
-  const [duration, setDuration] = useState("");
-  const [feeling, setFeeling] = useState(3);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [title, setTitle] = useState("");
-  const [effort, setEffort] = useState<number>(3);
-  const [saveAsPreset, setSaveAsPreset] = useState(false);
-  const [presetName, setPresetName] = useState("");
-  const [presetNameTouched, setPresetNameTouched] = useState(false);
-  const [showOptionalDistance, setShowOptionalDistance] = useState(false);
-  const [showOptionalDuration, setShowOptionalDuration] = useState(false);
-  const [showMetricTooltip, setShowMetricTooltip] = useState(false);
-  const [metricTooltip, setMetricTooltip] = useState<React.ReactNode>("");
-  const [metricTooltipAcknowledged, setMetricTooltipAcknowledged] = useState(false);
-  const [tooltipAlreadySeen] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const key = `metric_tooltip_seen_${initialType}`;
-    return localStorage.getItem(key) === "true";
-  });
-  const tooltipSeenKey = `metric_tooltip_seen_${initialType}`;
-
-  const [activityType] = useState(initialType);
-  const typeConfig = ACTIVITY_TYPES[activityType];
-  const [preference, setPreference] = useState<ActivityPreference | undefined>();
-  const { defaultFields, optionalFields } = resolveActivityFields(
-    activityType,
-    preference
-  );
   const { unitSystem } = useUnitSystem();
-
   const ding = new Audio("/sounds/ding.mp3");
-
   const [showMorePresets, setShowMorePresets] = useState(false);
 
-  const filteredPresets = presets.filter((p) => p.type === activityType);
-
-  const displayDistance =
-    distanceKm == null
-      ? ""
-      : unitSystem === "imperial"
-      ? String(Math.round(kmToMiles(distanceKm) * 100) / 100)
-      : String(distanceKm);
-
-  const handleDistanceChange = (value: string) => {
-    if (value === "") {
-      setDistanceKm(null);
-      return;
-    }
-    const numeric = Number(value);
-    if (Number.isNaN(numeric)) return;
-    const kmValue = unitSystem === "imperial" ? milesToKm(numeric) : numeric;
-    setDistanceKm(kmValue);
-  };
-
-  useEffect(() => {
-    setShowOptionalDistance(false);
-    setShowOptionalDuration(false);
-    setPreference(undefined);
-    const load = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      const { data } = await supabase
-        .from("presets")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("last_used_at", { ascending: false });
-
-      setPresets(data || []);
-
-      const initialPresets = (data || []).filter(
-        (p) => p.type === activityType
-      );
-
-      if (initialPresets.length > 0) {
-        const first = initialPresets[0];
-        setActivePreset(first);
-        setDistanceKm(first.distance_km ?? null);
-        setDuration(first.duration_min != null ? String(first.duration_min) : "");
-        setShowOptionalDistance(!!first.distance_km);
-        setShowOptionalDuration(!!first.duration_min);
-        setTitle(first.name ?? "");
-        setEffort(first.effort ?? 3);
-      }
-
-      const preferenceData = await fetchActivityPreference(
-        user.id,
-        activityType
-      );
-      setPreference(preferenceData);
-    };
-
-    load();
-  }, [activityType]);
-
-  useEffect(() => {
-    if (!presetNameTouched) {
-      setPresetName(title);
-    }
-  }, [title, presetNameTouched]);
-
-  const usePreset = (preset: Preset) => {
-    setActivePreset(preset);
-    setDistanceKm(preset.distance_km ?? null);
-    setDuration(
-      preset.duration_min != null ? String(preset.duration_min) : ""
-    );
-    setShowOptionalDistance(!!preset.distance_km);
-    setShowOptionalDuration(!!preset.duration_min);
-    setTitle(preset.name ?? ""); // ✅ new
-    setEffort(preset.effort ?? 3);
-  };
-
-  const useCustom = () => {
-    setActivePreset(null);
-    setDistanceKm(null);
-    setDuration("");
-    setTitle(""); // ✅ clear title
-    setPresetName("");
-    setPresetNameTouched(false);
-    setShowOptionalDistance(false);
-    setShowOptionalDuration(false);
-  };
-
-  const save = async () => {
-    // Guard: ensure default metric is present
-    const needsDistance = defaultFields.includes("distance_km");
-    const needsDuration = defaultFields.includes("duration_min");
-    const defaultMetricLabel = needsDistance ? "distance" : "duration";
-    const altMetricLabel = needsDistance ? "duration" : "distance";
-
-    if (
-      needsDistance &&
-      distanceKm == null &&
-      !metricTooltipAcknowledged &&
-      !tooltipAlreadySeen
-    ) {
-      setMetricTooltip(
-        <>
-          <p className="text-sm text-gray-800">
-            {typeConfig.label} tracks {defaultMetricLabel} by default. You’re logging only{" "}
-            {altMetricLabel}. If you prefer using {altMetricLabel} for this activity,
-            change the default metric in Settings → Activity Preferences.
-          </p>
-          <a
-            href="/settings/activity-preferences"
-            className="text-sm text-movenotes-primary underline block mt-2"
-          >
-            Go to Activity Preferences
-          </a>
-          <p className="text-xs text-gray-600 mt-2">
-            Close to save anyway without {defaultMetricLabel}.
-          </p>
-        </>
-      );
-      setShowMetricTooltip(true);
-      return;
-    }
-
-    if (needsDuration && !duration && !metricTooltipAcknowledged && !tooltipAlreadySeen) {
-      setMetricTooltip(
-        <>
-          <p className="text-sm text-gray-800">
-            {typeConfig.label} tracks {defaultMetricLabel} by default. You’re logging only{" "}
-            {altMetricLabel}. If you prefer using {altMetricLabel} for this activity,
-            change the default metric in Settings → Activity Preferences.
-          </p>
-          <a
-            href="/settings/activity-preferences"
-            className="text-sm text-movenotes-primary underline block mt-2"
-          >
-            Go to Activity Preferences
-          </a>
-          <p className="text-xs text-gray-600 mt-2">
-            Close to save anyway without {defaultMetricLabel}.
-          </p>
-        </>
-      );
-      setShowMetricTooltip(true);
-      return;
-    }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
-    const distanceValue =
-      (defaultFields.includes("distance_km") ||
-        showOptionalDistance) && distanceKm != null
-        ? distanceKm
-        : null;
-
-    const durationValue =
-      (defaultFields.includes("duration_min") ||
-        showOptionalDuration) && duration
-        ? Number(duration)
-        : null;
-
-    const effortValue = ["run", "ride", "swim", "hike"].includes(activityType)
-      ? Number(effort) || null
-      : null;
-
-    const feelingValue = Number(feeling) || null;
-
-    const { data, error } = await supabase
-      .from("activities")
-      .insert([
-        {
-          user_id: user.id,
-          type: activityType,
-          date,
-          distance_km: distanceValue,
-          duration_min: durationValue,
-          effort: effortValue,
-          feeling: feelingValue,
-          title,
-        },
-      ])
-      .select("id")
-      .single();
-
-    if (error) {
-      console.error("[QuickLogForm] Error saving activity:", error.message);
-      return;
-    }
-
-    const newActivityId = data?.id;
-    if (!newActivityId) {
-      console.warn("[QuickLogForm] No activity ID returned after insert");
-      return;
-    }
-
-    if (saveAsPreset && presetName.trim()) {
-      const { error: presetError } = await supabase.from("presets").insert([
-        {
-          user_id: user.id,
-          type: activityType,
-          name: presetName.trim(),
-          distance_km: distanceValue,
-          duration_min: durationValue,
-          effort: effortValue,
-        },
-      ]);
-      if (presetError) {
-        console.error("[QuickLogForm] Error saving preset:", presetError.message);
-      }
-    }
-
-    if (activePreset) {
-      await supabase
-        .from("presets")
-        .update({ last_used_at: new Date().toISOString() })
-        .eq("id", activePreset.id);
-    }
-
-    if (onboardingDone) {
-      showTooltip("after_first_log");
-    }
-    ding.play();
-    onLogged(newActivityId); // ✅ pass id to Home
-
-    setTimeout(() => {
-      onClose();
-      navigate("/");
-    }, 400);
-
-    setTimeout(() => {
-      onClose();
-      navigate("/");
-    }, 400);
-  };
+  const {
+    activePreset,
+    duration,
+    feeling,
+    date,
+    title,
+    effort,
+    saveAsPreset,
+    presetName,
+    presetNameTouched,
+    showOptionalDistance,
+    showOptionalDuration,
+    showMetricTooltip,
+    metricTooltip,
+    tooltipSeenKey,
+    activityType,
+    defaultFields,
+    optionalFields,
+    filteredPresets,
+    displayDistance,
+    handleDistanceChange,
+    setTitle,
+    setDate,
+    setDuration,
+    setFeeling,
+    setEffort,
+    setSaveAsPreset,
+    setPresetName,
+    setPresetNameTouched,
+    setShowOptionalDistance,
+    setShowOptionalDuration,
+    setShowMetricTooltip,
+    setMetricTooltipAcknowledged,
+    usePreset,
+    useCustom,
+    save,
+  } = useQuickLogForm({
+    initialType,
+    unitSystem,
+    onClose,
+    onLogged,
+    onboardingDone,
+    showTooltip,
+    navigate,
+    ding,
+  });
 
   return (
     <>
