@@ -5,6 +5,8 @@ import { supabase } from "../supabaseClient";
 import type { Goal } from "../types";
 import { Target, CalendarDays, Ruler, Hash } from "lucide-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { kmToMiles, milesToKm } from "../lib/units";
 
 interface EditGoalModalProps {
   goal: Goal;
@@ -27,6 +29,38 @@ export default function EditGoalModal({
   const [saving, setSaving] = useState(false);
   const safeActivityType = goal.activity_type || "any";
   const typeConfig = ACTIVITY_TYPES[safeActivityType] ?? ACTIVITY_TYPES["any"];
+  const { unitSystem } = useUnitSystem();
+
+  const targetDisplay =
+    metric === "distance"
+      ? target
+        ? String(
+            Math.round(
+              (unitSystem === "imperial"
+                ? kmToMiles(Number(target))
+                : Number(target)) * 10
+            ) / 10
+          )
+        : ""
+      : target;
+
+  const handleTargetChange = (value: string) => {
+    if (metric !== "distance") {
+      setTarget(value);
+      return;
+    }
+    if (value === "") {
+      setTarget("");
+      return;
+    }
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) {
+      setTarget("");
+      return;
+    }
+    const kmValue = unitSystem === "imperial" ? milesToKm(numeric) : numeric;
+    setTarget(String(kmValue));
+  };
 
   const save = async () => {
     setSaving(true);
@@ -125,13 +159,18 @@ export default function EditGoalModal({
       </div>
 
       <label className="text-sm text-gray-600">
-        Target {metric === "distance" ? "(km)" : metric === "duration" ? "(min)" : "(count)"}
+        Target{" "}
+        {metric === "distance"
+          ? `(${unitSystem === "imperial" ? "mi" : "km"})`
+          : metric === "duration"
+          ? "(min)"
+          : "(count)"}
       </label>
       <input
         type="number"
         className="w-full border rounded p-2 mb-3"
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
+        value={metric === "distance" ? targetDisplay : target}
+        onChange={(e) => handleTargetChange(e.target.value)}
       />
 
       <label className="text-sm text-gray-600">Name</label>

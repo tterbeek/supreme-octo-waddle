@@ -11,6 +11,9 @@ import {
   resolveActivityFields,
   type ActivityPreference,
 } from "../lib/resolveActivityFields";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { formatDistance, kmToMiles, milesToKm } from "../lib/units";
+import type { ReactNode } from "react";
 
 type QuickLogFormProps = {
   initialType?: string;
@@ -130,7 +133,7 @@ export default function QuickLogForm2({
   const [presets, setPresets] = useState<Preset[]>([]);
   const [activePreset, setActivePreset] = useState<Preset | null>(null);
 
-  const [distance, setDistance] = useState("");
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [duration, setDuration] = useState("");
   const [feeling, setFeeling] = useState(3);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -142,7 +145,7 @@ export default function QuickLogForm2({
   const [showOptionalDistance, setShowOptionalDistance] = useState(false);
   const [showOptionalDuration, setShowOptionalDuration] = useState(false);
   const [showMetricTooltip, setShowMetricTooltip] = useState(false);
-  const [metricTooltip, setMetricTooltip] = useState("");
+  const [metricTooltip, setMetricTooltip] = useState<React.ReactNode>("");
   const [metricTooltipAcknowledged, setMetricTooltipAcknowledged] = useState(false);
   const [tooltipAlreadySeen] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -158,12 +161,31 @@ export default function QuickLogForm2({
     activityType,
     preference
   );
+  const { unitSystem } = useUnitSystem();
 
   const ding = new Audio("/sounds/ding.mp3");
 
   const [showMorePresets, setShowMorePresets] = useState(false);
 
   const filteredPresets = presets.filter((p) => p.type === activityType);
+
+  const displayDistance =
+    distanceKm == null
+      ? ""
+      : unitSystem === "imperial"
+      ? String(Math.round(kmToMiles(distanceKm) * 100) / 100)
+      : String(distanceKm);
+
+  const handleDistanceChange = (value: string) => {
+    if (value === "") {
+      setDistanceKm(null);
+      return;
+    }
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return;
+    const kmValue = unitSystem === "imperial" ? milesToKm(numeric) : numeric;
+    setDistanceKm(kmValue);
+  };
 
   useEffect(() => {
     setShowOptionalDistance(false);
@@ -191,7 +213,7 @@ export default function QuickLogForm2({
       if (initialPresets.length > 0) {
         const first = initialPresets[0];
         setActivePreset(first);
-        setDistance(first.distance_km != null ? String(first.distance_km) : "");
+        setDistanceKm(first.distance_km ?? null);
         setDuration(first.duration_min != null ? String(first.duration_min) : "");
         setShowOptionalDistance(!!first.distance_km);
         setShowOptionalDuration(!!first.duration_min);
@@ -217,9 +239,7 @@ export default function QuickLogForm2({
 
   const usePreset = (preset: Preset) => {
     setActivePreset(preset);
-    setDistance(
-      preset.distance_km != null ? String(preset.distance_km) : ""
-    );
+    setDistanceKm(preset.distance_km ?? null);
     setDuration(
       preset.duration_min != null ? String(preset.duration_min) : ""
     );
@@ -231,7 +251,7 @@ export default function QuickLogForm2({
 
   const useCustom = () => {
     setActivePreset(null);
-    setDistance("");
+    setDistanceKm(null);
     setDuration("");
     setTitle(""); // ✅ clear title
     setPresetName("");
@@ -244,10 +264,32 @@ export default function QuickLogForm2({
     // Guard: ensure default metric is present
     const needsDistance = defaultFields.includes("distance_km");
     const needsDuration = defaultFields.includes("duration_min");
+    const defaultMetricLabel = needsDistance ? "distance" : "duration";
+    const altMetricLabel = needsDistance ? "duration" : "distance";
 
-    if (needsDistance && !distance && !metricTooltipAcknowledged && !tooltipAlreadySeen) {
+    if (
+      needsDistance &&
+      distanceKm == null &&
+      !metricTooltipAcknowledged &&
+      !tooltipAlreadySeen
+    ) {
       setMetricTooltip(
-        `Tip for ${typeConfig.label}\nTrends use distance for ${typeConfig.label}.\nSince this entry doesn’t include distance, it won’t appear in your Trends graph. Close to save anyway.`
+        <>
+          <p className="text-sm text-gray-800">
+            {typeConfig.label} tracks {defaultMetricLabel} by default. You’re logging only{" "}
+            {altMetricLabel}. If you prefer using {altMetricLabel} for this activity,
+            change the default metric in Settings → Activity Preferences.
+          </p>
+          <a
+            href="/settings/activity-preferences"
+            className="text-sm text-movenotes-primary underline block mt-2"
+          >
+            Go to Activity Preferences
+          </a>
+          <p className="text-xs text-gray-600 mt-2">
+            Close to save anyway without {defaultMetricLabel}.
+          </p>
+        </>
       );
       setShowMetricTooltip(true);
       return;
@@ -255,7 +297,22 @@ export default function QuickLogForm2({
 
     if (needsDuration && !duration && !metricTooltipAcknowledged && !tooltipAlreadySeen) {
       setMetricTooltip(
-        `Tip for ${typeConfig.label}\nTrends use duration for ${typeConfig.label}.\nSince this entry doesn’t include duration, it won’t appear in your Trends graph. Close to save anyway.`
+        <>
+          <p className="text-sm text-gray-800">
+            {typeConfig.label} tracks {defaultMetricLabel} by default. You’re logging only{" "}
+            {altMetricLabel}. If you prefer using {altMetricLabel} for this activity,
+            change the default metric in Settings → Activity Preferences.
+          </p>
+          <a
+            href="/settings/activity-preferences"
+            className="text-sm text-movenotes-primary underline block mt-2"
+          >
+            Go to Activity Preferences
+          </a>
+          <p className="text-xs text-gray-600 mt-2">
+            Close to save anyway without {defaultMetricLabel}.
+          </p>
+        </>
       );
       setShowMetricTooltip(true);
       return;
@@ -269,8 +326,8 @@ export default function QuickLogForm2({
 
     const distanceValue =
       (defaultFields.includes("distance_km") ||
-        showOptionalDistance) && distance
-        ? Number(distance)
+        showOptionalDistance) && distanceKm != null
+        ? distanceKm
         : null;
 
     const durationValue =
@@ -417,12 +474,14 @@ export default function QuickLogForm2({
         {(defaultFields.includes("distance_km") ||
           showOptionalDistance) && (
           <div className="form-group mb-4">
-            <label className="text-sm text-gray-600">Distance (km)</label>
+            <label className="text-sm text-gray-600">
+              Distance ({unitSystem === "imperial" ? "mi" : "km"})
+            </label>
             <input
               type="number"
               inputMode="decimal"
-              value={distance}
-              onChange={(e) => setDistance(e.target.value)}
+              value={displayDistance}
+              onChange={(e) => handleDistanceChange(e.target.value)}
               className="w-full border rounded-md p-2"
             />
           </div>
@@ -530,9 +589,7 @@ export default function QuickLogForm2({
                 localStorage.setItem(tooltipSeenKey, "true");
               }}
             >
-              <p className="text-sm text-gray-800 whitespace-pre-line">
-                {metricTooltip}
-              </p>
+              {metricTooltip}
             </TooltipBubble>
           )}
         </div>
@@ -568,7 +625,7 @@ export default function QuickLogForm2({
               >
                 <div className="font-medium text-gray-800">{p.name}</div>
                 <div className="text-sm text-gray-500">
-                  {p.distance_km != null && `${p.distance_km} km`}
+                  {p.distance_km != null && formatDistance(p.distance_km, unitSystem)}
                   {p.duration_min != null &&
                     `${p.distance_km != null ? " · " : ""}${p.duration_min} min`}
                   {p.effort != null && ` · Effort ${p.effort}`}

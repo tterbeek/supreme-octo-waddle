@@ -3,6 +3,8 @@ import { supabase } from "../supabaseClient";
 import { Zap } from "lucide-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import type { Preset } from "../types";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { kmToMiles, milesToKm } from "../lib/units";
 
 type PresetFormProps = {
   initialType?: keyof typeof ACTIVITY_TYPES;
@@ -24,8 +26,8 @@ export default function PresetForm({
     ACTIVITY_TYPES[activityType] ?? ACTIVITY_TYPES["other"];
 
   const [name, setName] = useState(preset?.name ?? "");
-  const [distance, setDistance] = useState(
-    preset?.distance_km != null ? String(preset.distance_km) : ""
+  const [distanceKm, setDistanceKm] = useState<number | null>(
+    preset?.distance_km ?? null
   );
   const [duration, setDuration] = useState(
     preset?.duration_min != null ? String(preset.duration_min) : ""
@@ -38,6 +40,25 @@ export default function PresetForm({
 
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
+  const { unitSystem } = useUnitSystem();
+
+  const distanceDisplay =
+    distanceKm == null
+      ? ""
+      : unitSystem === "imperial"
+      ? String(Math.round(kmToMiles(distanceKm) * 100) / 100)
+      : String(distanceKm);
+
+  const handleDistanceChange = (value: string) => {
+    if (value === "") {
+      setDistanceKm(null);
+      return;
+    }
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return;
+    const kmValue = unitSystem === "imperial" ? milesToKm(numeric) : numeric;
+    setDistanceKm(kmValue);
+  };
 
   useEffect(() => {
     setAnimateIn(true);
@@ -57,8 +78,8 @@ export default function PresetForm({
 
     const distanceValue =
       (typeConfig.defaultFields.includes("distance_km") || showOptionalDistance) &&
-      distance
-        ? Number(distance)
+      distanceKm != null
+        ? distanceKm
         : null;
 
     const durationValue =
@@ -161,11 +182,13 @@ export default function PresetForm({
         {/* DISTANCE */}
         {(typeConfig.defaultFields.includes("distance_km") || showOptionalDistance) && (
           <>
-            <label className="text-sm text-gray-600">Distance (km)</label>
+            <label className="text-sm text-gray-600">
+              Distance ({unitSystem === "imperial" ? "mi" : "km"})
+            </label>
             <input
               type="number"
-              value={distance}
-              onChange={(e) => setDistance(e.target.value)}
+              value={distanceDisplay}
+              onChange={(e) => handleDistanceChange(e.target.value)}
               className="w-full border border-warm-200 rounded-md p-2 mb-4"
             />
           </>

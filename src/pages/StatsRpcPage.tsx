@@ -18,6 +18,8 @@ import GoalProgressCard from "../components/GoalProgressCard";
 import AddGoalModal from "../components/AddGoalModal";
 import EditGoalModal from "../components/EditGoalModal";
 import type { Goal } from "../types";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { kmToMiles } from "../lib/units";
 
 const TRENDS_META_RPC = "stats_activity_trend_meta";
 const TRENDS_SERIES_RPC = "stats_activity_trend_series";
@@ -149,6 +151,7 @@ export default function StatsRpcPage() {
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
   const statsHeaderRef = useRef<HTMLDivElement | null>(null);
+  const { unitSystem } = useUnitSystem();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -539,6 +542,12 @@ export default function StatsRpcPage() {
                   const key = `${meta.activity_type}:${activeMetric}`;
                   const series = trendData[key] || [];
                   if (!series.length) return null;
+                  const unitLabel =
+                    activeMetric === "distance"
+                      ? unitSystem === "imperial"
+                        ? "mi"
+                        : "km"
+                      : "min";
 
                   const currentWeekStr = format(
                     startOfWeek(new Date(), { weekStartsOn: 1 }),
@@ -550,10 +559,14 @@ export default function StatsRpcPage() {
                     const end = new Date(start);
                     end.setDate(end.getDate() + 6);
                     const isCurrent = point.week_start === currentWeekStr;
+                    const value =
+                      activeMetric === "distance" && unitSystem === "imperial"
+                        ? kmToMiles(point.value)
+                        : point.value;
                     return {
                       week: point.week_start,
                       weekLabel: format(end, "dd MMM"),
-                      value: point.value,
+                      value,
                       isCurrent,
                     };
                   });
@@ -595,7 +608,9 @@ export default function StatsRpcPage() {
                           </span>
                           <h3 className="text-lg font-semibold text-movenotes-text">
                             {cfg.label} —{" "}
-                            {activeMetric === "distance" ? "Distance (km)" : "Duration (min)"}
+                            {activeMetric === "distance"
+                              ? `Distance (${unitLabel})`
+                              : "Duration (min)"}
                           </h3>
                         </div>
 
@@ -640,8 +655,23 @@ export default function StatsRpcPage() {
                       <ResponsiveContainer width="100%" height={200}>
                         <LineChart data={rowsWithLines}>
                           <XAxis dataKey="weekLabel" stroke="#888" fontSize={12} />
-                          <YAxis stroke="#888" fontSize={12} />
-                          <RechartsTooltip />
+                          <YAxis
+                            stroke="#888"
+                            fontSize={12}
+                            label={{ value: unitLabel, angle: -90, position: "insideLeft" }}
+                            tickFormatter={(v: number | string) =>
+                              activeMetric === "distance"
+                                ? Number(v).toFixed(0)
+                                : Number(v).toFixed(0)
+                            }
+                          />
+                          <RechartsTooltip
+                            formatter={(value: number | string) =>
+                              activeMetric === "distance"
+                                ? `${Number(value).toFixed(0)} ${unitLabel}`
+                                : `${Number(value).toFixed(0)} ${unitLabel}`
+                            }
+                          />
                           <Line
                             type="monotone"
                             dataKey="valueSolid"

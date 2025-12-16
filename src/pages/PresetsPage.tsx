@@ -7,6 +7,8 @@ import PresetForm from "../components/PresetForm";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { kmToMiles, milesToKm } from "../lib/units";
 
 
 
@@ -26,6 +28,7 @@ export default function PresetsPage() {
   >("run");
   const { visible, showTooltip, hideTooltip, hasSeen } = useTooltipManager();
   const headerRef = useRef<HTMLDivElement | null>(null);
+  const { unitSystem } = useUnitSystem();
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
@@ -74,6 +77,22 @@ export default function PresetsPage() {
     }
   }, [hasDoneOnboarding, hasSeen, showTooltip]);
 
+  const toDisplayDistance = (distanceKm: string) => {
+    if (distanceKm === "") return "";
+    const numeric = Number(distanceKm);
+    if (Number.isNaN(numeric)) return "";
+    const display = unitSystem === "imperial" ? kmToMiles(numeric) : numeric;
+    return String(Math.round(display * 100) / 100);
+  };
+
+  const parseDistanceInput = (value: string) => {
+    if (value === "") return "";
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return "";
+    const kmValue = unitSystem === "imperial" ? milesToKm(numeric) : numeric;
+    return String(kmValue);
+  };
+
   // Update local edit state
   const setField = (
     id: string,
@@ -82,7 +101,10 @@ export default function PresetsPage() {
   ) => {
     setEdit((prev) => ({
       ...prev,
-      [id]: { ...prev[id], [field]: value },
+      [id]: {
+        ...prev[id],
+        [field]: field === "distance" ? parseDistanceInput(value) : value,
+      },
     }));
   };
 
@@ -187,6 +209,8 @@ export default function PresetsPage() {
             const isEndurance = ["run", "ride", "swim", "hike"].includes(
               typeConfig.id
             );
+            const distanceValue = edit[p.id]?.distance ?? "";
+            const displayDistance = toDisplayDistance(distanceValue);
             return (
             <div
               key={p.id}
@@ -214,11 +238,11 @@ export default function PresetsPage() {
               typeConfig.optionalFields.includes("distance_km") ? (
                 <>
                   <label className="block text-xs text-gray-600 mb-1">
-                    Distance (km)
+                    Distance ({unitSystem === "imperial" ? "mi" : "km"})
                   </label>
                   <input
                     type="number"
-                    value={edit[p.id]?.distance ?? ""}
+                    value={displayDistance}
                     onChange={(e) =>
                       setField(String(p.id), "distance", e.target.value)
                     }

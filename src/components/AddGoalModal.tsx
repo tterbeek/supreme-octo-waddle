@@ -4,6 +4,8 @@ import { supabase } from "../supabaseClient";
 import ModalSheet from "./ModalSheet";
 import type { Goal } from "../types";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { kmToMiles, milesToKm } from "../lib/units";
 
 interface AddGoalModalProps {
   onClose: () => void;
@@ -28,6 +30,7 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
   const [target, setTarget] = useState("");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const { unitSystem } = useUnitSystem();
 
   const autoName = () => {
     const typeLabel = ACTIVITY_TYPES[activityType]?.label || "Activity";
@@ -35,6 +38,37 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
     const what =
       metric === "distance" ? "Distance" : metric === "duration" ? "Duration" : "Count";
     return `${per} ${typeLabel} ${what}`;
+  };
+
+  const targetDisplay =
+    metric === "distance"
+      ? target
+        ? String(
+            Math.round(
+              (unitSystem === "imperial"
+                ? kmToMiles(Number(target))
+                : Number(target)) * 10
+            ) / 10
+          )
+        : ""
+      : target;
+
+  const handleTargetChange = (value: string) => {
+    if (metric !== "distance") {
+      setTarget(value);
+      return;
+    }
+    if (value === "") {
+      setTarget("");
+      return;
+    }
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) {
+      setTarget("");
+      return;
+    }
+    const kmValue = unitSystem === "imperial" ? milesToKm(numeric) : numeric;
+    setTarget(String(kmValue));
   };
 
 const save = async () => {
@@ -158,12 +192,16 @@ const save = async () => {
 
       <label className="text-sm text-gray-600">
         Target{" "}
-        {metric === "distance" ? "(km)" : metric === "duration" ? "(min)" : "(count)"}
+        {metric === "distance"
+          ? `(${unitSystem === "imperial" ? "mi" : "km"})`
+          : metric === "duration"
+          ? "(min)"
+          : "(count)"}
       </label>
       <input
         className="w-full border rounded p-2 mb-3"
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
+        value={metric === "distance" ? targetDisplay : target}
+        onChange={(e) => handleTargetChange(e.target.value)}
         type="number"
       />
 

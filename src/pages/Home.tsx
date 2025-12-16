@@ -15,6 +15,8 @@ import GoalProgressCard from "../components/GoalProgressCard";
 import type { Goal } from "../types";
 import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { formatDistance } from "../lib/units";
 
 type GoalStat = {
   goal_id: string;
@@ -34,6 +36,7 @@ const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
 export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean }) {
   const navigate = useNavigate();
+  const { unitSystem } = useUnitSystem();
 
   // --------------------------------------------------
   // STATE
@@ -529,6 +532,10 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
             const typeConfig = ACTIVITY_TYPES[a.type] ?? ACTIVITY_TYPES["other"];
             const TypeIcon = typeConfig.Icon;
             const showAfterLogTooltip = visible === "after_first_log" && idx === 0;
+            const formattedDistance =
+              a.distance_km != null
+                ? formatDistance(Number(a.distance_km), unitSystem)
+                : null;
             return (
               <SwipeActions
                 key={a.id}
@@ -563,9 +570,9 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
 
                   {/* Distance/Duration + Date */}
                   <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1 flex-wrap">
-                    {a.distance_km != null && (
+                    {formattedDistance && (
                       <>
-                        <span>{a.distance_km} km</span>
+                        <span>{formattedDistance}</span>
                         <span className="text-gray-400">·</span>
                       </>
                     )}
@@ -757,7 +764,9 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
                 <span className="mx-2">•</span>
               )}
               {lightbox.activity?.distance_km && (
-                <span>{Number(lightbox.activity.distance_km).toFixed(1)} km</span>
+                <span>
+                  {formatDistance(Number(lightbox.activity.distance_km), unitSystem)}
+                </span>
               )}
               {lightbox.activity?.duration_min && (
                 <>

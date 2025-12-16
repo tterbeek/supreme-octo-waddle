@@ -3,10 +3,40 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { Download, LogOut, Trash2, FileText } from "lucide-react";
+import { useUnitSystem } from "../contexts/UnitContext";
 
 export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [savingUnit, setSavingUnit] = useState(false);
+  const { unitSystem, setUnitSystem } = useUnitSystem();
+
+  const updateUnit = async (unit: "metric" | "imperial") => {
+    if (unit === unitSystem) return;
+    const previous = unitSystem;
+    setUnitSystem(unit);
+    setSavingUnit(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not logged in");
+
+      const { error } = await supabase
+        .from("user_preferences")
+        .upsert({
+          user_id: user.id,
+          unit_system: unit,
+        });
+      if (error) throw error;
+    } catch (err: any) {
+      console.error("[Settings] Failed to update unit preference:", err?.message || err);
+      setUnitSystem(previous);
+    } finally {
+      setSavingUnit(false);
+    }
+  };
 
   // --------------------------------------
   // EXPORT CSV
@@ -95,6 +125,33 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-lg mx-auto">
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">Settings</h1>
+
+      {/* UNIT PREFERENCE */}
+      <div className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
+        <h3 className="text-sm font-medium text-gray-800 mb-2">Units</h3>
+        <div className="flex flex-col gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              className="accent-movenotes-primary"
+              checked={unitSystem === "metric"}
+              onChange={() => updateUnit("metric")}
+              disabled={savingUnit}
+            />
+            <span>Metric (km)</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              className="accent-movenotes-primary"
+              checked={unitSystem === "imperial"}
+              onChange={() => updateUnit("imperial")}
+              disabled={savingUnit}
+            />
+            <span>Imperial (miles)</span>
+          </label>
+        </div>
+      </div>
 
       {/* MANAGE PRESETS */}
       <Link

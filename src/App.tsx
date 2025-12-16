@@ -22,6 +22,7 @@ import ActivityPreferencesPage from "./pages/ActivityPreferencesPage";
 import { AdminRoute } from "./components/AdminRoute";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import IntroPage from "./pages/IntroPage";
+import { UnitProvider } from "./contexts/UnitContext";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -111,148 +112,144 @@ export default function App() {
   };
 
   return (
-    <BrowserRouter>
-      {showOnboarding && user && (
-        <OnboardingCarousel
-          onComplete={completeOnboarding}
-          onSkip={completeOnboarding}
-        />
-      )}
-    
+    <UnitProvider>
+      <BrowserRouter>
+        {showOnboarding && user && (
+          <OnboardingCarousel
+            onComplete={completeOnboarding}
+            onSkip={completeOnboarding}
+          />
+        )}
 
-      <AnimatePresence mode="wait">
-        <motion.div
-  key="content"
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  exit={{ opacity: 0 }}
-  transition={{ duration: 0.4 }}
-  className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl min-h-screen p-4 bg-movenotes-bg text-movenotes-text"
->
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl min-h-screen p-4 bg-movenotes-bg text-movenotes-text"
+          >
+            <Routes>
+              {/* 🌿 Public routes (always visible) */}
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/about" element={<AboutPage />} />
 
-<Routes>
-  {/* 🌿 Public routes (always visible) */}
-  <Route path="/terms" element={<Terms />} />
-  <Route path="/privacy" element={<Privacy />} />
-  <Route path="/about" element={<AboutPage />} />
+              {/* 🔐 Auth routes */}
+              {!user ? (
+                <>
+                  <Route path="/" element={<IntroPage />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                </>
+              ) : (
+                <>
+                  <Route
+                    path="/"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <Home useRpcGoals />
+                      </Layout>
+                    }
+                  />
 
-  {/* 🔐 Auth routes */}
-  {!user ? (
-    <>
-      <Route path="/" element={<IntroPage />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-    </>
-  ) : (
-    <>
-<Route
-  path="/"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <Home useRpcGoals />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/home-legacy"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <Home />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/home-legacy"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <Home />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/home-rpc"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <Home useRpcGoals />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/home-rpc"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <Home useRpcGoals />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/presets"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <PresetsPage />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/presets"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <PresetsPage />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/presets/new"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <AddPresetPage />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/presets/new"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <AddPresetPage />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/presets/:id"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <EditPresetPage />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/presets/:id"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <EditPresetPage />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/stats"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <StatsRpcPage />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/stats"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <StatsRpcPage />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/stats-rpc"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <StatsRpcPage />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/stats-rpc"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <StatsRpcPage />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/settings"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <SettingsPage />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/settings"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <SettingsPage />
-    </Layout>
-  }
-/>
+                  <Route
+                    path="/settings/activity-preferences"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <ActivityPreferencesPage />
+                      </Layout>
+                    }
+                  />
 
-<Route
-  path="/settings/activity-preferences"
-  element={
-    <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-      <ActivityPreferencesPage />
-    </Layout>
-  }
-/>
-
-<Route
-  path="/admin"
-  element={
-    <AdminRoute>
-      <AdminDashboard />
-    </AdminRoute>
-  }
-/>
-
-
-    </>
-  )}
-</Routes>
-
-        </motion.div>
-      </AnimatePresence>
-      <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
-    </BrowserRouter>
-    
+                  <Route
+                    path="/admin"
+                    element={
+                      <AdminRoute>
+                        <AdminDashboard />
+                      </AdminRoute>
+                    }
+                  />
+                </>
+              )}
+            </Routes>
+          </motion.div>
+        </AnimatePresence>
+        <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+      </BrowserRouter>
+    </UnitProvider>
   );
 }

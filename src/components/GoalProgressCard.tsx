@@ -2,6 +2,8 @@ import { ACTIVITY_TYPES } from "../config/activityTypes";
 import type { Goal } from "../types";
 import { computeGoalProgress } from "../lib/goalEngine";
 import { Star } from "lucide-react";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { formatDistance } from "../lib/units";
 
 type ActivityForProgress = {
   type: string;
@@ -27,6 +29,7 @@ export default function GoalProgressCard({
   starred = false,
   showStar = false,
 }: GoalProgressCardProps) {
+  const { unitSystem } = useUnitSystem();
   const cfg = ACTIVITY_TYPES[goal.activity_type] ?? ACTIVITY_TYPES["any"];
   const Icon = cfg?.Icon;
   const clickable = typeof onClick === "function";
@@ -84,7 +87,7 @@ export default function GoalProgressCard({
 
   const valueLabel =
     metric === "distance"
-      ? `${progress} km / ${target} km`
+      ? `${formatDistance(progress, unitSystem)} / ${formatDistance(target, unitSystem)}`
       : metric === "duration"
       ? `${progress} min / ${target} min`
       : `${progress} / ${target} ${target === 1 ? "activity" : "activities"}`;

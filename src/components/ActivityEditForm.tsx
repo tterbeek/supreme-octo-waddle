@@ -6,6 +6,8 @@ import {
   type ActivityPreference,
 } from "../lib/resolveActivityFields";
 import { resolveEditFields } from "../lib/resolveEditActivityFields";
+import { useUnitSystem } from "../contexts/UnitContext";
+import { kmToMiles, milesToKm } from "../lib/units";
 
 const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
@@ -39,7 +41,7 @@ export default function ActivityEditForm({
   onDeleted,
 }: ActivityEditFormProps) {
   const [title, setTitle] = useState(activity.title || "");
-  const [distance, setDistance] = useState(activity.distance_km || "");
+  const [distanceKm, setDistanceKm] = useState<number | null>(activity.distance_km ?? null);
   const activityType = activity.type;
   const [preference, setPreference] = useState<ActivityPreference | undefined>();
   const baseFields = resolveActivityFields(activityType, preference);
@@ -65,6 +67,25 @@ export default function ActivityEditForm({
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const openedAtRef = useRef<number>(Date.now());
+  const { unitSystem } = useUnitSystem();
+
+  const distanceDisplay =
+    distanceKm == null
+      ? ""
+      : unitSystem === "imperial"
+      ? String(Math.round(kmToMiles(distanceKm) * 100) / 100)
+      : String(distanceKm);
+
+  const handleDistanceChange = (value: string) => {
+    if (value === "") {
+      setDistanceKm(null);
+      return;
+    }
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return;
+    const kmValue = unitSystem === "imperial" ? milesToKm(numeric) : numeric;
+    setDistanceKm(kmValue);
+  };
 
   useEffect(() => {
     openedAtRef.current = Date.now();
@@ -110,8 +131,8 @@ export default function ActivityEditForm({
 
     const distanceValue =
       (defaultFields.includes("distance_km") || showOptionalDistance) &&
-      distance
-        ? Number(distance)
+      distanceKm != null
+        ? distanceKm
         : null;
 
     const durationValue =
@@ -355,11 +376,13 @@ export default function ActivityEditForm({
         {/* DISTANCE FIELD (default or optional) */}
         {(defaultFields.includes("distance_km") || showOptionalDistance) && (
           <>
-            <label className="text-sm text-gray-600">Distance (km)</label>
+            <label className="text-sm text-gray-600">
+              Distance ({unitSystem === "imperial" ? "mi" : "km"})
+            </label>
             <input
               type="number"
-              value={distance}
-              onChange={(e) => setDistance(e.target.value)}
+              value={distanceDisplay}
+              onChange={(e) => handleDistanceChange(e.target.value)}
               className="w-full border border-warm-200 rounded-md p-2 mb-4"
             />
           </>
