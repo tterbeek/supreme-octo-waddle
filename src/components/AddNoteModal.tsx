@@ -3,14 +3,14 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera } from "lucide-react";
 import { supabase } from "../supabaseClient";
+import { getCurrentUser } from "../services/auth.service";
+import { compressImage, uploadActivityImage } from "../services/activityMedia.service";
 
 interface AddNoteModalProps {
   activityId: string;
   onSave: () => void;
   onSkip: () => void;
 }
-
-const NOTE_BUCKET = "actvity-notes"; // adjust if your bucket name differs
 
 export default function AddNoteModal({
   activityId,
@@ -50,46 +50,6 @@ export default function AddNoteModal({
     return () => clearTimeout(t);
   }, [onSkip]);
 
-  const compressImage = async (file: File) => {
-    const maxDim = 1600;
-    const quality = 0.75;
-
-    return new Promise<Blob>((resolve, reject) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          URL.revokeObjectURL(objectUrl);
-          reject(new Error("Cannot get canvas context"));
-          return;
-        }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(
-          (blob) => {
-            URL.revokeObjectURL(objectUrl);
-            if (!blob) {
-              reject(new Error("Unable to compress image"));
-            } else {
-              resolve(blob);
-            }
-          },
-          "image/jpeg",
-          quality
-        );
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        reject(new Error("Could not load image"));
-      };
-      img.src = objectUrl;
-    });
-  };
-
   const handleSave = async () => {
     markInteraction(); // user clearly acted
 
@@ -110,20 +70,10 @@ export default function AddNoteModal({
         const compressed = await compressImage(selectedFile);
         setUploadProgress(40);
 
-        const {
-          data: { user },
-          error: userErr,
-        } = await supabase.auth.getUser();
-        if (userErr || !user) throw userErr || new Error("No user");
+        const user = await getCurrentUser();
+        if (!user) throw new Error("No user");
 
-        const path = `${user.id}/${activityId}-${Date.now()}.jpg`;
-        const { error: uploadErr } = await supabase.storage
-          .from(NOTE_BUCKET)
-          .upload(path, compressed, {
-            contentType: "image/jpeg",
-            upsert: true,
-          });
-        if (uploadErr) throw uploadErr;
+        const path = await uploadActivityImage(user.id, activityId, compressed);
 
         setUploadProgress(80);
         // Store the storage path; frontend will request signed URLs
