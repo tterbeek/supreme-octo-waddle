@@ -1,0 +1,175 @@
+import { Frown, Laugh, Meh, Smile, Zap } from "lucide-react";
+import SwipeActions from "./SwipeActions";
+import TooltipBubble from "./TooltipBubble";
+import { ACTIVITY_TYPES } from "../config/activityTypes";
+import { formatDistance, type UnitSystem } from "../lib/units";
+
+type RecentActivityCardProps = {
+  activity: any;
+  signedNoteImages: Record<string, string>;
+  noteImageOrientation: Record<string, "portrait" | "landscape">;
+  onEdit: (activity: any) => void;
+  onNoteImageLoad: (activityId: string, naturalWidth: number, naturalHeight: number) => void;
+  unitSystem: UnitSystem;
+  tooltipVisible: boolean;
+  onTooltipClose: () => void;
+  onImageClick: (e: React.MouseEvent<HTMLImageElement>, url: string, activity: any) => void;
+  onImageTouchStart: (e: React.TouchEvent<HTMLImageElement>) => void;
+  onImageTouchMove: (e: React.TouchEvent<HTMLImageElement>) => void;
+  onImageTouchEnd: (
+    e: React.TouchEvent<HTMLImageElement>,
+    url: string,
+    activity: any
+  ) => void;
+  disableSwipe?: boolean;
+};
+
+export default function RecentActivityCard({
+  activity,
+  signedNoteImages,
+  noteImageOrientation,
+  onEdit,
+  onNoteImageLoad,
+  unitSystem,
+  tooltipVisible,
+  onTooltipClose,
+  onImageClick,
+  onImageTouchStart,
+  onImageTouchMove,
+  onImageTouchEnd,
+  disableSwipe = false,
+}: RecentActivityCardProps) {
+  const typeConfig = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES["other"];
+  const TypeIcon = typeConfig.Icon;
+  const formattedDistance =
+    activity.distance_km != null
+      ? formatDistance(Number(activity.distance_km), unitSystem)
+      : null;
+
+  return (
+    <SwipeActions onEdit={() => onEdit(activity)} disabled={disableSwipe}>
+      <div
+        className="
+          relative rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
+          w-full mx-auto
+          max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
+          sm:p-6 md:p-7
+        "
+        onClick={() => onEdit(activity)}
+      >
+        {tooltipVisible && (
+          <TooltipBubble position="top" onClose={onTooltipClose}>
+            Create a preset to make logging this activity faster next time.
+          </TooltipBubble>
+        )}
+
+        <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
+          <TypeIcon size={24} strokeWidth={1.8} />
+          <span className="font-semibold text-gray-900 text-base md:text-lg leading-tight">
+            {activity.title || typeConfig.label}
+          </span>
+        </div>
+
+        <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1 flex-wrap">
+          {formattedDistance && (
+            <>
+              <span>{formattedDistance}</span>
+              <span className="text-gray-400">·</span>
+            </>
+          )}
+          {activity.duration_min != null && (
+            <>
+              <span>{activity.duration_min} min</span>
+              <span className="text-gray-400">·</span>
+            </>
+          )}
+          <span>
+            {new Date(activity.date).toLocaleDateString("en-GB", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              year: "2-digit"
+            }).replace(/(\d{2})$/, "’$1")}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-center gap-3 my-3">
+          {(() => {
+            const f = Number(activity.feeling) || 0;
+            const base = "w-5 h-5 md:w-6 md:h-6";
+            if (f <= 1)
+              return (
+                <Frown className={`${base} text-movenotes-accent`} />
+              );
+            if (f === 2)
+              return <Meh className={`${base} text-movenotes-accent`} />;
+            if (f === 3)
+              return (
+                <Smile className={`${base} text-movenotes-accent`} />
+              );
+            if (f >= 4)
+              return (
+                <Laugh className={`${base} text-movenotes-accent`} />
+              );
+            return null;
+          })()}
+
+          <div className="flex items-center gap-1 md:gap-1.5">
+            {Array.from({ length: Number(activity.effort) || 0 }).map(
+              (_, i) => (
+                <Zap
+                  key={i}
+                  className="w-4 h-4 md:w-5 md:h-5 text-movenotes-accent"
+                />
+              )
+            )}
+          </div>
+        </div>
+
+        {(activity.notes?.trim() || signedNoteImages[activity.id]) && (
+          <div className="mt-3 space-y-2">
+            {activity.notes?.trim() && (
+              <p
+                className="
+                  text-[15px] md:text[17px]
+                  text-gray-600 font-[DMSerifDisplay] italic leading-snug
+                  max-w-xs sm:max-w-sm md:max-w-md mx-auto
+                "
+              >
+                “{activity.notes}”
+              </p>
+            )}
+
+            {signedNoteImages[activity.id] && (
+              <div>
+                <img
+                  src={signedNoteImages[activity.id]}
+                  alt="Activity note"
+                  loading="lazy"
+                  className={`
+                    rounded-xl border border-warm-200 shadow-sm
+                    ${
+                      noteImageOrientation[activity.id] === "portrait"
+                        ? "max-h-80 w-auto max-w-full mx-auto object-contain"
+                        : "w-full max-h-56 object-cover"
+                    }
+                  `}
+                  onClick={(e) => onImageClick(e, signedNoteImages[activity.id], activity)}
+                  onTouchStart={onImageTouchStart}
+                  onTouchMove={onImageTouchMove}
+                  onTouchEnd={(e) =>
+                    onImageTouchEnd(e, signedNoteImages[activity.id], activity)
+                  }
+                  onLoad={(e) => {
+                    const { naturalWidth, naturalHeight } = e.currentTarget;
+                    onNoteImageLoad(activity.id, naturalWidth, naturalHeight);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </SwipeActions>
+  );
+}

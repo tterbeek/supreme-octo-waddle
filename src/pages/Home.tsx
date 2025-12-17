@@ -1,41 +1,29 @@
 // src/pages/Home.tsx
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "../supabaseClient";
 import QuickLogForm from "../components/QuickLogForm2";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
-import { IconActivity, IconSearch } from "@tabler/icons-react";
-import { ACTIVITY_TYPES } from "../config/activityTypes";
-import { Zap, Frown, Meh, Smile, Laugh } from "lucide-react";
-import SwipeActions from "../components/SwipeActions";
-import { useNavigate } from "react-router-dom";
 import AddNoteModal from "../components/AddNoteModal";
 import ActivityEditForm from "../components/ActivityEditForm";
-import GoalProgressCard from "../components/GoalProgressCard";
-import type { Goal } from "../types";
-import TooltipBubble from "../components/TooltipBubble";
+import GoalsSection from "../components/GoalsSection";
+import LogCTA from "../components/LogCTA";
+import SearchBar from "../components/SearchBar";
+import RecentActivityCard from "../components/RecentActivityCard";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
+import { getCurrentUser } from "../services/auth.service";
+import { fetchActivitiesForGoals, restoreActivity } from "../services/activities.service";
+import { useHomeFeed } from "../hooks/useHomeFeed";
+import { useHomeGoals } from "../hooks/useHomeGoals";
+import { useNoteImages } from "../hooks/useNoteImages";
+import { useLightbox } from "../hooks/useLightbox";
+import { useHomeNotes } from "../hooks/useHomeNotes";
+import { useHomeModals } from "../hooks/useHomeModals";
 
-type GoalStat = {
-  goal_id: string;
-  name: string | null;
-  activity_type: keyof typeof ACTIVITY_TYPES | "any";
-  metric: "distance" | "duration" | "count";
-  period: "week" | "month" | "year";
-  target: number;
-  current_value: number;
-  unit: "km" | "activities" | "min";
-  progress_ratio: number;
-  comparison_pct: number | null;
-};
-
-const GOAL_RPC = "stats_goal_progress";
 const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
 export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean }) {
-  const navigate = useNavigate();
   const { unitSystem } = useUnitSystem();
 
   // --------------------------------------------------
@@ -43,179 +31,88 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   // --------------------------------------------------
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Feed activities (recent history list)
-  const [activities, setActivities] = useState<any[]>([]);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Activities used for goals (last 60 days)
+  // Activities used for goals (last 60 days) and goals state
   const [activitiesForGoals, setActivitiesForGoals] = useState<any[]>([]);
-
-  // Goals
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]); // IDs
-  const [goalStats, setGoalStats] = useState<GoalStat[]>([]);
-  const [signedNoteImages, setSignedNoteImages] = useState<Record<string, string>>(
-    {}
+  const { goals, selectedGoals, goalStats, refreshGoals } = useHomeGoals(
+    userId,
+    useRpcGoals
   );
-  const [noteImageOrientation, setNoteImageOrientation] = useState<
-    Record<string, "portrait" | "landscape">
-  >({});
-  const [initialFeedLoaded, setInitialFeedLoaded] = useState(false);
+  const {
+    signedNoteImages,
+    noteImageOrientation,
+    setNoteImageOrientation,
+    resolveFor: resolveNoteImages,
+  } = useNoteImages(NOTE_BUCKET);
   const { visible, hideTooltip, showTooltip } = useTooltipManager();
-  const [lightbox, setLightbox] = useState<{
-    url: string;
-    activity: any;
-  } | null>(null);
-  const lightboxOpenedAt = useRef<number>(0);
-  const imageTouch = useRef<{ x: number; y: number; moved: boolean }>({
-    x: 0,
-    y: 0,
-    moved: false,
-  });
-  const logButtonRef = useRef<HTMLButtonElement | null>(null);
+  const {
+    lightbox,
+    closeLightbox,
+    handleOverlayClick: handleLightboxOverlayClick,
+    onImageClick: onLightboxImageClick,
+    onImageTouchStart: onLightboxImageTouchStart,
+    onImageTouchMove: onLightboxImageTouchMove,
+    onImageTouchEnd: onLightboxImageTouchEnd,
+  } = useLightbox();
 
-  // Quick log
-  const [showTypeSelector, setShowTypeSelector] = useState(false);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [showQuickLog, setShowQuickLog] = useState(false);
+  // Quick log / edit modals
+  const {
+    showTypeSelector,
+    setShowTypeSelector,
+    selectedType,
+    setSelectedType,
+    showQuickLog,
+    setShowQuickLog,
+    editActivity,
+    setEditActivity,
+  } = useHomeModals();
 
   // Toasts
   const [showToast, setShowToast] = useState(false);
   const [showUndoToast, setShowUndoToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showNoteSkippedToast, setShowNoteSkippedToast] = useState(false);
-  const [showNoteSavedToast, setShowNoteSavedToast] = useState(false);
-
-  // Notes
-  const [lastActivityId, setLastActivityId] = useState<string | null>(null);
-  const [showNotePrompt, setShowNotePrompt] = useState(false);
-
-  // Edit activity
-  const [editActivity, setEditActivity] = useState<any | null>(null);
+  const {
+    lastActivityId,
+    setLastActivityId,
+    showNotePrompt,
+    setShowNotePrompt,
+    showNoteSkippedToast,
+    setShowNoteSkippedToast,
+    showNoteSavedToast,
+    setShowNoteSavedToast,
+  } = useHomeNotes();
 
   // Sidebar
   // Delete / undo
   const lastDeletedRef = useRef<any | null>(null);
 
   // Infinite scroll feed
-  const [feedOffset, setFeedOffset] = useState(0);
-  const [hasMoreFeed, setHasMoreFeed] = useState(true);
-  const FEED_PAGE_SIZE = 20;
-
-  // prevent concurrent loadMoreFeed calls
-  const isLoadingMoreRef = useRef(false);
-
-  const activityOrder: Record<GoalStat["activity_type"], number> = {
-    run: 0,
-    ride: 1,
-    any: 2,
-  };
-
-  const sortGoalStats = (items: GoalStat[]) =>
-    [...items].sort((a, b) => {
-      const aOrder = activityOrder[a.activity_type] ?? 99;
-      const bOrder = activityOrder[b.activity_type] ?? 99;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return (a.name || "").localeCompare(b.name || "");
-    });
-
-  // --------------------------------------------------
-  // HELPERS
-  // --------------------------------------------------
-
-  const sortActivitiesByDateAndCreated = (items: any[]) =>
-    [...items].sort((a, b) => {
-      const dateDiff =
-        new Date(b.date).getTime() - new Date(a.date).getTime();
-      if (dateDiff !== 0) return dateDiff;
-
-      const bCreated =
-        (b.created_at && new Date(b.created_at).getTime()) ||
-        (b.inserted_at && new Date(b.inserted_at).getTime()) ||
-        (b.updated_at && new Date(b.updated_at).getTime()) ||
-        0;
-      const aCreated =
-        (a.created_at && new Date(a.created_at).getTime()) ||
-        (a.inserted_at && new Date(a.inserted_at).getTime()) ||
-        (a.updated_at && new Date(a.updated_at).getTime()) ||
-        0;
-
-      return bCreated - aCreated;
-    });
+  const {
+    activities,
+    filteredActivities,
+    refresh: refreshFeed,
+    initialFeedLoaded,
+    searchOpen,
+    setSearchOpen,
+    searchTerm,
+    setSearchTerm,
+  } = useHomeFeed(userId);
 
   async function refreshActivities() {
     if (!userId) return;
 
+    await refreshGoals();
+
     if (!useRpcGoals) {
-      // 1) For goals: last 60 days
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 60);
       const cutoffStr = cutoff.toISOString().split("T")[0];
 
-      const { data: goalActs } = await supabase
-        .from("activities")
-        .select("id, user_id, type, date, distance_km, feeling, effort")
-        .eq("user_id", userId)
-        .gte("date", cutoffStr)
-        .order("date", { ascending: false });
-
+      const { data: goalActs } = await fetchActivitiesForGoals(userId, cutoffStr);
       setActivitiesForGoals(goalActs || []);
-    } else {
-      const { data, error } = await supabase.rpc(GOAL_RPC, { user_id: userId });
-      if (!error) setGoalStats((data as GoalStat[]) || []);
     }
 
-    // 2) For feed: first page (20)
-    const { data: firstFeed } = await supabase
-      .from("activities")
-      .select("*")
-      .eq("user_id", userId)
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(FEED_PAGE_SIZE);
-
-    setActivities(sortActivitiesByDateAndCreated(firstFeed || []));
-    setFeedOffset(firstFeed ? firstFeed.length : 0);
-    setHasMoreFeed(!!firstFeed && firstFeed.length === FEED_PAGE_SIZE);
-    setInitialFeedLoaded(true);
+    await refreshFeed();
   }
-
-  const loadMoreFeed = async () => {
-  if (!hasMoreFeed) return;
-  if (!userId) return;
-  if (isLoadingMoreRef.current) return; // ⛔ already fetching
-
-  isLoadingMoreRef.current = true;
-
-  try {
-    const offset = feedOffset;
-
-    const { data: more } = await supabase
-      .from("activities")
-      .select("*")
-      .eq("user_id", userId)
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + FEED_PAGE_SIZE - 1);
-
-    if (!more || more.length === 0) {
-      setHasMoreFeed(false);
-      return;
-    }
-
-    setActivities((prev) =>
-      sortActivitiesByDateAndCreated([...prev, ...more])
-    );
-    setFeedOffset((prev) => prev + more.length);
-
-    if (more.length < FEED_PAGE_SIZE) {
-      setHasMoreFeed(false);
-    }
-  } finally {
-    isLoadingMoreRef.current = false;
-  }
-};
 
 
   // --------------------------------------------------
@@ -224,66 +121,27 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   useEffect(() => {
     const load = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const user = await getCurrentUser();
         if (!user) return;
 
         setUserId(user.id);
 
-        // 1) Goals
-        const { data: g } = await supabase
-          .from("goals")
-          .select("id, activity_type, metric, period, target, name, updated_at")
-          .eq("user_id", user.id)
-          .order("updated_at", { ascending: false });
+        await refreshGoals();
 
-        setGoals((g as Goal[]) || []);
-
-        // 2) Goal preferences
-        const { data: prefs } = await supabase
-          .from("goal_preferences")
-          .select("goal_id")
-          .eq("user_id", user.id);
-
-        setSelectedGoals(prefs?.map((p) => p.goal_id) || []);
-
-        if (useRpcGoals) {
-          // 3a) Goal stats from Supabase RPC
-          const { data: stats, error: statsErr } = await supabase.rpc(GOAL_RPC, {
-            user_id: user.id,
-          });
-          if (!statsErr) setGoalStats((stats as GoalStat[]) || []);
-        } else {
+        if (!useRpcGoals) {
           // 3b) Activities for goals (last 60 days) for client-side calc
           const cutoff = new Date();
           cutoff.setDate(cutoff.getDate() - 60);
           const cutoffStr = cutoff.toISOString().split("T")[0];
 
-          const { data: goalActs } = await supabase
-            .from("activities")
-            .select("id, user_id, type, date, distance_km, feeling, effort")
-            .eq("user_id", user.id)
-            .gte("date", cutoffStr)
-            .order("date", { ascending: false });
+          const { data: goalActs } = await fetchActivitiesForGoals(user.id, cutoffStr);
 
           setActivitiesForGoals(goalActs || []);
         }
 
-        // 4) First feed page
-        const { data: firstFeed } = await supabase
-          .from("activities")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("date", { ascending: false })
-          .order("created_at", { ascending: false })
-          .limit(FEED_PAGE_SIZE);
-
-        setActivities(sortActivitiesByDateAndCreated(firstFeed || []));
-        setFeedOffset(firstFeed ? firstFeed.length : 0);
-        setHasMoreFeed(!!firstFeed && firstFeed.length === FEED_PAGE_SIZE);
+        await refreshFeed();
       } finally {
-        setInitialFeedLoaded(true);
+        // no-op
       }
     };
 
@@ -291,48 +149,8 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   }, []);
 
   // --------------------------------------------------
-  // INFINITE SCROLL VIA WINDOW SCROLL
-  // --------------------------------------------------
-  useEffect(() => {
-    const handleScroll = () => {
-      if (
-        window.innerHeight + window.scrollY >=
-        document.body.offsetHeight - 200
-      ) {
-        loadMoreFeed();
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [loadMoreFeed]);
-
-  // --------------------------------------------------
   // GOALS FOR HOMEPAGE (max 2 shown, chosen by user)
   // --------------------------------------------------
-  const homeGoals = goals
-    .filter((g) => selectedGoals.includes(g.id))
-    .slice(0, 3); // still respect up to 3, we’ll *display* max 2
-
-  const homeGoalStats = sortGoalStats(
-    goalStats.filter((g) => selectedGoals.includes(g.goal_id))
-  ).slice(0, 3);
-
-  const showGoalSection = useRpcGoals
-    ? homeGoalStats.length > 0
-    : homeGoals.length > 0;
-
-  const displayedGoalStats = homeGoalStats.slice(0, 2);
-  const displayedLegacyGoals = homeGoals.slice(0, 2);
-  const displayedCount = useRpcGoals
-    ? displayedGoalStats.length
-    : displayedLegacyGoals.length;
-
-  const goalGridClass =
-    displayedCount === 1
-      ? "grid grid-cols-1 gap-3"
-      : "grid grid-cols-1 sm:grid-cols-2 gap-3";
-
   const toggleSearch = () => {
     if (searchOpen) {
       setSearchTerm("");
@@ -340,49 +158,13 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     setSearchOpen(!searchOpen);
   };
 
-  const normalizedSearch = searchTerm.toLowerCase();
-  const filteredActivities = activities.filter((a) => {
-    return (
-      a.title?.toLowerCase().includes(normalizedSearch) ||
-      a.notes?.toLowerCase().includes(normalizedSearch) ||
-      a.type?.toLowerCase().includes(normalizedSearch)
-    );
-  });
-
   // --------------------------------------------------
   // SIGNED URLS FOR NOTE IMAGES (feeds)
   // --------------------------------------------------
   useEffect(() => {
-    const withImages = activities.filter((a) => a.note_image_url);
-    if (withImages.length === 0) {
-      setSignedNoteImages({});
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      const entries = await Promise.all(
-        withImages.map(async (a) => {
-          const path = a.note_image_url as string;
-          const { data, error } = await supabase.storage
-            .from(NOTE_BUCKET)
-            .createSignedUrl(path, 86400); // 24h
-          if (error) return [a.id, null] as const;
-          return [a.id, data?.signedUrl || null] as const;
-        })
-      );
-      if (cancelled) return;
-      const map: Record<string, string> = {};
-      entries.forEach(([id, url]) => {
-        if (url) map[id] = url;
-      });
-      setSignedNoteImages(map);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activities]);
+    const cleanup = resolveNoteImages(activities);
+    return cleanup;
+  }, [activities, resolveNoteImages]);
 
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
@@ -398,10 +180,11 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
 
   const undoDelete = async () => {
     if (!lastDeletedRef.current) return;
-    setActivities((prev) =>
-      sortActivitiesByDateAndCreated([lastDeletedRef.current, ...prev])
-    );
-    await supabase.from("activities").insert(lastDeletedRef.current);
+    const { error } = await restoreActivity(lastDeletedRef.current);
+    if (error) {
+      console.error("[Home] Undo delete failed:", error.message);
+      return;
+    }
     lastDeletedRef.current = null;
     setShowUndoToast(false);
     refreshActivities();
@@ -434,267 +217,62 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
           </div>
         )}
 
-        {showGoalSection && (
-          <>
-            <h2 className="text-sm font-medium text-gray-500 mb-2 mt-4">
-              Your Progress
-            </h2>
-            <div
-              className="mb-4"
-              onClick={() => navigate(useRpcGoals ? "/stats" : "/stats-legacy")}
-            >
-              <div className={goalGridClass}>
-                {useRpcGoals
-                  ? displayedGoalStats.map((g) => (
-                      <GoalProgressCard
-                        key={g.goal_id}
-                        goal={{ ...g, progress_current: g.current_value }}
-                      />
-                    ))
-                  : displayedLegacyGoals.map((g) => (
-                      <GoalProgressCard
-                        key={g.id}
-                        goal={g}
-                        activities={activitiesForGoals}
-                      />
-                    ))}
-              </div>
-            </div>
-          </>
-        )}
+        <GoalsSection
+          goals={goals}
+          goalStats={goalStats}
+          selectedGoals={selectedGoals}
+          useRpcGoals={useRpcGoals}
+          activitiesForGoals={activitiesForGoals}
+        />
 
-        {/* -------------------------------------------------- */}
-        {/* LOG ACTIVITY BUTTONS                               */}
-        {/* -------------------------------------------------- */}
-        <h2 className="text-sm font-medium text-gray-500 mb-2">
-          Log Activity
-        </h2>
-
-        <div className="relative inline-block w-full">
-          <button
-            ref={logButtonRef}
-            onClick={() => {
-              hideTooltip();
-              setShowTypeSelector(true);
-            }}
-            className="w-full flex items-center justify-center gap-2 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium my-2 transition transform hover:-translate-y-0.5 active:scale-95"
-          >
-            <span className="text-xl">+</span>
-            <IconActivity size={20} strokeWidth={1.8} />
-            <span>Activity</span>
-          </button>
-
-        </div>
+        <LogCTA
+          showFirstLogPrompt={showFirstLogPrompt}
+          setShowTypeSelector={(open) => {
+            if (open) hideTooltip();
+            setShowTypeSelector(open);
+          }}
+        />
 
         {/* -------------------------------------------------- */}
         {/* RECENT HISTORY                                     */}
         {/* -------------------------------------------------- */}
-        <div className="flex items-center justify-between px-4 mt-6 gap-2">
-          <h2 className="text-sm font-medium text-gray-700">
-            Recent Activity
-          </h2>
-          <div
-            className="flex items-center justify-end transition-all duration-200"
-            style={{ width: searchOpen ? "55%" : "36px" }}
-          >
-            {searchOpen ? (
-              <div className="relative w-full">
-                <input
-                  type="text"
-                  className="w-full rounded-full border border-warm-200 bg-warm-100 px-4 py-2 text-sm shadow-sm pr-8"
-                  placeholder="Search…"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  autoFocus
-                />
-                <button
-                  onClick={toggleSearch}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-gray-600 hover:text-gray-800"
-                  aria-label="Close search"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={toggleSearch}
-                className="p-2 rounded-full hover:bg-warm-100 transition"
-                aria-label="Open search"
-              >
-                <IconSearch size={18} strokeWidth={1.8} />
-              </button>
-            )}
-          </div>
-        </div>
+        <SearchBar
+          searchOpen={searchOpen}
+          searchTerm={searchTerm}
+          setSearchOpen={setSearchOpen}
+          setSearchTerm={setSearchTerm}
+          onToggle={toggleSearch}
+        />
 
         <div className="flex flex-col gap-3 mt-2">
           {filteredActivities.map((a, idx) => {
-            const typeConfig = ACTIVITY_TYPES[a.type] ?? ACTIVITY_TYPES["other"];
-            const TypeIcon = typeConfig.Icon;
             const showAfterLogTooltip = visible === "after_first_log" && idx === 0;
-            const formattedDistance =
-              a.distance_km != null
-                ? formatDistance(Number(a.distance_km), unitSystem)
-                : null;
             return (
-              <SwipeActions
+              <RecentActivityCard
                 key={a.id}
-                onEdit={() => setEditActivity(a)}
-                disabled={!!lightbox}
-              >
-                <div
-                  className="
-                    relative rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
-                    w-full mx-auto
-                    max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
-                    sm:p-6 md:p-7
-                  "
-                  onClick={() => {
-                    hideTooltip();
-                    setEditActivity(a);
-                  }}
-                >
-                  {showAfterLogTooltip && (
-                    <TooltipBubble position="top" onClose={hideTooltip}>
-                      Create a preset to make logging this activity faster next time.
-                    </TooltipBubble>
-                  )}
-
-                  {/* Icon + Title */}
-                  <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
-                    <TypeIcon size={24} strokeWidth={1.8} />
-                    <span className="font-semibold text-gray-900 text-base md:text-lg leading-tight">
-                      {a.title || typeConfig.label}
-                    </span>
-                  </div>
-
-                  {/* Distance/Duration + Date */}
-                  <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1 flex-wrap">
-                    {formattedDistance && (
-                      <>
-                        <span>{formattedDistance}</span>
-                        <span className="text-gray-400">·</span>
-                      </>
-                    )}
-                    {a.duration_min != null && (
-                      <>
-                        <span>{a.duration_min} min</span>
-                        <span className="text-gray-400">·</span>
-                      </>
-                    )}
-                    <span>
-                      {new Date(a.date).toLocaleDateString("en-GB", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                        year: "2-digit"
-                      }).replace(/(\d{2})$/, "’$1")}
-                    </span>
-                  </div>
-
-                  {/* Feeling + Effort */}
-                  <div className="flex items-center justify-center gap-3 my-3">
-                    {/* Feeling */}
-                    {(() => {
-                      const f = Number(a.feeling) || 0;
-                      const base = "w-5 h-5 md:w-6 md:h-6";
-                      if (f <= 1)
-                        return (
-                          <Frown className={`${base} text-movenotes-accent`} />
-                        );
-                      if (f === 2)
-                        return <Meh className={`${base} text-movenotes-accent`} />;
-                      if (f === 3)
-                        return (
-                          <Smile className={`${base} text-movenotes-accent`} />
-                        );
-                      if (f >= 4)
-                        return (
-                          <Laugh className={`${base} text-movenotes-accent`} />
-                        );
-                      return null;
-                    })()}
-
-                    {/* Effort */}
-                    <div className="flex items-center gap-1 md:gap-1.5">
-                      {Array.from({ length: Number(a.effort) || 0 }).map(
-                        (_, i) => (
-                          <Zap
-                            key={i}
-                            className="w-4 h-4 md:w-5 md:h-5 text-movenotes-accent"
-                          />
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  {(a.notes?.trim() || signedNoteImages[a.id]) && (
-                    <div className="mt-3 space-y-2">
-                      {a.notes?.trim() && (
-                        <p
-                          className="
-                            text-[15px] md:text[17px]
-                            text-gray-600 font-[DMSerifDisplay] italic leading-snug
-                            max-w-xs sm:max-w-sm md:max-w-md mx-auto
-                          "
-                        >
-                          “{a.notes}”
-                        </p>
-                      )}
-
-                      {signedNoteImages[a.id] && (
-                        <div>
-                          <img
-                            src={signedNoteImages[a.id]}
-                            alt="Activity note"
-                            loading="lazy"
-                            className={`
-                              rounded-xl border border-warm-200 shadow-sm
-                              ${
-                                noteImageOrientation[a.id] === "portrait"
-                                  ? "max-h-80 w-auto max-w-full mx-auto object-contain"
-                                  : "w-full max-h-56 object-cover"
-                              }
-                            `}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              lightboxOpenedAt.current = Date.now();
-                              setLightbox({ url: signedNoteImages[a.id], activity: a });
-                            }}
-                            onTouchStart={(e) => {
-                              const t = e.touches[0];
-                              imageTouch.current = { x: t.clientX, y: t.clientY, moved: false };
-                            }}
-                            onTouchMove={(e) => {
-                              const t = e.touches[0];
-                              const dx = Math.abs(t.clientX - imageTouch.current.x);
-                              const dy = Math.abs(t.clientY - imageTouch.current.y);
-                              if (dx > 8 || dy > 8) {
-                                imageTouch.current.moved = true;
-                              }
-                            }}
-                            onTouchEnd={(e) => {
-                              if (imageTouch.current.moved) return; // treat as scroll, do nothing
-                              e.stopPropagation();
-                              lightboxOpenedAt.current = Date.now();
-                              setLightbox({ url: signedNoteImages[a.id], activity: a });
-                            }}
-                            onLoad={(e) => {
-                              const { naturalWidth, naturalHeight } = e.currentTarget;
-                              setNoteImageOrientation((prev) => ({
-                                ...prev,
-                                [a.id]:
-                                  naturalHeight > naturalWidth ? "portrait" : "landscape",
-                              }));
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </SwipeActions>
+                activity={a}
+                signedNoteImages={signedNoteImages}
+                noteImageOrientation={noteImageOrientation}
+                onEdit={(activity) => {
+                  hideTooltip();
+                  setEditActivity(activity);
+                }}
+                onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {
+                  setNoteImageOrientation((prev) => ({
+                    ...prev,
+                    [activityId]:
+                      naturalHeight > naturalWidth ? "portrait" : "landscape",
+                  }));
+                }}
+                unitSystem={unitSystem}
+                tooltipVisible={showAfterLogTooltip}
+                onTooltipClose={hideTooltip}
+                onImageClick={onLightboxImageClick}
+                onImageTouchStart={onLightboxImageTouchStart}
+                onImageTouchMove={onLightboxImageTouchMove}
+                onImageTouchEnd={onLightboxImageTouchEnd}
+                disableSwipe={!!lightbox}
+              />
             );
           })}
         </div>
@@ -715,21 +293,14 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         {lightbox && (
           <div
             className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col"
-            onClick={(e) => {
-              // ignore the immediate click that follows the tap that opened the lightbox
-              if (Date.now() - lightboxOpenedAt.current < 300) {
-                e.stopPropagation();
-                return;
-              }
-              setLightbox(null);
-            }}
+            onClick={handleLightboxOverlayClick}
           >
             <button
               aria-label="Close"
               className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
               onClick={(e) => {
                 e.stopPropagation();
-                setLightbox(null);
+                closeLightbox();
               }}
             >
               ×
