@@ -1,25 +1,23 @@
 import { useState } from "react";
 import { Trash2, Camera } from "lucide-react";
-import DistanceDurationFields from "./quick-log/DistanceDurationFields";
-import FeelingSelector from "./quick-log/FeelingSelector";
-import EffortSelector from "./quick-log/EffortSelector";
-import { useUnitSystem } from "../contexts/UnitContext";
-import { useActivityEditForm } from "../hooks/useActivityEditForm";
-import EquipmentDialog from "./EquipmentDialog";
+import { useUnitSystem } from "../../contexts/UnitContext";
+import { useActivityEditForm } from "../../hooks/useActivityEditForm";
+import EquipmentDialog from "../../components/EquipmentDialog";
+import ActivityForm from "./ActivityForm";
 
-type ActivityEditFormProps = {
+type EditActivityModalProps = {
   activity: any; // existing activity record
   onClose: () => void;
   onUpdated: () => void;
   onDeleted: () => void;
 };
 
-export default function ActivityEditForm({
+export default function EditActivityModal({
   activity,
   onClose,
   onUpdated,
   onDeleted,
-}: ActivityEditFormProps) {
+}: EditActivityModalProps) {
   const { unitSystem } = useUnitSystem();
   const {
     title,
@@ -114,75 +112,32 @@ export default function ActivityEditForm({
           Edit Activity
         </h2>
 
-        {/* Title */}
-        <label className="text-sm text-gray-600">Title</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full border border-warm-200 rounded-md p-2 mb-4"
-        />
-
-        {/* Date */}
-        <label className="text-sm text-gray-600">Date</label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full border border-warm-200 rounded-md p-2 mb-4"
-        />
-
-        <DistanceDurationFields
-          defaultFields={defaultFields}
-          optionalFields={optionalFields}
-          showOptionalDistance={showOptionalDistance}
-          showOptionalDuration={showOptionalDuration}
-          displayDistance={distanceDisplay}
-          duration={duration}
+        <ActivityForm
+          values={{
+            title,
+            date,
+            distanceDisplay,
+            duration,
+            feeling: rating,
+            effort,
+            activityType,
+            defaultFields,
+            optionalFields,
+            showOptionalDistance,
+            showOptionalDuration,
+          }}
           unitSystem={unitSystem}
+          onTitleChange={setTitle}
+          onDateChange={setDate}
           onDistanceChange={handleDistanceChange}
           onDurationChange={setDuration}
           onShowDistance={() => setShowOptionalDistance(true)}
           onShowDuration={() => setShowOptionalDuration(true)}
+          onFeelingChange={setRating}
+          onEffortChange={setEffort}
+          equipmentSummary={equipmentSummary}
+          onEquipmentClick={() => setShowEquipmentDialog(true)}
         />
-
-        <div className="mt-1 mb-4">
-          {equipmentSummary ? (
-            <button
-              type="button"
-              onClick={() => setShowEquipmentDialog(true)}
-              className="block w-full text-left border border-warm-200 rounded-md p-3"
-            >
-              <div className="text-sm text-gray-600">Equipment</div>
-              <div className="text-base text-gray-900">{equipmentSummary}</div>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="block text-movenotes-primary text-sm underline"
-              onClick={() => setShowEquipmentDialog(true)}
-            >
-              + Add equipment
-            </button>
-          )}
-        </div>
-
-        {/* Feeling & Effort */}
-        <div className="mb-4">
-          <label className="block text-sm text-gray-600 mb-1">
-            Feeling & Effort
-          </label>
-
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex justify-between w-full max-w-sm">
-              <FeelingSelector value={rating} onChange={setRating} />
-            </div>
-
-            {["run", "ride", "swim", "hike"].includes(activityType) && (
-              <EffortSelector value={effort} onChange={setEffort} />
-            )}
-          </div>
-        </div>
 
         {/* Notes */}
         <label className="text-sm text-gray-600">Notes</label>

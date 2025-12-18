@@ -6,7 +6,6 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import PresetsPage from "./pages/PresetsPage";
 import AddPresetPage from "./pages/AddPresetPage";
-import EditPresetPage from "./pages/EditPresetPage";
 import StatsRpcPage from "./pages/StatsRpcPage";
 import AnimatedLogo from "./components/AnimatedLogo";
 import { motion, AnimatePresence } from "framer-motion";
@@ -186,15 +185,6 @@ export default function App() {
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
                         <AddPresetPage />
-                      </Layout>
-                    }
-                  />
-
-                  <Route
-                    path="/presets/:id"
-                    element={
-                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-                        <EditPresetPage />
                       </Layout>
                     }
                   />

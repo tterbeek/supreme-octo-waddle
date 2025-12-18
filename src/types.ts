@@ -6,6 +6,8 @@ export type Preset = {
   duration_min: number | null;
   effort?: number; 
   equipment_ids?: string[];
+  equipment?: Equipment[];
+  preset_equipment?: { equipment: Equipment }[];
 };
 
 export type Equipment = {

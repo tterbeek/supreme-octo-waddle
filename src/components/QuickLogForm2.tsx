@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalSheet from "./ModalSheet";
-import FeelingSelector from "./quick-log/FeelingSelector";
-import EffortSelector from "./quick-log/EffortSelector";
 import PresetsBar from "./quick-log/PresetsBar";
-import DistanceDurationFields from "./quick-log/DistanceDurationFields";
 import SavePresetFooter from "./quick-log/SavePresetFooter";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
 import { useQuickLogForm } from "../hooks/useQuickLogForm";
 import EquipmentDialog from "./EquipmentDialog";
+import ActivityFormFields from "./ActivityFormFields";
 
 type QuickLogFormProps = {
   initialType?: string;
@@ -111,65 +109,32 @@ export default function QuickLogForm2({
           onOpenMore={() => setShowMorePresets(true)}
         />
 
-        {/* Title */}
-        <label className="text-sm text-gray-600">Title</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full border rounded-md p-2 mb-4"
-        />
-
-        {/* Date */}
-        <label className="text-sm text-gray-600">Date</label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full border rounded-md p-2 mb-4"
-        />
-
-        <DistanceDurationFields
-          defaultFields={defaultFields}
-          optionalFields={optionalFields}
-          showOptionalDistance={showOptionalDistance}
-          showOptionalDuration={showOptionalDuration}
-          displayDistance={displayDistance}
-          duration={duration}
+        <ActivityFormFields
+          values={{
+            title,
+            date,
+            distanceDisplay: displayDistance,
+            duration,
+            feeling,
+            effort,
+            activityType,
+            defaultFields,
+            optionalFields,
+            showOptionalDistance,
+            showOptionalDuration,
+          }}
           unitSystem={unitSystem}
+          onTitleChange={setTitle}
+          onDateChange={setDate}
           onDistanceChange={handleDistanceChange}
           onDurationChange={setDuration}
           onShowDistance={() => setShowOptionalDistance(true)}
           onShowDuration={() => setShowOptionalDuration(true)}
+          onFeelingChange={setFeeling}
+          onEffortChange={setEffort}
+          equipmentSummary={equipmentSummary}
+          onEquipmentClick={() => setShowEquipmentDialog(true)}
         />
-
-        <div className="mt-1 mb-4">
-          {equipmentSummary ? (
-            <button
-              type="button"
-              onClick={() => setShowEquipmentDialog(true)}
-              className="block w-full text-left border border-warm-200 rounded-md p-3"
-            >
-              <div className="text-sm text-gray-600">Equipment</div>
-              <div className="text-base text-gray-900">{equipmentSummary}</div>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="block text-movenotes-primary text-sm underline"
-              onClick={() => setShowEquipmentDialog(true)}
-            >
-              + Add equipment
-            </button>
-          )}
-        </div>
-
-        <div className="mb-4 flex flex-col items-center gap-4">
-          <FeelingSelector value={feeling} onChange={setFeeling} />
-          {["run", "ride", "swim", "hike"].includes(activityType) && (
-            <EffortSelector value={effort} onChange={setEffort} />
-          )}
-        </div>
 
         <SavePresetFooter
           saveAsPreset={saveAsPreset}

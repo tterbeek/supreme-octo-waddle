@@ -1,10 +1,10 @@
 // src/pages/Home.tsx
 import { useEffect, useState, useRef } from "react";
-import QuickLogForm from "../components/QuickLogForm2";
+import AddActivityModal from "../features/activities/AddActivityModal";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
 import AddNoteModal from "../components/AddNoteModal";
-import ActivityEditForm from "../components/ActivityEditForm";
+import EditActivityModal from "../features/activities/EditActivityModal";
 import GoalsSection from "../components/GoalsSection";
 import LogCTA from "../components/LogCTA";
 import SearchBar from "../components/SearchBar";
@@ -356,7 +356,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         )}
 
         {showQuickLog && (
-          <QuickLogForm
+          <AddActivityModal
             initialType={selectedType ?? "run"}
             onClose={() => {
               setShowQuickLog(false);
@@ -388,7 +388,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         )}
 
         {editActivity && (
-          <ActivityEditForm
+          <EditActivityModal
             activity={editActivity}
             onClose={() => setEditActivity(null)}
             onUpdated={() => {

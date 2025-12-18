@@ -21,10 +21,19 @@ export async function fetchActivityPreference(
   return data ?? undefined;
 }
 
+const mapPresetRow = (row: any) => {
+  const equipment =
+    row.preset_equipment?.map((item: any) => item?.equipment).filter(Boolean) || [];
+  const equipment_ids = equipment.map((eq: any) => eq.id);
+  return { ...row, equipment, equipment_ids } as Preset;
+};
+
 export async function fetchPresets(userId: string) {
   const { data, error } = await supabase
     .from("presets")
-    .select("*")
+    .select(
+      "*, preset_equipment:preset_equipment(equipment:equipment_id (id, user_id, name, notes, is_active, created_at))"
+    )
     .eq("user_id", userId)
     .order("last_used_at", { ascending: false });
 
@@ -33,7 +42,7 @@ export async function fetchPresets(userId: string) {
     return [];
   }
 
-  return (data || []) as Preset[];
+  return (data || []).map(mapPresetRow);
 }
 
 export type SaveQuickLogInput = {
@@ -58,10 +67,10 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
         date: input.date,
         distance_km: input.distanceValue,
         duration_min: input.durationValue,
-      effort: input.effortValue,
-      feeling: input.feelingValue,
-      title: input.title,
-    },
+        effort: input.effortValue,
+        feeling: input.feelingValue,
+        title: input.title,
+      },
     ])
     .select("id")
     .single();
@@ -73,8 +82,6 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
 
   const activityId = data?.id ?? null;
 
-  let equipmentError = null;
-
   if (activityId && input.equipmentIds.length > 0) {
     const { error: linkError } = await replaceActivityEquipment(
       activityId,
@@ -85,11 +92,11 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
         "[QuickLog] Error linking equipment to activity:",
         linkError.message
       );
-      equipmentError = linkError;
+      return { id: activityId, error: linkError };
     }
   }
 
-  return { id: activityId, error: equipmentError };
+  return { id: activityId, error: null };
 }
 
 export async function createPresetFromActivity(params: {

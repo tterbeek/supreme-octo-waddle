@@ -91,3 +91,35 @@ export async function replaceActivityEquipment(
 
   return { error };
 }
+
+export async function replacePresetEquipment(
+  presetId: string,
+  equipmentIds: string[]
+) {
+  const { error: deleteError } = await supabase
+    .from("preset_equipment")
+    .delete()
+    .eq("preset_id", presetId);
+
+  if (deleteError) {
+    console.error("[Equipment] Error clearing preset equipment:", deleteError.message);
+    return { error: deleteError };
+  }
+
+  if (equipmentIds.length === 0) {
+    return { error: null };
+  }
+
+  const { error } = await supabase.from("preset_equipment").insert(
+    equipmentIds.map((equipmentId) => ({
+      preset_id: presetId,
+      equipment_id: equipmentId,
+    }))
+  );
+
+  if (error) {
+    console.error("[Equipment] Error linking equipment to preset:", error.message);
+  }
+
+  return { error };
+}
