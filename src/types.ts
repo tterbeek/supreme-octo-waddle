@@ -5,6 +5,16 @@ export type Preset = {
   distance_km: number | null;
   duration_min: number | null;
   effort?: number; 
+  equipment_ids?: string[];
+};
+
+export type Equipment = {
+  id: string;
+  user_id: string;
+  name: string;
+  notes: string | null;
+  is_active: boolean;
+  created_at?: string;
 };
 
 

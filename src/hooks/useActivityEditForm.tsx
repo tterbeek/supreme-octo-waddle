@@ -13,6 +13,13 @@ import {
   deleteActivityImages,
 } from "../services/activityMedia.service";
 import { updateActivity, deleteActivity } from "../services/activity.service";
+import {
+  createEquipment,
+  fetchActiveEquipment,
+  fetchEquipmentForActivity,
+  replaceActivityEquipment,
+} from "../services/equipment.service";
+import type { Equipment } from "../types";
 
 type UseActivityEditFormArgs = {
   activity: any;
@@ -50,6 +57,9 @@ export function useActivityEditForm({
   const [saving, setSaving] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
   const [dragY, setDragY] = useState(0);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const startY = useRef<number | null>(null);
   const originalImagePath = useRef<string | null>(activity.note_image_url || null);
   const openedAtRef = useRef<number>(Date.now());
@@ -61,6 +71,14 @@ export function useActivityEditForm({
       : unitSystem === "imperial"
       ? String(Math.round(kmToMiles(distanceKm) * 100) / 100)
       : String(distanceKm);
+
+  const ensureUserId = async () => {
+    if (userId) return userId;
+    const user = await getCurrentUser();
+    if (!user) return null;
+    setUserId(user.id);
+    return user.id;
+  };
 
   const handleDistanceChange = (value: string) => {
     if (value === "") {
@@ -82,20 +100,39 @@ export function useActivityEditForm({
     let cancelled = false;
     setShowOptionalDistance(false);
     setShowOptionalDuration(false);
+    setEquipment([]);
+    setSelectedEquipmentIds([]);
 
     const loadPreference = async () => {
       setPreference(undefined);
 
-      if (activityType === "restore") return;
+      const currentUserId = await ensureUserId();
 
-      const user = await getCurrentUser();
+      if (!currentUserId || cancelled) return;
 
-      if (!user || cancelled) return;
-
-      const pref = await fetchActivityPreference(user.id, activityType);
-      if (!cancelled) {
-        setPreference(pref);
+      if (activityType !== "restore") {
+        const pref = await fetchActivityPreference(currentUserId, activityType);
+        if (!cancelled) {
+          setPreference(pref);
+        }
       }
+
+      const [equipmentList, activityEquipment] = await Promise.all([
+        fetchActiveEquipment(currentUserId),
+        fetchEquipmentForActivity(activity.id),
+      ]);
+
+      if (cancelled) return;
+
+      const mergedEquipment: Equipment[] = [...equipmentList];
+      activityEquipment.forEach((item) => {
+        if (!mergedEquipment.find((eq) => eq.id === item.id)) {
+          mergedEquipment.push(item);
+        }
+      });
+
+      setEquipment(mergedEquipment);
+      setSelectedEquipmentIds(activityEquipment.map((item) => item.id));
     };
 
     loadPreference();
@@ -103,7 +140,7 @@ export function useActivityEditForm({
     return () => {
       cancelled = true;
     };
-  }, [activityType]);
+  }, [activity.id, activityType]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -137,10 +174,10 @@ export function useActivityEditForm({
 
         setUploadProgress(40);
 
-        const user = await getCurrentUser();
-        if (!user) throw new Error("No user");
+        const currentUserId = await ensureUserId();
+        if (!currentUserId) throw new Error("No user");
 
-        const path = await uploadActivityImage(user.id, activity.id, compressed);
+        const path = await uploadActivityImage(currentUserId, activity.id, compressed);
 
         setUploadProgress(80);
         imageUrl = path;
@@ -183,6 +220,15 @@ export function useActivityEditForm({
         }
       } else {
         originalImagePath.current = imageUrl;
+      }
+
+      const { error: equipmentError } = await replaceActivityEquipment(
+        activity.id,
+        selectedEquipmentIds
+      );
+
+      if (equipmentError) {
+        throw equipmentError;
       }
     } catch (err: any) {
       console.error("[EditActivity] Save error:", err);
@@ -258,6 +304,28 @@ export function useActivityEditForm({
     startY.current = null;
   };
 
+  const addEquipment = async (name: string, notes: string) => {
+    const currentUserId = await ensureUserId();
+    if (!currentUserId) return null;
+
+    const { equipment: created } = await createEquipment({
+      userId: currentUserId,
+      name,
+      notes: notes || undefined,
+    });
+
+    if (!created) {
+      return null;
+    }
+
+    setEquipment((prev) => [created, ...prev]);
+    setSelectedEquipmentIds((prev) =>
+      prev.includes(created.id) ? prev : [...prev, created.id]
+    );
+
+    return created;
+  };
+
   return {
     title,
     setTitle,
@@ -279,6 +347,9 @@ export function useActivityEditForm({
     setRating,
     effort,
     setEffort,
+    equipment,
+    selectedEquipmentIds,
+    setSelectedEquipmentIds,
     note,
     setNote,
     noteImageUrl,
@@ -302,5 +373,6 @@ export function useActivityEditForm({
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    addEquipment,
   };
 }

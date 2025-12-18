@@ -45,6 +45,17 @@ export default function RecentActivityCard({
     activity.distance_km != null
       ? formatDistance(Number(activity.distance_km), unitSystem)
       : null;
+  const equipmentItems: Array<{ id: string; name: string }> =
+    activity.equipment || activity.activity_equipment?.map((item: any) => item?.equipment).filter(Boolean) || [];
+  const equipmentName = (() => {
+    if (!equipmentItems.length) return "";
+    const first = equipmentItems[0];
+    if (!first?.name) return "";
+    const maxLen = 26;
+    return first.name.length > maxLen
+      ? `${first.name.slice(0, maxLen - 3)}...`
+      : first.name;
+  })();
 
   return (
     <SwipeActions onEdit={() => onEdit(activity)} disabled={disableSwipe}>
@@ -92,6 +103,12 @@ export default function RecentActivityCard({
             }).replace(/(\d{2})$/, "’$1")}
           </span>
         </div>
+
+        {equipmentName && (
+          <div className="text-xs md:text-sm text-gray-500 my-2">
+            {equipmentName}
+          </div>
+        )}
 
         <div className="flex items-center justify-center gap-3 my-3">
           {(() => {

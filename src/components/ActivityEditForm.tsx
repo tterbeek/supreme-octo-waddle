@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Trash2, Camera } from "lucide-react";
 import DistanceDurationFields from "./quick-log/DistanceDurationFields";
 import FeelingSelector from "./quick-log/FeelingSelector";
 import EffortSelector from "./quick-log/EffortSelector";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { useActivityEditForm } from "../hooks/useActivityEditForm";
+import EquipmentDialog from "./EquipmentDialog";
 
 type ActivityEditFormProps = {
   activity: any; // existing activity record
@@ -36,6 +38,9 @@ export default function ActivityEditForm({
     setRating,
     effort,
     setEffort,
+    equipment,
+    selectedEquipmentIds,
+    setSelectedEquipmentIds,
     note,
     setNote,
     noteImageUrl,
@@ -60,6 +65,7 @@ export default function ActivityEditForm({
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    addEquipment,
   } = useActivityEditForm({
     activity,
     unitSystem,
@@ -67,25 +73,41 @@ export default function ActivityEditForm({
     onUpdated,
     onDeleted,
   });
+  const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
+  const equipmentSummary = (() => {
+    if (selectedEquipmentIds.length === 0) return "";
+    const first = equipment.find((item) => item.id === selectedEquipmentIds[0]);
+    if (!first) return "";
+    const maxLen = 26;
+    let label = first.name;
+    if (label.length > maxLen) {
+      label = `${label.slice(0, maxLen - 3)}...`;
+    }
+    if (selectedEquipmentIds.length > 1) {
+      label = `${label}...`;
+    }
+    return label;
+  })();
 
   return (
-    <div
-      className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 overscroll-none"
-      onClick={handleOverlayClick}
-    >
+    <>
       <div
-        onClick={(e) => e.stopPropagation()}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          transform: `translateY(${dragY}px)`,
-          touchAction: "none",
-        }}
-        className={`w-full max-w-md bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 
+        className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 overscroll-none"
+        onClick={handleOverlayClick}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{
+            transform: `translateY(${dragY}px)`,
+            touchAction: "none",
+          }}
+          className={`w-full max-w-md max-h-[90vh] overflow-y-auto bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 
       ${animateIn ? "translate-y-0" : "translate-y-full"} animate-fadeIn 
       shadow-lg will-change-transform sm:rounded-2xl sm:mt-20`}
-      >
+        >
         <div className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4" />
 
         <h2 className="text-lg font-semibold text-center mb-4">
@@ -124,6 +146,27 @@ export default function ActivityEditForm({
           onShowDuration={() => setShowOptionalDuration(true)}
         />
 
+        <div className="mt-1 mb-4">
+          {equipmentSummary ? (
+            <button
+              type="button"
+              onClick={() => setShowEquipmentDialog(true)}
+              className="block w-full text-left border border-warm-200 rounded-md p-3"
+            >
+              <div className="text-sm text-gray-600">Equipment</div>
+              <div className="text-base text-gray-900">{equipmentSummary}</div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="block text-movenotes-primary text-sm underline"
+              onClick={() => setShowEquipmentDialog(true)}
+            >
+              + Add equipment
+            </button>
+          )}
+        </div>
+
         {/* Feeling & Effort */}
         <div className="mb-4">
           <label className="block text-sm text-gray-600 mb-1">
@@ -155,11 +198,11 @@ export default function ActivityEditForm({
         <div className="mb-4 flex items-center gap-3 flex-wrap">
           <button
             type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
-        >
-          <Camera className="w-4 h-4 text-amber-700" />
-          <span>Snap or attach</span>
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+          >
+            <Camera className="w-4 h-4 text-amber-700" />
+            <span>Snap or attach</span>
           </button>
           <input
             ref={fileInputRef}
@@ -227,5 +270,16 @@ export default function ActivityEditForm({
         </button>
       </div>
     </div>
+
+    {showEquipmentDialog && (
+      <EquipmentDialog
+        equipment={equipment}
+        selectedEquipmentIds={selectedEquipmentIds}
+        onChange={(ids) => setSelectedEquipmentIds(ids)}
+        onAddEquipment={addEquipment}
+        onClose={() => setShowEquipmentDialog(false)}
+      />
+    )}
+    </>
   );
 }

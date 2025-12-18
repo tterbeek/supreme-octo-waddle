@@ -18,13 +18,24 @@ export async function fetchFeedPage(
 ) {
   const { data, error } = await supabase
     .from("activities")
-    .select("*")
+    .select(
+      "*, activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
+    )
     .eq("user_id", userId)
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  return { data: data || [], error };
+  const mapped =
+    data?.map((activity: any) => {
+      const equipment =
+        activity.activity_equipment
+          ?.map((item: any) => item?.equipment)
+          .filter(Boolean) || [];
+      return { ...activity, equipment };
+    }) || [];
+
+  return { data: mapped, error };
 }
 
 export async function restoreActivity(activity: any) {

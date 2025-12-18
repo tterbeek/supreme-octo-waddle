@@ -1,5 +1,6 @@
 import { supabase } from "../supabaseClient";
 import type { Preset } from "../types";
+import { replaceActivityEquipment } from "./equipment.service";
 
 export async function fetchActivityPreference(
   userId: string,
@@ -44,6 +45,7 @@ export type SaveQuickLogInput = {
   effortValue: number | null;
   feelingValue: number | null;
   title: string;
+  equipmentIds: string[];
 };
 
 export async function saveQuickLog(input: SaveQuickLogInput) {
@@ -56,10 +58,10 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
         date: input.date,
         distance_km: input.distanceValue,
         duration_min: input.durationValue,
-        effort: input.effortValue,
-        feeling: input.feelingValue,
-        title: input.title,
-      },
+      effort: input.effortValue,
+      feeling: input.feelingValue,
+      title: input.title,
+    },
     ])
     .select("id")
     .single();
@@ -69,7 +71,25 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
     return { id: null, error };
   }
 
-  return { id: data?.id ?? null, error: null };
+  const activityId = data?.id ?? null;
+
+  let equipmentError = null;
+
+  if (activityId && input.equipmentIds.length > 0) {
+    const { error: linkError } = await replaceActivityEquipment(
+      activityId,
+      input.equipmentIds
+    );
+    if (linkError) {
+      console.error(
+        "[QuickLog] Error linking equipment to activity:",
+        linkError.message
+      );
+      equipmentError = linkError;
+    }
+  }
+
+  return { id: activityId, error: equipmentError };
 }
 
 export async function createPresetFromActivity(params: {

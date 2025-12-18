@@ -10,6 +10,7 @@ import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
 import { useQuickLogForm } from "../hooks/useQuickLogForm";
+import EquipmentDialog from "./EquipmentDialog";
 
 type QuickLogFormProps = {
   initialType?: string;
@@ -30,6 +31,7 @@ export default function QuickLogForm2({
   const { unitSystem } = useUnitSystem();
   const ding = new Audio("/sounds/ding.mp3");
   const [showMorePresets, setShowMorePresets] = useState(false);
+  const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
 
   const {
     activePreset,
@@ -50,8 +52,12 @@ export default function QuickLogForm2({
     defaultFields,
     optionalFields,
     filteredPresets,
+    equipment,
+    selectedEquipmentIds,
+    setSelectedEquipmentIds,
     displayDistance,
     handleDistanceChange,
+    addEquipment,
     setTitle,
     setDate,
     setDuration,
@@ -77,6 +83,21 @@ export default function QuickLogForm2({
     navigate,
     ding,
   });
+
+  const equipmentSummary = (() => {
+    if (selectedEquipmentIds.length === 0) return "";
+    const first = equipment.find((item) => item.id === selectedEquipmentIds[0]);
+    if (!first) return "";
+    const maxLen = 26;
+    let label = first.name;
+    if (label.length > maxLen) {
+      label = `${label.slice(0, maxLen - 3)}...`;
+    }
+    if (selectedEquipmentIds.length > 1) {
+      label = `${label}...`;
+    }
+    return label;
+  })();
 
   return (
     <>
@@ -122,6 +143,27 @@ export default function QuickLogForm2({
           onShowDuration={() => setShowOptionalDuration(true)}
         />
 
+        <div className="mt-1 mb-4">
+          {equipmentSummary ? (
+            <button
+              type="button"
+              onClick={() => setShowEquipmentDialog(true)}
+              className="block w-full text-left border border-warm-200 rounded-md p-3"
+            >
+              <div className="text-sm text-gray-600">Equipment</div>
+              <div className="text-base text-gray-900">{equipmentSummary}</div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="block text-movenotes-primary text-sm underline"
+              onClick={() => setShowEquipmentDialog(true)}
+            >
+              + Add equipment
+            </button>
+          )}
+        </div>
+
         <div className="mb-4 flex flex-col items-center gap-4">
           <FeelingSelector value={feeling} onChange={setFeeling} />
           {["run", "ride", "swim", "hike"].includes(activityType) && (
@@ -151,6 +193,16 @@ export default function QuickLogForm2({
           }}
         />
       </ModalSheet>
+
+      {showEquipmentDialog && (
+        <EquipmentDialog
+          equipment={equipment}
+          selectedEquipmentIds={selectedEquipmentIds}
+          onChange={(ids) => setSelectedEquipmentIds(ids)}
+          onAddEquipment={addEquipment}
+          onClose={() => setShowEquipmentDialog(false)}
+        />
+      )}
 
       {/* SECOND SHEET: ALL PRESETS */}
       {showMorePresets && (

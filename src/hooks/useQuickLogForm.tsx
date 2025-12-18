@@ -15,7 +15,8 @@ import {
   type SaveQuickLogInput,
   updatePresetLastUsed,
 } from "../services/quickLog.service";
-import type { Preset } from "../types";
+import { createEquipment, fetchActiveEquipment } from "../services/equipment.service";
+import type { Preset, Equipment } from "../types";
 
 type UseQuickLogFormArgs = {
   initialType: string;
@@ -71,6 +72,9 @@ export function useQuickLogForm({
   );
 
   const filteredPresets = presets.filter((p) => p.type === activityType);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const displayDistance =
     distanceKm == null
@@ -78,6 +82,14 @@ export function useQuickLogForm({
       : unitSystem === "imperial"
       ? String(Math.round(kmToMiles(distanceKm) * 100) / 100)
       : String(distanceKm);
+
+  const ensureUserId = async () => {
+    if (userId) return userId;
+    const user = await getCurrentUser();
+    if (!user) return null;
+    setUserId(user.id);
+    return user.id;
+  };
 
   const handleDistanceChange = (value: string) => {
     if (value === "") {
@@ -94,10 +106,13 @@ export function useQuickLogForm({
     setShowOptionalDistance(false);
     setShowOptionalDuration(false);
     setPreference(undefined);
+    setSelectedEquipmentIds([]);
     const load = async () => {
       const user = await getCurrentUser();
 
       if (!user) return;
+
+      setUserId(user.id);
 
       const presetData = await fetchPresets(user.id);
       setPresets(presetData);
@@ -115,10 +130,14 @@ export function useQuickLogForm({
         setShowOptionalDuration(!!first.duration_min);
         setTitle(first.name ?? "");
         setEffort(first.effort ?? 3);
+        setSelectedEquipmentIds(first.equipment_ids ?? []);
       }
 
       const preferenceData = await fetchActivityPreference(user.id, activityType);
       setPreference(preferenceData);
+
+      const equipmentList = await fetchActiveEquipment(user.id);
+      setEquipment(equipmentList);
     };
 
     load();
@@ -138,6 +157,7 @@ export function useQuickLogForm({
     setShowOptionalDuration(!!preset.duration_min);
     setTitle(preset.name ?? "");
     setEffort(preset.effort ?? 3);
+    setSelectedEquipmentIds(preset.equipment_ids ?? []);
   };
 
   const useCustom = () => {
@@ -149,6 +169,29 @@ export function useQuickLogForm({
     setPresetNameTouched(false);
     setShowOptionalDistance(false);
     setShowOptionalDuration(false);
+    setSelectedEquipmentIds([]);
+  };
+
+  const addEquipment = async (name: string, notes: string) => {
+    const currentUserId = await ensureUserId();
+    if (!currentUserId) return null;
+
+    const { equipment: created } = await createEquipment({
+      userId: currentUserId,
+      name,
+      notes: notes || undefined,
+    });
+
+    if (!created) {
+      return null;
+    }
+
+    setEquipment((prev) => [created, ...prev]);
+    setSelectedEquipmentIds((prev) =>
+      prev.includes(created.id) ? prev : [...prev, created.id]
+    );
+
+    return created;
   };
 
   const save = async () => {
@@ -208,9 +251,8 @@ export function useQuickLogForm({
       return;
     }
 
-    const user = await getCurrentUser();
-
-    if (!user) return;
+    const currentUserId = await ensureUserId();
+    if (!currentUserId) return;
 
     const distanceValue =
       (defaultFields.includes("distance_km") || showOptionalDistance) && distanceKm != null
@@ -229,7 +271,7 @@ export function useQuickLogForm({
     const feelingValue = Number(feeling) || null;
 
     const saveInput: SaveQuickLogInput = {
-      userId: user.id,
+      userId: currentUserId,
       activityType,
       date,
       distanceValue,
@@ -237,6 +279,7 @@ export function useQuickLogForm({
       effortValue,
       feelingValue,
       title,
+      equipmentIds: selectedEquipmentIds,
     };
 
     const { id: newActivityId, error } = await saveQuickLog(saveInput);
@@ -247,7 +290,7 @@ export function useQuickLogForm({
 
     if (saveAsPreset && presetName.trim()) {
       await createPresetFromActivity({
-        userId: user.id,
+        userId: currentUserId,
         activityType,
         name: presetName.trim(),
         distanceValue,
@@ -318,8 +361,12 @@ export function useQuickLogForm({
     defaultFields,
     optionalFields,
     filteredPresets,
+    equipment,
+    selectedEquipmentIds,
+    setSelectedEquipmentIds,
     displayDistance,
     handleDistanceChange,
+    addEquipment,
     usePreset,
     useCustom,
     save,
