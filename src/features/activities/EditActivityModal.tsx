@@ -100,7 +100,7 @@ export default function EditActivityModal({
           onTouchEnd={handleTouchEnd}
           style={{
             transform: `translateY(${dragY}px)`,
-            touchAction: "none",
+            touchAction: "pan-y",
           }}
           className={`w-full max-w-md max-h-[90vh] overflow-y-auto bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 
       ${animateIn ? "translate-y-0" : "translate-y-full"} animate-fadeIn 
