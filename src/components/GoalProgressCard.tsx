@@ -221,9 +221,11 @@ export default function GoalProgressCard({
         : stablePick(PACING_MESSAGES.nearPaceEarly, dailySeed);
     }
 
-    return late
-      ? stablePick(PACING_MESSAGES.gentleLate, dailySeed)
-      : stablePick(PACING_MESSAGES.gentleEarly, dailySeed);
+    // After the very early phase, use the “late” gentle nudge so mid-period
+    // users don’t see an “early” message when the period is half done.
+    return early
+      ? stablePick(PACING_MESSAGES.gentleEarly, dailySeed)
+      : stablePick(PACING_MESSAGES.gentleLate, dailySeed);
   };
 
   const pacingMessage = getPacingMessage(

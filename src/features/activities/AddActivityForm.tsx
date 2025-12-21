@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ModalSheet from "./ModalSheet";
-import PresetsBar from "./quick-log/PresetsBar";
-import SavePresetFooter from "./quick-log/SavePresetFooter";
-import { useTooltipManager } from "../hooks/useTooltipManager";
-import { useUnitSystem } from "../contexts/UnitContext";
-import { formatDistance } from "../lib/units";
-import { useQuickLogForm } from "../hooks/useQuickLogForm";
-import EquipmentDialog from "./EquipmentDialog";
-import ActivityFormFields from "./ActivityFormFields";
+import ModalSheet from "../../components/ModalSheet";
+import PresetsBar from "../../components/quick-log/PresetsBar";
+import SavePresetFooter from "../../components/quick-log/SavePresetFooter";
+import { useTooltipManager } from "../../hooks/useTooltipManager";
+import { useUnitSystem } from "../../contexts/UnitContext";
+import { formatDistance } from "../../lib/units";
+import { useQuickLogForm } from "../../hooks/useQuickLogForm";
+import EquipmentDialog from "../../components/EquipmentDialog";
+import ActivityFormFields from "../../components/ActivityFormFields";
 
 type QuickLogFormProps = {
   initialType?: string;
@@ -16,7 +16,7 @@ type QuickLogFormProps = {
   onLogged: (activityId: string) => void; // ✅ returns activity id
 };
 
-export default function QuickLogForm2({
+export default function AddActivityForm({
   initialType = "run",
   onClose,
   onLogged,

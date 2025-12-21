@@ -1,4 +1,4 @@
-import QuickLogForm2 from "../../components/QuickLogForm2";
+import AddActivityForm from "./AddActivityForm";
 
 type AddActivityModalProps = {
   initialType?: string;
@@ -12,7 +12,7 @@ export default function AddActivityModal({
   onLogged,
 }: AddActivityModalProps) {
   return (
-    <QuickLogForm2
+    <AddActivityForm
       initialType={initialType}
       onClose={onClose}
       onLogged={onLogged}
