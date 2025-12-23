@@ -6,7 +6,7 @@ export default function Toast(
   { message, onClose }: { message: ReactNode; onClose: () => void }
 ) {
   useEffect(() => {
-    const t = setTimeout(onClose, 3000);
+    const t = setTimeout(onClose, 800);
     return () => clearTimeout(t);
   }, [onClose]);
 
