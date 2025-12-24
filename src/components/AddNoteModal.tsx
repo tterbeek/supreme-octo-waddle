@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { getCurrentUser } from "../services/auth.service";
-import { compressImage, uploadActivityImage } from "../services/activityMedia.service";
+import { compressImage, createThumbnail, uploadActivityImage } from "../services/activityMedia.service";
 
 interface AddNoteModalProps {
   activityId: string;
@@ -100,6 +100,7 @@ export default function AddNoteModal({
     setSaving(true);
     setUploadError(null);
     let imageUrl: string | null = null;
+    let thumbUrl: string | null = null;
 
     try {
       if (selectedFile) {
@@ -109,14 +110,23 @@ export default function AddNoteModal({
         const compressed = await compressImage(selectedFile);
         setUploadProgress(40);
 
+        const thumbnail = await createThumbnail(selectedFile);
+        setUploadProgress(60);
+
         const user = await getCurrentUser();
         if (!user) throw new Error("No user");
 
-        const path = await uploadActivityImage(user.id, activityId, compressed);
+        const { imagePath, thumbPath } = await uploadActivityImage(
+          user.id,
+          activityId,
+          compressed,
+          thumbnail
+        );
 
-        setUploadProgress(80);
-        // Store the storage path; frontend will request signed URLs
-        imageUrl = path;
+        setUploadProgress(85);
+        // Store the storage paths; frontend will request signed URLs
+        imageUrl = imagePath;
+        thumbUrl = thumbPath;
       }
 
       await supabase
@@ -125,6 +135,7 @@ export default function AddNoteModal({
           notes: note || null,
           note_updated_at: new Date().toISOString(),
           note_image_url: imageUrl,
+          note_thumb_image_url: thumbUrl,
         })
         .eq("id", activityId);
 

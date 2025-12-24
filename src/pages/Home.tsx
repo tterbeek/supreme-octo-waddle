@@ -39,6 +39,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   );
   const {
     signedNoteImages,
+    signedNoteThumbs,
     noteImageOrientation,
     setNoteImageOrientation,
     resolveFor: resolveNoteImages,
@@ -237,6 +238,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
                 key={a.id}
                 activity={a}
                 signedNoteImages={signedNoteImages}
+                signedNoteThumbs={signedNoteThumbs}
                 noteImageOrientation={noteImageOrientation}
                 onEdit={(activity) => {
                   hideTooltip();

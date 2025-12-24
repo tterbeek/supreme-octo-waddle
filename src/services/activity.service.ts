@@ -10,6 +10,7 @@ export type UpdateActivityInput = {
   effort: number | null;
   notes: string;
   note_image_url: string | null;
+  note_thumb_image_url: string | null;
 };
 
 export async function updateActivity(input: UpdateActivityInput) {
@@ -25,6 +26,7 @@ export async function updateActivity(input: UpdateActivityInput) {
       notes: input.notes,
       note_updated_at: new Date().toISOString(),
       note_image_url: input.note_image_url,
+      note_thumb_image_url: input.note_thumb_image_url,
     })
     .eq("id", input.id);
 

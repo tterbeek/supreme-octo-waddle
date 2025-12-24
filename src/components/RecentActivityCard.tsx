@@ -7,6 +7,7 @@ import { formatDistance, type UnitSystem } from "../lib/units";
 type RecentActivityCardProps = {
   activity: any;
   signedNoteImages: Record<string, string>;
+  signedNoteThumbs: Record<string, string>;
   noteImageOrientation: Record<string, "portrait" | "landscape">;
   onEdit: (activity: any) => void;
   onNoteImageLoad: (activityId: string, naturalWidth: number, naturalHeight: number) => void;
@@ -27,6 +28,7 @@ type RecentActivityCardProps = {
 export default function RecentActivityCard({
   activity,
   signedNoteImages,
+  signedNoteThumbs,
   noteImageOrientation,
   onEdit,
   onNoteImageLoad,
@@ -143,7 +145,10 @@ export default function RecentActivityCard({
           </div>
         </div>
 
-        {(activity.notes?.trim() || signedNoteImages[activity.id]) && (
+        {(() => {
+          const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
+          return activity.notes?.trim() || thumbUrl;
+        })() && (
           <div className="mt-3 space-y-2">
             {activity.notes?.trim() && (
               <p
@@ -157,10 +162,14 @@ export default function RecentActivityCard({
               </p>
             )}
 
-            {signedNoteImages[activity.id] && (
+            {(() => {
+              const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
+              const fullUrl = signedNoteImages[activity.id] || thumbUrl;
+              if (!thumbUrl) return null;
+              return (
               <div>
                 <img
-                  src={signedNoteImages[activity.id]}
+                  src={thumbUrl}
                   alt="Activity note"
                   loading="lazy"
                   className={`
@@ -171,11 +180,11 @@ export default function RecentActivityCard({
                         : "w-full max-h-56 object-cover"
                     }
                   `}
-                  onClick={(e) => onImageClick(e, signedNoteImages[activity.id], activity)}
+                  onClick={(e) => fullUrl && onImageClick(e, fullUrl, activity)}
                   onTouchStart={onImageTouchStart}
                   onTouchMove={onImageTouchMove}
                   onTouchEnd={(e) =>
-                    onImageTouchEnd(e, signedNoteImages[activity.id], activity)
+                    fullUrl && onImageTouchEnd(e, fullUrl, activity)
                   }
                   onLoad={(e) => {
                     const { naturalWidth, naturalHeight } = e.currentTarget;
@@ -183,7 +192,8 @@ export default function RecentActivityCard({
                   }}
                 />
               </div>
-            )}
+              );
+            })()}
           </div>
         )}
       </div>

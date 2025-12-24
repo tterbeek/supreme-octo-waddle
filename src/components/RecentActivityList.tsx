@@ -4,6 +4,7 @@ import type { UnitSystem } from "../lib/units";
 type RecentActivityListProps = {
   activities: any[];
   signedNoteImages: Record<string, string>;
+  signedNoteThumbs: Record<string, string>;
   noteImageOrientation: Record<string, "portrait" | "landscape">;
   setNoteImageOrientation: React.Dispatch<
     React.SetStateAction<Record<string, "portrait" | "landscape">>
@@ -26,6 +27,7 @@ type RecentActivityListProps = {
 export default function RecentActivityList({
   activities,
   signedNoteImages,
+  signedNoteThumbs,
   noteImageOrientation,
   setNoteImageOrientation,
   unitSystem,
@@ -47,6 +49,7 @@ export default function RecentActivityList({
             key={a.id}
             activity={a}
             signedNoteImages={signedNoteImages}
+            signedNoteThumbs={signedNoteThumbs}
             noteImageOrientation={noteImageOrientation}
             onEdit={(activity) => onEdit(activity)}
             onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {

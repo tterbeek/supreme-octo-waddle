@@ -42,24 +42,68 @@ export async function compressImage(file: File) {
   });
 }
 
+export async function createThumbnail(
+  file: File,
+  maxSize = 480,
+  quality = 0.7
+): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+
+  const scale = Math.min(maxSize / bitmap.width, maxSize / bitmap.height, 1);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas not supported");
+
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return reject(new Error("Thumbnail creation failed"));
+        resolve(blob);
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+}
+
 export async function uploadActivityImage(
   userId: string,
   activityId: string,
-  file: Blob
+  file: Blob,
+  thumbnail?: Blob | null
 ) {
-  const path = `${userId}/${activityId}-${Date.now()}.jpg`;
-  const { error } = await supabase.storage
-    .from(NOTE_BUCKET)
-    .upload(path, file, {
+  const fileName = `${activityId}-${Date.now()}.jpg`;
+  const path = `${userId}/${fileName}`;
+  const thumbPath = thumbnail ? `${userId}/thumb/${fileName}` : null;
+
+  const [imageResult, thumbResult] = await Promise.all([
+    supabase.storage.from(NOTE_BUCKET).upload(path, file, {
       contentType: "image/jpeg",
       upsert: true,
-    });
+    }),
+    thumbnail
+      ? supabase.storage.from(NOTE_BUCKET).upload(thumbPath as string, thumbnail, {
+          contentType: "image/jpeg",
+          upsert: true,
+        })
+      : Promise.resolve({ error: null }),
+  ]);
 
-  if (error) {
-    throw error;
+  if (imageResult.error) {
+    throw imageResult.error;
   }
 
-  return path;
+  if (thumbResult.error) {
+    throw thumbResult.error;
+  }
+
+  return { imagePath: path, thumbPath };
 }
 
 export async function deleteActivityImages(paths: string[]) {

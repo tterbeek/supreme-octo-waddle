@@ -9,6 +9,7 @@ import { getCurrentUser } from "../services/auth.service";
 import { fetchActivityPreference } from "../services/quickLog.service";
 import {
   compressImage,
+  createThumbnail,
   uploadActivityImage,
   deleteActivityImages,
 } from "../services/activityMedia.service";
@@ -50,6 +51,7 @@ export function useActivityEditForm({
   const [effort, setEffort] = useState(activity.effort || 3);
   const [note, setNote] = useState(activity.notes || "");
   const [noteImageUrl, setNoteImageUrl] = useState(activity.note_image_url || null);
+  const [noteThumbImageUrl, setNoteThumbImageUrl] = useState(activity.note_thumb_image_url || null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -62,6 +64,7 @@ export function useActivityEditForm({
   const [userId, setUserId] = useState<string | null>(null);
   const startY = useRef<number | null>(null);
   const originalImagePath = useRef<string | null>(activity.note_image_url || null);
+  const originalThumbPath = useRef<string | null>(activity.note_thumb_image_url || null);
   const openedAtRef = useRef<number>(Date.now());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -146,6 +149,7 @@ export function useActivityEditForm({
     setSaving(true);
     setUploadError(null);
     let imageUrl = noteImageUrl;
+    let thumbUrl = noteThumbImageUrl;
     const deletePaths: string[] = [];
 
     const distanceValue =
@@ -174,23 +178,40 @@ export function useActivityEditForm({
 
         setUploadProgress(40);
 
+        const thumbnail = await createThumbnail(selectedFile);
+
+        setUploadProgress(55);
+
         const currentUserId = await ensureUserId();
         if (!currentUserId) throw new Error("No user");
 
-        const path = await uploadActivityImage(currentUserId, activity.id, compressed);
+        const { imagePath, thumbPath } = await uploadActivityImage(
+          currentUserId,
+          activity.id,
+          compressed,
+          thumbnail
+        );
 
         setUploadProgress(80);
-        imageUrl = path;
+        imageUrl = imagePath;
+        thumbUrl = thumbPath || null;
 
         if (originalImagePath.current && originalImagePath.current !== imageUrl) {
           deletePaths.push(originalImagePath.current);
+        }
+        if (originalThumbPath.current && originalThumbPath.current !== thumbUrl) {
+          deletePaths.push(originalThumbPath.current);
         }
       }
 
       if (noteImageUrl === null && selectedFile === null && activity.note_image_url) {
         imageUrl = null;
+        thumbUrl = null;
         if (originalImagePath.current) {
           deletePaths.push(originalImagePath.current);
+        }
+        if (originalThumbPath.current) {
+          deletePaths.push(originalThumbPath.current);
         }
       }
 
@@ -204,6 +225,7 @@ export function useActivityEditForm({
         effort: effortValue,
         notes: note,
         note_image_url: imageUrl,
+        note_thumb_image_url: thumbUrl,
       });
 
       if (error) throw error;
@@ -217,9 +239,11 @@ export function useActivityEditForm({
           console.warn("[EditActivity] Failed to delete old images", removeErr?.message || removeErr);
         } finally {
           originalImagePath.current = imageUrl;
+          originalThumbPath.current = thumbUrl;
         }
       } else {
         originalImagePath.current = imageUrl;
+        originalThumbPath.current = thumbUrl;
       }
 
       const { error: equipmentError } = await replaceActivityEquipment(
@@ -249,9 +273,14 @@ export function useActivityEditForm({
   const handleDelete = async () => {
     if (!confirm("Delete this activity?")) return;
 
-    if (activity.note_image_url) {
+    const pathsToDelete = [
+      activity.note_image_url,
+      activity.note_thumb_image_url,
+    ].filter(Boolean) as string[];
+
+    if (pathsToDelete.length > 0) {
       try {
-        await deleteActivityImages([activity.note_image_url]);
+        await deleteActivityImages(pathsToDelete);
       } catch (removeErr: any) {
         console.warn("[EditActivity] Could not delete image from storage", removeErr?.message || removeErr);
       }
@@ -354,6 +383,8 @@ export function useActivityEditForm({
     setNote,
     noteImageUrl,
     setNoteImageUrl,
+    noteThumbImageUrl,
+    setNoteThumbImageUrl,
     selectedFile,
     setSelectedFile,
     uploading,
