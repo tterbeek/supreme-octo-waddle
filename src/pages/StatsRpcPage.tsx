@@ -126,6 +126,9 @@ export default function StatsRpcPage() {
   const [selectedMetric, setSelectedMetric] = useState<
     Record<string, "distance" | "duration">
   >({});
+  const [activityPreferences, setActivityPreferences] = useState<
+    Record<string, "distance" | "duration">
+  >({});
   const [trendsLoading, setTrendsLoading] = useState(false);
   const PERIOD_ORDER: Record<"week" | "month" | "year", number> = {
     week: 1,
@@ -241,6 +244,33 @@ export default function StatsRpcPage() {
   }, []);
 
   useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    const loadPrefs = async () => {
+      const { data, error } = await supabase
+        .from("activity_preferences")
+        .select("activity_type, default_metric")
+        .eq("user_id", userId);
+      if (error) {
+        console.error("[Trends] Could not load activity preferences", error.message);
+        return;
+      }
+      if (cancelled) return;
+      const map: Record<string, "distance" | "duration"> = {};
+      (data || []).forEach((row) => {
+        if (row.default_metric === "distance" || row.default_metric === "duration") {
+          map[row.activity_type] = row.default_metric;
+        }
+      });
+      setActivityPreferences(map);
+    };
+    loadPrefs();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
     if (!hasDoneOnboarding) return;
     if (!hasSeen("stats_trends_info")) {
       showTooltip("stats_trends_info");
@@ -302,6 +332,27 @@ export default function StatsRpcPage() {
 
   const canToggle = (meta: TrendMeta) => meta.has_distance && meta.has_duration;
 
+  const fieldToMetric = (field: string | undefined): "distance" | "duration" | null => {
+    if (field === "distance_km") return "distance";
+    if (field === "duration_min") return "duration";
+    return null;
+  };
+
+  const metaHasMetric = (meta: TrendMeta, metric: "distance" | "duration") =>
+    metric === "distance" ? meta.has_distance : meta.has_duration;
+
+  const getDefaultMetric = (meta: TrendMeta): "distance" | "duration" | null => {
+    const pref = activityPreferences[meta.activity_type];
+    if (pref && metaHasMetric(meta, pref)) return pref;
+    const config = ACTIVITY_TYPES[meta.activity_type];
+    const configDefault = fieldToMetric(config?.defaultFields?.[0]);
+    if (configDefault && metaHasMetric(meta, configDefault)) return configDefault;
+    if (meta.default_metric && metaHasMetric(meta, meta.default_metric)) return meta.default_metric;
+    if (meta.has_duration) return "duration";
+    if (meta.has_distance) return "distance";
+    return null;
+  };
+
   useEffect(() => {
     if (activeTab !== "trends" || !userId) return;
 
@@ -321,19 +372,24 @@ export default function StatsRpcPage() {
   useEffect(() => {
     if (!trendMeta.length || !userId) return;
 
-    trendMeta.forEach((meta) => {
-      if (!meta.default_metric) return;
-      setSelectedMetric((prev) =>
-        prev[meta.activity_type]
-          ? prev
-          : { ...prev, [meta.activity_type]: meta.default_metric as "distance" | "duration" }
-      );
+    setSelectedMetric((prev) => {
+      const next = { ...prev };
+      trendMeta.forEach((meta) => {
+        const def = getDefaultMetric(meta);
+        if (!def) return;
+        const current = prev[meta.activity_type];
+        if (!current || !metaHasMetric(meta, current) || current !== def) {
+          next[meta.activity_type] = def;
+        }
+      });
+      return next;
     });
 
     const missing = trendMeta.filter(
-      (meta) =>
-        meta.default_metric &&
-        !trendData[`${meta.activity_type}:${meta.default_metric}`]
+      (meta) => {
+        const def = getDefaultMetric(meta);
+        return def && !trendData[`${meta.activity_type}:${def}`];
+      }
     );
 
     if (!missing.length) return;
@@ -345,16 +401,17 @@ export default function StatsRpcPage() {
       try {
         await Promise.all(
           missing.map(async (meta) => {
-            if (!meta.default_metric) return;
+            const def = getDefaultMetric(meta);
+            if (!def) return;
             const series = await fetchTrendSeries(
               userId,
               meta.activity_type,
-              meta.default_metric
+              def
             );
             if (cancelled) return;
             setTrendData((prev) => ({
               ...prev,
-              [`${meta.activity_type}:${meta.default_metric}`]: series,
+              [`${meta.activity_type}:${def}`]: series,
             }));
           })
         );
@@ -376,7 +433,7 @@ export default function StatsRpcPage() {
       cancelled = true;
     };
     // trendData is intentionally included to avoid refetching loaded series
-  }, [trendMeta, trendData, userId]);
+  }, [trendMeta, trendData, userId, activityPreferences]);
 
   const onToggleMetric = async (
     activityType: string,
@@ -401,7 +458,7 @@ export default function StatsRpcPage() {
     }
   };
 
-  const metasWithDefault = trendMeta.filter((meta) => meta.default_metric);
+  const metasWithDefault = trendMeta.filter((meta) => getDefaultMetric(meta));
 
   const hasTrendRows = metasWithDefault.some((meta) => {
     const activeMetric =
@@ -534,11 +591,12 @@ export default function StatsRpcPage() {
                 )}
 
                 {metasWithDefault.map((meta) => {
-                  if (!meta.default_metric) return null;
+                  const defaultMetric = getDefaultMetric(meta);
+                  if (!defaultMetric) return null;
                   const cfg = ACTIVITY_TYPES[meta.activity_type];
                   const Icon = cfg.Icon;
                   const activeMetric =
-                    selectedMetric[meta.activity_type] ?? meta.default_metric;
+                    selectedMetric[meta.activity_type] ?? defaultMetric;
                   const key = `${meta.activity_type}:${activeMetric}`;
                   const series = trendData[key] || [];
                   if (!series.length) return null;
