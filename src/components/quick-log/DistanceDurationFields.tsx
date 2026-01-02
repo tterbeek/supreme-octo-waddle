@@ -10,6 +10,9 @@ type DistanceDurationFieldsProps = {
   onDurationChange: (value: string) => void;
   onShowDistance: () => void;
   onShowDuration: () => void;
+  forceShowOptional?: boolean;
+  suppressAddButtons?: boolean;
+  dense?: boolean;
 };
 
 export default function DistanceDurationFields({
@@ -24,11 +27,21 @@ export default function DistanceDurationFields({
   onDurationChange,
   onShowDistance,
   onShowDuration,
+  forceShowOptional = false,
+  suppressAddButtons = false,
+  dense = false,
 }: DistanceDurationFieldsProps) {
+  const distanceVisible =
+    defaultFields.includes("distance_km") || showOptionalDistance || forceShowOptional;
+  const durationVisible =
+    defaultFields.includes("duration_min") || showOptionalDuration || forceShowOptional;
+  const spacing = dense ? "mb-3" : "mb-4";
+  const inputPadding = dense ? "p-2.5" : "p-2";
+
   return (
     <>
-      {(defaultFields.includes("distance_km") || showOptionalDistance) && (
-        <div className="form-group mb-4">
+      {distanceVisible && (
+        <div className={`form-group ${spacing}`}>
           <label className="text-sm text-gray-600">
             Distance ({unitSystem === "imperial" ? "mi" : "km"})
           </label>
@@ -37,12 +50,13 @@ export default function DistanceDurationFields({
             inputMode="decimal"
             value={displayDistance}
             onChange={(e) => onDistanceChange(e.target.value)}
-            className="w-full border rounded-md p-2"
+            className={`w-full border rounded-md ${inputPadding}`}
           />
         </div>
       )}
 
-      {!defaultFields.includes("distance_km") &&
+      {!suppressAddButtons &&
+        !defaultFields.includes("distance_km") &&
         optionalFields.includes("distance_km") &&
         !showOptionalDistance && (
           <button
@@ -52,22 +66,23 @@ export default function DistanceDurationFields({
           >
             + Add distance
           </button>
-      )}
+        )}
 
-      {(defaultFields.includes("duration_min") || showOptionalDuration) && (
-        <div className="form-group mb-4">
+      {durationVisible && (
+        <div className={`form-group ${spacing}`}>
           <label className="text-sm text-gray-600">Duration (min)</label>
           <input
             type="number"
             inputMode="numeric"
             value={duration}
             onChange={(e) => onDurationChange(e.target.value)}
-            className="w-full border rounded-md p-2"
+            className={`w-full border rounded-md ${inputPadding}`}
           />
         </div>
       )}
 
-      {!defaultFields.includes("duration_min") &&
+      {!suppressAddButtons &&
+        !defaultFields.includes("duration_min") &&
         optionalFields.includes("duration_min") &&
         !showOptionalDuration && (
           <button

@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Trash2, Camera } from "lucide-react";
+import { Trash2, Camera, ChevronDown } from "lucide-react";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { useActivityEditForm } from "../../hooks/useActivityEditForm";
 import EquipmentDialog from "../../components/EquipmentDialog";
-import ActivityForm from "./ActivityForm";
+import DistanceDurationFields from "../../components/quick-log/DistanceDurationFields";
+import FeelingSelector from "../../components/quick-log/FeelingSelector";
+import EffortSelector from "../../components/quick-log/EffortSelector";
 
 type EditActivityModalProps = {
   activity: any; // existing activity record
@@ -72,6 +74,7 @@ export default function EditActivityModal({
     onDeleted,
   });
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const equipmentSummary = (() => {
     if (selectedEquipmentIds.length === 0) return "";
     const first = equipment.find((item) => item.id === selectedEquipmentIds[0]);
@@ -102,7 +105,7 @@ export default function EditActivityModal({
             transform: `translateY(${dragY}px)`,
             touchAction: "pan-y",
           }}
-          className={`w-full max-w-md max-h-[90vh] overflow-y-auto bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 
+          className={`w-full max-w-md sm:max-w-2xl max-h-[96vh] overflow-y-auto bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 
       ${animateIn ? "translate-y-0" : "translate-y-full"} animate-fadeIn 
       shadow-lg will-change-transform sm:rounded-2xl sm:mt-20`}
         >
@@ -112,83 +115,149 @@ export default function EditActivityModal({
           Edit Activity
         </h2>
 
-        <ActivityForm
-          values={{
-            title,
-            date,
-            distanceDisplay,
-            duration,
-            feeling: rating,
-            effort,
-            activityType,
-            defaultFields,
-            optionalFields,
-            showOptionalDistance,
-            showOptionalDuration,
-          }}
-          unitSystem={unitSystem}
-          onTitleChange={setTitle}
-          onDateChange={setDate}
-          onDistanceChange={handleDistanceChange}
-          onDurationChange={setDuration}
-          onShowDistance={() => setShowOptionalDistance(true)}
-          onShowDuration={() => setShowOptionalDuration(true)}
-          onFeelingChange={setRating}
-          onEffortChange={setEffort}
-          equipmentSummary={equipmentSummary}
-          onEquipmentClick={() => setShowEquipmentDialog(true)}
-        />
+        <div className="space-y-5">
+          <div>
+            <label className="text-sm text-gray-700">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full border border-warm-200 rounded-lg p-3 mt-1"
+            />
+          </div>
 
-        {/* Notes */}
-        <label className="text-sm text-gray-600">Notes</label>
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={3}
-          placeholder="Add a short note about your activity..."
-          className="w-full border border-warm-200 rounded-md p-2 mb-4 resize-none focus:ring-1 focus:ring-movenotes-primary"
-        />
+          <div className="space-y-4">
+            <FeelingSelector value={rating} onChange={setRating} />
+            {["run", "ride", "swim", "hike"].includes(activityType) && (
+              <EffortSelector value={effort} onChange={setEffort} />
+            )}
+          </div>
 
-        {/* Photo attach / clear */}
-        <div className="mb-4 flex items-center gap-3 flex-wrap">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
-          >
-            <Camera className="w-4 h-4 text-amber-700" />
-            <span>Snap or attach</span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              setSelectedFile(file);
-              setUploadError(null);
-              setUploadProgress(0);
-            }}
-            className="hidden"
-          />
-          {noteImageUrl && (
+          <div className="pb-2">
             <button
               type="button"
-              className="text-xs text-red-600 underline"
+              className="w-full flex items-center justify-between text-gray-800"
               onClick={() => {
-                setNoteImageUrl(null);
-                setSelectedFile(null);
+                const next = !detailsOpen;
+                setDetailsOpen(next);
+                if (next) {
+                  setShowOptionalDistance(true);
+                  setShowOptionalDuration(true);
+                }
               }}
             >
-              Remove current image
+              <div className="text-left">
+                <div className="text-sm font-medium">Details</div>
+                <div className="text-xs text-gray-400">
+                  Distance, time, equipment
+                </div>
+              </div>
+              <ChevronDown
+                className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                  detailsOpen ? "rotate-180" : ""
+                }`}
+              />
             </button>
-          )}
-          {selectedFile && (
-            <span className="text-xs text-gray-600">
-              Selected: {selectedFile.name}
-            </span>
-          )}
+            <div
+              className={`overflow-hidden transition-all duration-200 ${
+                detailsOpen ? "max-h-[900px] opacity-100 pt-3" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm text-gray-600">Date</label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full border border-warm-200 rounded-lg p-2.5"
+                  />
+                </div>
+
+                <DistanceDurationFields
+                  defaultFields={defaultFields}
+                  optionalFields={optionalFields}
+                  showOptionalDistance={showOptionalDistance}
+                  showOptionalDuration={showOptionalDuration}
+                  displayDistance={distanceDisplay}
+                  duration={duration}
+                  unitSystem={unitSystem}
+                  onDistanceChange={handleDistanceChange}
+                  onDurationChange={setDuration}
+                  onShowDistance={() => {}}
+                  onShowDuration={() => {}}
+                  forceShowOptional
+                  suppressAddButtons
+                  dense
+                />
+
+                <div>
+                  <div className="text-sm text-gray-600 mb-1">Equipment</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowEquipmentDialog(true)}
+                    className="w-full border border-warm-200 rounded-lg p-3 text-left text-gray-800"
+                  >
+                    {equipmentSummary || <span className="text-gray-400">None selected</span>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <label className="text-sm text-gray-700">Note</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={5}
+              placeholder="How did it feel?"
+              className="w-full rounded-xl bg-white/70 border border-warm-200/70 p-4 text-base text-gray-800 placeholder:text-gray-400 resize-none focus:ring-2 focus:ring-movenotes-primary/30 focus:border-movenotes-primary/30 transition"
+            />
+          </div>
+
+          {/* Photo attach / clear */}
+          <div className="flex items-center gap-3 flex-wrap mb-6">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+            >
+              <Camera className="w-4 h-4 text-amber-700" />
+              <span>Snap or attach</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setSelectedFile(file);
+                setUploadError(null);
+                setUploadProgress(0);
+              }}
+              className="hidden"
+            />
+            {noteImageUrl && (
+              <button
+                type="button"
+                className="text-xs text-red-600 underline"
+                onClick={() => {
+                  setNoteImageUrl(null);
+                  setSelectedFile(null);
+                }}
+              >
+                Remove current image
+              </button>
+            )}
+            {selectedFile && (
+              <span className="text-xs text-gray-600">
+                Selected: {selectedFile.name}
+              </span>
+            )}
+          </div>
         </div>
 
         {uploadError && (
@@ -211,7 +280,7 @@ export default function EditActivityModal({
         <button
           onClick={handleSave}
           disabled={saving}
-          className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50"
+          className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50 mt-4"
         >
           {saving ? "Saving..." : "Save Changes"}
         </button>

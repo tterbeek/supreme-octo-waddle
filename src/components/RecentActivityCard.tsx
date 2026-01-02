@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Frown, Laugh, Meh, Smile, Zap } from "lucide-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
@@ -41,6 +42,7 @@ export default function RecentActivityCard({
   onImageTouchEnd,
   disableSwipe = false,
 }: RecentActivityCardProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const typeConfig = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES["other"];
   const TypeIcon = typeConfig.Icon;
   const formattedDistance =
@@ -58,6 +60,12 @@ export default function RecentActivityCard({
       ? `${first.name.slice(0, maxLen - 3)}...`
       : first.name;
   })();
+  const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
+  const fullUrl = signedNoteImages[activity.id] || thumbUrl;
+
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [thumbUrl]);
 
   return (
     <SwipeActions onEdit={() => onEdit(activity)} disabled={disableSwipe}>
@@ -145,10 +153,7 @@ export default function RecentActivityCard({
           </div>
         </div>
 
-        {(() => {
-          const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
-          return activity.notes?.trim() || thumbUrl;
-        })() && (
+        {(activity.notes?.trim() || thumbUrl) && (
           <div className="mt-3 space-y-2">
             {activity.notes?.trim() && (
               <p
@@ -162,23 +167,20 @@ export default function RecentActivityCard({
               </p>
             )}
 
-            {(() => {
-              const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
-              const fullUrl = signedNoteImages[activity.id] || thumbUrl;
-              if (!thumbUrl) return null;
-              return (
+            {thumbUrl && (
               <div>
                 <img
                   src={thumbUrl}
                   alt="Activity note"
                   loading="lazy"
                   className={`
-                    rounded-xl border border-warm-200 shadow-sm
+                    rounded-xl border border-warm-200 shadow-sm transition-opacity duration-200
                     ${
                       noteImageOrientation[activity.id] === "portrait"
                         ? "max-h-80 w-auto max-w-full mx-auto object-contain"
                         : "w-full max-h-56 object-cover"
                     }
+                    ${imageLoaded ? "opacity-100" : "opacity-0"}
                   `}
                   onClick={(e) => fullUrl && onImageClick(e, fullUrl, activity)}
                   onTouchStart={onImageTouchStart}
@@ -189,11 +191,11 @@ export default function RecentActivityCard({
                   onLoad={(e) => {
                     const { naturalWidth, naturalHeight } = e.currentTarget;
                     onNoteImageLoad(activity.id, naturalWidth, naturalHeight);
+                    setImageLoaded(true);
                   }}
                 />
               </div>
-              );
-            })()}
+            )}
           </div>
         )}
       </div>

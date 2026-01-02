@@ -43,9 +43,13 @@ export function useActivityEditForm({
   const [preference, setPreference] = useState<ActivityPreference | undefined>();
   const baseFields = resolveActivityFields(activityType, preference);
   const { defaultFields, optionalFields } = resolveEditFields(baseFields, activity);
-  const [showOptionalDistance, setShowOptionalDistance] = useState(false);
+  const [showOptionalDistance, setShowOptionalDistance] = useState(
+    activity.distance_km != null
+  );
   const [duration, setDuration] = useState(activity.duration_min || "");
-  const [showOptionalDuration, setShowOptionalDuration] = useState(false);
+  const [showOptionalDuration, setShowOptionalDuration] = useState(
+    activity.duration_min != null
+  );
   const [date, setDate] = useState(activity.date || "");
   const [rating, setRating] = useState(activity.feeling || 3);
   const [effort, setEffort] = useState(activity.effort || 3);
@@ -101,8 +105,8 @@ export function useActivityEditForm({
 
   useEffect(() => {
     let cancelled = false;
-    setShowOptionalDistance(false);
-    setShowOptionalDuration(false);
+    setShowOptionalDistance(activity.distance_km != null);
+    setShowOptionalDuration(activity.duration_min != null);
     setEquipment([]);
     setSelectedEquipmentIds([]);
 
