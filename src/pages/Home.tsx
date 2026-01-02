@@ -5,17 +5,14 @@ import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
 import AddNoteModal from "../components/AddNoteModal";
 import EditActivityModal from "../features/activities/EditActivityModal";
-import GoalsSection from "../components/GoalsSection";
-import LogCTA from "../components/LogCTA";
 import SearchBar from "../components/SearchBar";
 import RecentActivityCard from "../components/RecentActivityCard";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
 import { getCurrentUser } from "../services/auth.service";
-import { fetchActivitiesForGoals, restoreActivity } from "../services/activities.service";
+import { restoreActivity } from "../services/activities.service";
 import { useHomeFeed } from "../hooks/useHomeFeed";
-import { useHomeGoals } from "../hooks/useHomeGoals";
 import { useNoteImages } from "../hooks/useNoteImages";
 import { useLightbox } from "../hooks/useLightbox";
 import { useHomeNotes } from "../hooks/useHomeNotes";
@@ -23,7 +20,7 @@ import { useHomeModals } from "../hooks/useHomeModals";
 
 const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
-export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean }) {
+export default function Home() {
   const { unitSystem } = useUnitSystem();
 
   // --------------------------------------------------
@@ -31,12 +28,6 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   // --------------------------------------------------
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Activities used for goals (last 60 days) and goals state
-  const [activitiesForGoals, setActivitiesForGoals] = useState<any[]>([]);
-  const { goals, selectedGoals, goalStats, refreshGoals } = useHomeGoals(
-    userId,
-    useRpcGoals
-  );
   const {
     signedNoteImages,
     signedNoteThumbs,
@@ -91,33 +82,27 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
     activities,
     filteredActivities,
     refresh: refreshFeed,
-    initialFeedLoaded,
     searchOpen,
     setSearchOpen,
     searchTerm,
     setSearchTerm,
   } = useHomeFeed(userId);
 
+  const openQuickLog = () => {
+    hideTooltip();
+    setSelectedType((prev) => prev ?? "run");
+    setShowQuickLog(true);
+  };
+
   async function refreshActivities() {
     if (!userId) return;
-
-    await refreshGoals();
-
-    if (!useRpcGoals) {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 60);
-      const cutoffStr = cutoff.toISOString().split("T")[0];
-
-      const { data: goalActs } = await fetchActivitiesForGoals(userId, cutoffStr);
-      setActivitiesForGoals(goalActs || []);
-    }
 
     await refreshFeed();
   }
 
 
   // --------------------------------------------------
-  // INITIAL LOAD: user → goals → activitiesForGoals + feed
+  // INITIAL LOAD: user → feed
   // --------------------------------------------------
   useEffect(() => {
     const load = async () => {
@@ -126,19 +111,6 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
         if (!user) return;
 
         setUserId(user.id);
-
-        await refreshGoals();
-
-        if (!useRpcGoals) {
-          // 3b) Activities for goals (last 60 days) for client-side calc
-          const cutoff = new Date();
-          cutoff.setDate(cutoff.getDate() - 60);
-          const cutoffStr = cutoff.toISOString().split("T")[0];
-
-          const { data: goalActs } = await fetchActivitiesForGoals(user.id, cutoffStr);
-
-          setActivitiesForGoals(goalActs || []);
-        }
 
         await refreshFeed();
       } finally {
@@ -150,7 +122,7 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   }, []);
 
   // --------------------------------------------------
-  // GOALS FOR HOMEPAGE (max 2 shown, chosen by user)
+  // SEARCH TOGGLE
   // --------------------------------------------------
   const toggleSearch = () => {
     if (searchOpen) {
@@ -170,10 +142,6 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
-  const showFirstLogPrompt =
-    hasDoneOnboarding && activities.length === 0 && initialFeedLoaded;
-
-  // Tooltip prompts removed on Home
 
   // --------------------------------------------------
   // DELETE / UNDO
@@ -201,36 +169,17 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
 
 
         {/* -------------------------------------------------- */}
-        {/* HOME GOALS SECTION (above QuickLog buttons)       */}
-        {/* -------------------------------------------------- */}
-        <GoalsSection
-          goals={goals}
-          goalStats={goalStats}
-          selectedGoals={selectedGoals}
-          useRpcGoals={useRpcGoals}
-          activitiesForGoals={activitiesForGoals}
-        />
-
-        <LogCTA
-          showFirstLogPrompt={showFirstLogPrompt}
-          setShowTypeSelector={(open) => {
-            if (open) hideTooltip();
-            setShowTypeSelector(open);
-          }}
-        />
-
-        {/* -------------------------------------------------- */}
         {/* RECENT HISTORY                                     */}
         {/* -------------------------------------------------- */}
         <SearchBar
           searchOpen={searchOpen}
           searchTerm={searchTerm}
           setSearchOpen={setSearchOpen}
-          setSearchTerm={setSearchTerm}
-          onToggle={toggleSearch}
-        />
+        setSearchTerm={setSearchTerm}
+        onToggle={toggleSearch}
+      />
 
-        <div className="flex flex-col gap-3 mt-2">
+        <div className="flex flex-col gap-3 mt-1">
           {filteredActivities.map((a, idx) => {
             const showAfterLogTooltip = visible === "after_first_log" && idx === 0;
             return (
@@ -263,6 +212,19 @@ export default function Home({ useRpcGoals = false }: { useRpcGoals?: boolean })
             );
           })}
         </div>
+
+        <button
+          type="button"
+          aria-label="Add activity"
+          onClick={openQuickLog}
+          className="fixed z-40 rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center text-2xl w-14 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
+          style={{
+            right: "calc(16px + env(safe-area-inset-right))",
+            bottom: "calc(90px + env(safe-area-inset-bottom))",
+          }}
+        >
+          +
+        </button>
 
         {/* -------------------------------------------------- */}
         {/* MODALS & TOASTS                                    */}

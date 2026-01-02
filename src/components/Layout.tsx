@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import HeaderLogo from "./HeaderLogo";
 import HamburgerButton from "../components/HamburgerButton";
@@ -16,6 +17,12 @@ export default function Layout({
 }) {
   const { showBanner, handleInstallClick, handleDismiss } =
     usePwaInstallBanner();
+  const location = useLocation();
+
+  const navItems = [
+    { to: "/", label: "Journal" },
+    { to: "/stats", label: "Insights" },
+  ];
 
   return (
     <div className="relative min-h-screen bg-movenotes-bg">
@@ -31,7 +38,7 @@ export default function Layout({
         mx-auto 
         w-full 
         max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl 
-        px-4 pt-2
+        px-4 pt-2 pb-20
       ">
         {/* Center logo */}
         <div className="flex justify-center">
@@ -46,6 +53,33 @@ export default function Layout({
 
       {/* Global sidebar */}
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      {/* Bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-movenotes-bg/95 backdrop-blur border-t border-movenotes-border">
+        <div className="mx-auto max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-6 py-3 flex items-center gap-4">
+          {navItems.map((item) => {
+            const isActive =
+              location.pathname === item.to ||
+              location.pathname.startsWith(`${item.to}/`) ||
+              (item.to === "/stats" && location.pathname.startsWith("/stats-"));
+
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex-1 text-center text-sm font-medium rounded-full py-2 transition ${
+                  isActive
+                    ? "bg-movenotes-primary/15 text-movenotes-primary shadow-sm border border-movenotes-primary/20"
+                    : "text-movenotes-text/80 hover:text-movenotes-text bg-transparent"
+                }`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
 
       {showBanner && (
         <PwaInstallBanner

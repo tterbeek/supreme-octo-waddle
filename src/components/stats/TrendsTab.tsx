@@ -54,13 +54,10 @@ export default function TrendsTab({
       )}
 
       {!error && (
-        <div className="space-y-10 mt-6">
-          <h2 className="text-xl font-semibold text-movenotes-primary mb-2 text-center">
+        <div className="space-y-8 mt-3">
+          <h2 className="text-xl font-semibold text-movenotes-primary mb-1 text-center">
             Your movement over time
           </h2>
-          <p className="text-center text-movenotes-muted text-sm mb-6">
-            Weekly trends for each activity you've logged recently.
-          </p>
 
           {!hasTrendRows && !trendsLoading && (
             <p className="text-center text-movenotes-muted mt-8">

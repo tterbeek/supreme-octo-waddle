@@ -148,7 +148,7 @@ export default function App() {
                     path="/"
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-                        <Home useRpcGoals />
+                        <Home />
                       </Layout>
                     }
                   />
@@ -166,7 +166,7 @@ export default function App() {
                     path="/home-rpc"
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
-                        <Home useRpcGoals />
+                        <Home />
                       </Layout>
                     }
                   />

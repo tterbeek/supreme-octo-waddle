@@ -2,10 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   IconX,
-  IconLayoutList,
-  IconChartLine,
   IconSettings,
   IconShare,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import Toast from "./Toast";
 
@@ -104,25 +103,6 @@ export default function Sidebar({
 
           <div className="space-y-2">
             <Link
-              to="/"
-              onClick={onClose}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-movenotes-text hover:bg-warm-100 transition"
-            >
-              <IconLayoutList size={18} strokeWidth={1.7} />
-              <span className="text-sm font-medium">Activity Feed</span>
-            </Link>
-            <Link
-              to="/stats"
-              onClick={onClose}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-movenotes-text hover:bg-warm-100 transition"
-            >
-              <IconChartLine size={18} strokeWidth={1.7} />
-              <span className="text-sm font-medium">Movement Insights</span>
-            </Link>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-warm-200 space-y-2">
-            <Link
               to="/settings"
               onClick={onClose}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-movenotes-text hover:bg-warm-100 transition"
@@ -130,6 +110,16 @@ export default function Sidebar({
               <IconSettings size={18} strokeWidth={1.7} />
               <span className="text-sm font-medium">Settings</span>
             </Link>
+            <a
+              href="/about"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-movenotes-text hover:bg-warm-100 transition"
+            >
+              <IconInfoCircle size={18} strokeWidth={1.7} />
+              <span className="text-sm font-medium">About MoveNotes</span>
+            </a>
             <button
               onClick={handleShare}
               type="button"
