@@ -10,10 +10,14 @@ export default function Layout({
   children,
   menuOpen,
   setMenuOpen,
+  showHamburger = true,
+  showHeaderLogo = true,
 }: {
   children: ReactNode;
   menuOpen: boolean;
   setMenuOpen: (v: boolean) => void;
+  showHamburger?: boolean;
+  showHeaderLogo?: boolean;
 }) {
   const { showBanner, handleInstallClick, handleDismiss } =
     usePwaInstallBanner();
@@ -28,22 +32,25 @@ export default function Layout({
     <div className="relative min-h-screen bg-movenotes-bg">
       
       {/* 🔥 Global hamburger - pinned to viewport left */}
-<div className="fixed top-4 left-4 z-60">
-  <HamburgerButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} />
-</div>
-
+      {showHamburger && (
+        <div className="fixed top-4 left-4 z-60">
+          <HamburgerButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} />
+        </div>
+      )}
 
       {/* 🟡 Centered content (restore your original width) */}
       <div className="
         mx-auto 
         w-full 
         max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl 
-        px-4 pt-2 pb-20
+        px-4 pt-1 pb-20
       ">
         {/* Center logo */}
-        <div className="flex justify-center">
-          <HeaderLogo delay={0} />
-        </div>
+        {showHeaderLogo && (
+          <div id="layout-header-logo" className="flex justify-center -mt-1">
+            <HeaderLogo />
+          </div>
+        )}
 
         {/* Page content */}
         <div className="mt-1">

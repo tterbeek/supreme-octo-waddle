@@ -5,8 +5,8 @@ import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
 import AddNoteModal from "../components/AddNoteModal";
 import EditActivityModal from "../features/activities/EditActivityModal";
-import SearchBar from "../components/SearchBar";
 import RecentActivityCard from "../components/RecentActivityCard";
+import SearchBar from "../components/SearchBar";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
@@ -87,6 +87,19 @@ export default function Home() {
     searchTerm,
     setSearchTerm,
   } = useHomeFeed(userId);
+  useEffect(() => {
+    const logoEl = document.getElementById("layout-header-logo");
+    if (!logoEl) return;
+    logoEl.style.transition = "opacity 200ms ease";
+    logoEl.style.opacity = searchOpen ? "0" : "1";
+    logoEl.style.pointerEvents = searchOpen ? "none" : "auto";
+  }, [searchOpen]);
+  const toggleSearch = () => {
+    if (searchOpen) {
+      setSearchTerm("");
+    }
+    setSearchOpen(!searchOpen);
+  };
 
   const openQuickLog = () => {
     hideTooltip();
@@ -122,16 +135,6 @@ export default function Home() {
   }, []);
 
   // --------------------------------------------------
-  // SEARCH TOGGLE
-  // --------------------------------------------------
-  const toggleSearch = () => {
-    if (searchOpen) {
-      setSearchTerm("");
-    }
-    setSearchOpen(!searchOpen);
-  };
-
-  // --------------------------------------------------
   // SIGNED URLS FOR NOTE IMAGES (feeds)
   // --------------------------------------------------
   useEffect(() => {
@@ -164,9 +167,7 @@ export default function Home() {
   // --------------------------------------------------
   return (
     <div className="min-h-screen bg-movenotes-bg p-1">
-      
       <div className="mt-2">
-
 
         {/* -------------------------------------------------- */}
         {/* RECENT HISTORY                                     */}
@@ -175,9 +176,11 @@ export default function Home() {
           searchOpen={searchOpen}
           searchTerm={searchTerm}
           setSearchOpen={setSearchOpen}
-        setSearchTerm={setSearchTerm}
-        onToggle={toggleSearch}
-      />
+          setSearchTerm={setSearchTerm}
+          onToggle={toggleSearch}
+          alignCenterOnOpen
+          className="z-50 px-0"
+        />
 
         <div className="flex flex-col gap-3 mt-1">
           {filteredActivities.map((a, idx) => {
@@ -217,13 +220,14 @@ export default function Home() {
           type="button"
           aria-label="Add activity"
           onClick={openQuickLog}
-          className="fixed z-40 rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center text-2xl w-14 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
+          className="fixed z-40 rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
           style={{
             right: "calc(16px + env(safe-area-inset-right))",
             bottom: "calc(90px + env(safe-area-inset-bottom))",
           }}
         >
-          +
+          <span className="text-2xl leading-none">+</span>
+          <span className="text-sm font-semibold">Add activity</span>
         </button>
 
         {/* -------------------------------------------------- */}
@@ -331,10 +335,10 @@ export default function Home() {
             }}
             onSkip={() => {
               setShowNotePrompt(false);
-              setShowNoteSkippedToast(true);
-            }}
-          />
-        )}
+            setShowNoteSkippedToast(true);
+          }}
+        />
+      )}
 
         {editActivity && (
           <EditActivityModal

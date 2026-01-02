@@ -165,7 +165,7 @@ export default function StatsRpcPage() {
         />
       )}
 
-      <HeaderLogo withTagline delay={0.2} />
+      <HeaderLogo withTagline />
     </div>
   );
 }
