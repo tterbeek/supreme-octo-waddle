@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "../components/ModalSheet";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
@@ -72,9 +73,11 @@ export default function CalendarPage() {
   const [dayThumbs, setDayThumbs] = useState<Record<string, string>>({});
   const [startOffset, setStartOffset] = useState(-2);
   const [endOffset, setEndOffset] = useState(2);
+  const [quickLogDate, setQuickLogDate] = useState<string | null>(null);
   const { unitSystem } = useUnitSystem();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const scrolledToTodayRef = useRef(false);
+  const expandingRef = useRef(false);
   const {
     signedNoteImages,
     signedNoteThumbs,
@@ -234,6 +237,7 @@ export default function CalendarPage() {
   }, [selectedDayActivities]);
 
   const openQuickLog = () => {
+    setQuickLogDate(selectedDate ?? todayKey);
     setSelectedType(null);
     setShowTypeSelector(true);
   };
@@ -316,22 +320,27 @@ export default function CalendarPage() {
 
   const handleScroll = () => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || expandingRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = el;
-    if (scrollTop < 180 && startOffset > -12) {
+    const threshold = 160;
+    if (scrollTop < threshold && startOffset > -12) {
+      expandingRef.current = true;
       setStartOffset((prev) => prev - 1);
+      setTimeout(() => {
+        expandingRef.current = false;
+      }, 120);
     }
-    if (scrollTop + clientHeight > scrollHeight - 180 && endOffset < 12) {
+    if (scrollTop + clientHeight > scrollHeight - threshold && endOffset < 12) {
+      expandingRef.current = true;
       setEndOffset((prev) => prev + 1);
+      setTimeout(() => {
+        expandingRef.current = false;
+      }, 120);
     }
   };
 
   return (
     <div className="h-screen bg-movenotes-bg flex flex-col">
-      <div className="px-4 pt-3 pb-2">
-        <h1 className="text-xl font-semibold text-movenotes-text">Calendar</h1>
-      </div>
-
       {error && (
         <div className="mx-4 mb-2 rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
           {error}
@@ -383,6 +392,8 @@ export default function CalendarPage() {
                     const hasActivity = entries.length > 0;
                     const backgroundClass = thumbUrl
                       ? ""
+                      : isToday
+                      ? "bg-movenotes-accent text-primary-text"
                       : hasActivity
                       ? "bg-movenotes-primary text-primary-text"
                       : isFuture
@@ -390,10 +401,10 @@ export default function CalendarPage() {
                       : "bg-warm-100";
                     const dayNumberClass = thumbUrl
                       ? "text-primary-text font-semibold"
+                      : isToday
+                      ? "text-primary-text font-semibold"
                       : hasActivity
                       ? "text-primary-text font-semibold"
-                      : isToday
-                      ? "text-movenotes-primary font-semibold"
                       : "text-movenotes-text";
 
                     return (
@@ -401,7 +412,7 @@ export default function CalendarPage() {
                         key={key}
                         type="button"
                         onClick={() => openDay(key)}
-                        className={`relative aspect-square rounded-xl border text-left p-2 flex flex-col items-center justify-center gap-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-movenotes-primary overflow-hidden ${
+                        className={`relative aspect-square rounded-xl border text-center p-2 flex flex-col items-center justify-center gap-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-movenotes-primary overflow-hidden ${
                           entries.length > 0
                             ? `border-movenotes-border ${backgroundClass} hover:border-movenotes-primary/70`
                             : `border-movenotes-border/80 ${backgroundClass} hover:border-movenotes-primary/60`
@@ -416,14 +427,14 @@ export default function CalendarPage() {
                             : undefined
                         }
                       >
-                        <div className="flex items-start justify-between w-full">
-                          <span className={`text-sm ${dayNumberClass}`}>
-                            {dayNumber}
-                          </span>
-                          {isToday && (
-                            <span className="text-[10px] text-movenotes-muted">•</span>
-                          )}
+                        <div className="w-full flex items-center justify-center">
+                          <span className={`text-sm ${dayNumberClass}`}>{dayNumber}</span>
                         </div>
+                        {isToday && (
+                          <span className="absolute top-2 right-2 text-[10px] text-movenotes-muted">
+                            •
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -495,67 +506,90 @@ export default function CalendarPage() {
         </ModalSheet>
       )}
 
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col"
-          onClick={handleLightboxOverlayClick}
+      {selectedDate && (
+        <button
+          type="button"
+          aria-label="Add activity for this day"
+          onClick={() => {
+            setQuickLogDate(selectedDate ?? todayKey);
+            setSelectedType(null);
+            setShowTypeSelector(true);
+          }}
+          className="fixed z-[70] rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
+          style={{
+            right: "calc(16px + env(safe-area-inset-right))",
+            bottom: "calc(90px + env(safe-area-inset-bottom))",
+          }}
         >
-          <button
-            aria-label="Close"
-            className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
-            onClick={(e) => {
-              e.stopPropagation();
-              closeLightbox();
-            }}
-          >
-            ×
-          </button>
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="relative flex items-center justify-center max-w-5xl w-full max-h-[85vh]">
-              <div className="absolute inset-4 rounded-3xl pointer-events-none shadow-md shadow-[rgba(0,0,0,0.15)]" />
-              <img
-                src={lightbox.url}
-                alt="Activity note full size"
-                className="relative max-h-[85vh] max-w-[90vw] w-auto h-auto object-contain rounded-3xl"
-              />
-              <div
-                className="absolute inset-0 rounded-3xl pointer-events-none"
-                style={{
-                  background:
-                    "radial-gradient(circle at center, transparent 60%, rgba(0,0,0,0.18) 100%)",
-                }}
-              />
-            </div>
-          </div>
-          <div className="pb-6 px-6 text-center text-sm text-white/80">
-            {lightbox.activity?.date && (
-              <span>
-                {new Date(lightbox.activity.date).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-            )}
-            {lightbox.activity?.distance_km && <span className="mx-2">•</span>}
-            {lightbox.activity?.distance_km && (
-              <span>
-                {formatDistance(Number(lightbox.activity.distance_km), unitSystem)}
-              </span>
-            )}
-            {lightbox.activity?.duration_min && (
-              <>
-                <span className="mx-2">•</span>
-                <span>{Number(lightbox.activity.duration_min)} min</span>
-              </>
-            )}
-            {lightbox.activity?.type && <span className="mx-2">•</span>}
-            {lightbox.activity?.type && (
-              <span className="uppercase">{lightbox.activity.type}</span>
-            )}
-          </div>
-        </div>
+          <span className="text-2xl leading-none">+</span>
+          <span className="text-sm font-semibold">Add activity</span>
+        </button>
       )}
+
+      {lightbox &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex flex-col"
+            onClick={handleLightboxOverlayClick}
+          >
+            <button
+              aria-label="Close"
+              className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeLightbox();
+              }}
+            >
+              ×
+            </button>
+            <div className="flex-1 flex items-center justify-center p-4">
+              <div className="relative flex items-center justify-center max-w-5xl w-full max-h-[85vh]">
+                <div className="absolute inset-4 rounded-3xl pointer-events-none shadow-md shadow-[rgba(0,0,0,0.15)]" />
+                <img
+                  src={lightbox.url}
+                  alt="Activity note full size"
+                  className="relative max-h-[85vh] max-w-[90vw] w-auto h-auto object-contain rounded-3xl"
+                />
+                <div
+                  className="absolute inset-0 rounded-3xl pointer-events-none"
+                  style={{
+                    background:
+                      "radial-gradient(circle at center, transparent 60%, rgba(0,0,0,0.18) 100%)",
+                  }}
+                />
+              </div>
+            </div>
+            <div className="pb-6 px-6 text-center text-sm text-white/80">
+              {lightbox.activity?.date && (
+                <span>
+                  {new Date(lightbox.activity.date).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              )}
+              {lightbox.activity?.distance_km && <span className="mx-2">•</span>}
+              {lightbox.activity?.distance_km && (
+                <span>
+                  {formatDistance(Number(lightbox.activity.distance_km), unitSystem)}
+                </span>
+              )}
+              {lightbox.activity?.duration_min && (
+                <>
+                  <span className="mx-2">•</span>
+                  <span>{Number(lightbox.activity.duration_min)} min</span>
+                </>
+              )}
+              {lightbox.activity?.type && <span className="mx-2">•</span>}
+              {lightbox.activity?.type && (
+                <span className="uppercase">{lightbox.activity.type}</span>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
 
       <SelectActivityTypeModal
         open={showTypeSelector}
@@ -570,9 +604,12 @@ export default function CalendarPage() {
       {showQuickLog && (
         <AddActivityModal
           initialType={selectedType ?? "run"}
-          initialDate={selectedDate ?? todayKey}
+          initialDate={quickLogDate ?? selectedDate ?? todayKey}
           returnTo="/calendar"
-          onClose={() => setShowQuickLog(false)}
+          onClose={() => {
+            setShowQuickLog(false);
+            setQuickLogDate(null);
+          }}
           onLogged={async (_id) => {
             await fetchMonthActivities(today);
           }}
