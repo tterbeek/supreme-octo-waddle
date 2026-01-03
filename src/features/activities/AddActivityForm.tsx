@@ -12,12 +12,16 @@ import ActivityFormFields from "../../components/ActivityFormFields";
 
 type QuickLogFormProps = {
   initialType?: string;
+  initialDate?: string;
+  returnTo?: string;
   onClose: () => void;
   onLogged: (activityId: string) => void; // ✅ returns activity id
 };
 
 export default function AddActivityForm({
   initialType = "run",
+  initialDate,
+  returnTo,
   onClose,
   onLogged,
 }: QuickLogFormProps) {
@@ -73,6 +77,8 @@ export default function AddActivityForm({
     save,
   } = useQuickLogForm({
     initialType,
+    initialDate,
+    returnTo,
     unitSystem,
     onClose,
     onLogged,

@@ -20,6 +20,8 @@ import type { Preset, Equipment } from "../types";
 
 type UseQuickLogFormArgs = {
   initialType: string;
+  initialDate?: string;
+  returnTo?: string;
   unitSystem: string;
   onClose: () => void;
   onLogged: (activityId: string) => void;
@@ -31,6 +33,8 @@ type UseQuickLogFormArgs = {
 
 export function useQuickLogForm({
   initialType,
+  initialDate,
+  returnTo,
   unitSystem,
   onClose,
   onLogged,
@@ -45,7 +49,9 @@ export function useQuickLogForm({
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [duration, setDuration] = useState("");
   const [feeling, setFeeling] = useState(3);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(
+    initialDate || new Date().toISOString().slice(0, 10)
+  );
   const [title, setTitle] = useState("");
   const [effort, setEffort] = useState<number>(3);
   const [saveAsPreset, setSaveAsPreset] = useState(false);
@@ -309,14 +315,10 @@ export function useQuickLogForm({
     ding.play();
     onLogged(newActivityId);
 
+    const targetPath = returnTo || "/";
     setTimeout(() => {
       onClose();
-      navigate("/");
-    }, 400);
-
-    setTimeout(() => {
-      onClose();
-      navigate("/");
+      navigate(targetPath);
     }, 400);
   };
 

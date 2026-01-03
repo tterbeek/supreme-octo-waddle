@@ -25,6 +25,7 @@ export default function Layout({
 
   const navItems = [
     { to: "/", label: "Journal" },
+    { to: "/calendar", label: "Calendar" },
     { to: "/stats", label: "Insights" },
   ];
 

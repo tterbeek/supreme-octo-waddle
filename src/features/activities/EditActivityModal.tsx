@@ -12,6 +12,7 @@ type EditActivityModalProps = {
   onClose: () => void;
   onUpdated: () => void;
   onDeleted: () => void;
+  zIndexClass?: string;
 };
 
 export default function EditActivityModal({
@@ -19,6 +20,7 @@ export default function EditActivityModal({
   onClose,
   onUpdated,
   onDeleted,
+  zIndexClass = "z-50",
 }: EditActivityModalProps) {
   const { unitSystem } = useUnitSystem();
   const {
@@ -93,7 +95,7 @@ export default function EditActivityModal({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/40 flex items-end justify-center z-50 overscroll-none"
+        className={`fixed inset-0 bg-black/40 flex items-end justify-center overscroll-none ${zIndexClass}`}
         onClick={handleOverlayClick}
       >
         <div

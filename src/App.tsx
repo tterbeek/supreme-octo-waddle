@@ -22,6 +22,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import IntroPage from "./pages/IntroPage";
 import { UnitProvider } from "./contexts/UnitContext";
+import CalendarPage from "./pages/CalendarPage";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -167,6 +168,15 @@ export default function App() {
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
                         <Home />
+                      </Layout>
+                    }
+                  />
+
+                  <Route
+                    path="/calendar"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <CalendarPage />
                       </Layout>
                     }
                   />
