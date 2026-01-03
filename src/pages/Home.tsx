@@ -103,8 +103,8 @@ export default function Home() {
 
   const openQuickLog = () => {
     hideTooltip();
-    setSelectedType((prev) => prev ?? "run");
-    setShowQuickLog(true);
+    setSelectedType(null);
+    setShowTypeSelector(true);
   };
 
   async function refreshActivities() {
@@ -180,9 +180,11 @@ export default function Home() {
           onToggle={toggleSearch}
           alignCenterOnOpen
           className="z-50 px-0"
+          portalTargetId="layout-top-right-slot"
+          centerPortalTargetId="layout-search-layer"
         />
 
-        <div className="flex flex-col gap-3 mt-1">
+        <div className="flex flex-col gap-3">
           {filteredActivities.map((a, idx) => {
             const showAfterLogTooltip = visible === "after_first_log" && idx === 0;
             return (

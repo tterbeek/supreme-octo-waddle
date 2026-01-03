@@ -30,39 +30,54 @@ export default function Layout({
 
   return (
     <div className="relative min-h-screen bg-movenotes-bg">
-      
-      {/* 🔥 Global hamburger - pinned to viewport left */}
-      {showHamburger && (
-        <div className="fixed top-4 left-4 z-60">
-          <HamburgerButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} />
+      {/* Top bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-movenotes-bg/95 backdrop-blur border-b border-movenotes-border">
+        <div className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-4">
+          <div className="relative flex items-center h-14">
+            <div className="w-12 flex justify-start">
+              {showHamburger ? (
+                <HamburgerButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} />
+              ) : (
+                <div className="w-10" />
+              )}
+            </div>
+
+            <div className="flex-1 flex justify-center">
+              {showHeaderLogo && (
+                <div id="layout-header-logo" className="flex justify-center">
+                  <HeaderLogo />
+                </div>
+              )}
+            </div>
+
+            <div id="layout-top-right-slot" className="w-12 flex justify-end" />
+
+            <div
+              id="layout-search-layer"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+            />
+          </div>
         </div>
-      )}
+      </div>
 
       {/* 🟡 Centered content (restore your original width) */}
-      <div className="
+      <div
+        className="
         mx-auto 
         w-full 
         max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl 
-        px-4 pt-1 pb-20
-      ">
-        {/* Center logo */}
-        {showHeaderLogo && (
-          <div id="layout-header-logo" className="flex justify-center -mt-1">
-            <HeaderLogo />
-          </div>
-        )}
-
+        px-4 pt-12 pb-20
+      "
+      >
         {/* Page content */}
-        <div className="mt-1">
-          {children}
-        </div>
+        <div className="mt-0.5">{children}</div>
       </div>
 
       {/* Global sidebar */}
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-movenotes-bg/95 backdrop-blur border-t border-movenotes-border">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-movenotes-bg/95 backdrop-blur border-t-[3px] border-movenotes-border shadow-[0_-4px_14px_rgba(0,0,0,0.09)]">
         <div className="mx-auto max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-6 py-3 flex items-center gap-4">
           {navItems.map((item) => {
             const isActive =

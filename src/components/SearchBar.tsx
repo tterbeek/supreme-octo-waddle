@@ -6,8 +6,12 @@ type SearchBarProps = {
   onToggle: () => void;
   className?: string;
   alignCenterOnOpen?: boolean;
+  portalTargetId?: string;
+  centerPortalTargetId?: string;
 };
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconSearch } from "@tabler/icons-react";
 
 export default function SearchBar({
@@ -18,13 +22,30 @@ export default function SearchBar({
   onToggle,
   className = "",
   alignCenterOnOpen = false,
+  portalTargetId,
+  centerPortalTargetId,
 }: SearchBarProps) {
-  const positionClass = alignCenterOnOpen && searchOpen
-    ? "fixed top-3 left-1/2 -translate-x-1/2 w-[min(60vw,420px)]"
-    : "fixed top-3 right-4";
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
-  return (
-    <div className={`${positionClass} flex items-center justify-end gap-2 ${className}`}>
+  useEffect(() => {
+    const targetId =
+      alignCenterOnOpen && searchOpen && centerPortalTargetId
+        ? centerPortalTargetId
+        : portalTargetId;
+    if (targetId) {
+      setPortalEl(document.getElementById(targetId));
+    } else {
+      setPortalEl(null);
+    }
+  }, [portalTargetId, centerPortalTargetId, alignCenterOnOpen, searchOpen]);
+
+  const positionClass =
+    alignCenterOnOpen && searchOpen
+      ? "flex items-center justify-center w-[min(60vw,420px)]"
+      : "flex items-center justify-end";
+
+  const content = (
+    <div className={`${positionClass} gap-2 ${className}`}>
       {searchOpen ? (
         <div className="relative w-full min-w-[220px] transition-all duration-200">
           <input
@@ -57,4 +78,10 @@ export default function SearchBar({
       )}
     </div>
   );
+
+  if (portalEl) {
+    return createPortal(content, portalEl);
+  }
+
+  return content;
 }
