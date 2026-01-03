@@ -32,30 +32,28 @@ export default function Layout({
     <div className="relative min-h-screen bg-movenotes-bg">
       {/* Top bar */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-movenotes-bg/95 backdrop-blur border-b border-movenotes-border">
-        <div className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-4">
-          <div className="relative flex items-center h-14">
-            <div className="w-12 flex justify-start">
-              {showHamburger ? (
-                <HamburgerButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} />
-              ) : (
-                <div className="w-10" />
-              )}
+        <div className="relative h-14">
+          {showHamburger && (
+            <div className="fixed left-4 top-0 z-60 h-14 flex items-center">
+              <HamburgerButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} />
             </div>
+          )}
 
-            <div className="flex-1 flex justify-center">
-              {showHeaderLogo && (
-                <div id="layout-header-logo" className="flex justify-center">
-                  <HeaderLogo />
-                </div>
-              )}
-            </div>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div id="layout-top-right-slot" className="flex justify-end" />
+          </div>
 
-            <div id="layout-top-right-slot" className="w-12 flex justify-end" />
+          <div
+            id="layout-search-layer"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+          />
 
-            <div
-              id="layout-search-layer"
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
-            />
+          <div className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-4 h-full flex items-center justify-center">
+            {showHeaderLogo && (
+              <div id="layout-header-logo" className="flex justify-center">
+                <HeaderLogo />
+              </div>
+            )}
           </div>
         </div>
       </div>

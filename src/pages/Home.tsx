@@ -261,12 +261,12 @@ export default function Home() {
               ×
             </button>
             <div className="flex-1 flex items-center justify-center p-4">
-              <div className="relative max-w-5xl w-full h-full flex items-center justify-center">
+              <div className="relative flex items-center justify-center max-w-5xl w-full max-h-[85vh]">
                 <div className="absolute inset-4 rounded-3xl pointer-events-none shadow-md shadow-[rgba(0,0,0,0.15)]" />
                 <img
                   src={lightbox.url}
                   alt="Activity note full size"
-                  className="relative max-h-full max-w-full object-contain rounded-3xl"
+                  className="relative max-h-[85vh] max-w-[90vw] w-auto h-auto object-contain rounded-3xl"
                 />
                 <div className="absolute inset-0 rounded-3xl pointer-events-none"
                   style={{
