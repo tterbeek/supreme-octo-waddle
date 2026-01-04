@@ -43,5 +43,30 @@
 
 html, body { overscroll-behavior-y: contain; }
 
+html, body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
 
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
 
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Ensure descendants also hide their scrollbars (react-window inner elements) */
+.hide-scrollbar * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar *::-webkit-scrollbar {
+  display: none;
+}
