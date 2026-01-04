@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import AddActivityModal from "../features/activities/AddActivityModal";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
@@ -165,6 +165,57 @@ export default function Home() {
   // --------------------------------------------------
   // RENDER
   // --------------------------------------------------
+  const monthGroups = useMemo(() => {
+    type DayGroup = {
+      key: string;
+      weekday: string;
+      dayNumber: string;
+      items: typeof filteredActivities;
+    };
+    type MonthGroup = {
+      key: string;
+      label: string;
+      days: DayGroup[];
+    };
+
+    const months: MonthGroup[] = [];
+    const monthMap = new Map<string, MonthGroup>();
+
+    filteredActivities.forEach((a) => {
+      const iso = typeof a.date === "string" ? a.date : a.date ? new Date(a.date).toISOString() : "";
+      if (!iso) return;
+      const dayKey = iso.slice(0, 10);
+      const monthKey = iso.slice(0, 7); // YYYY-MM
+      const dateObj = new Date(dayKey);
+
+      let monthBucket = monthMap.get(monthKey);
+      if (!monthBucket) {
+        const monthLabel = dateObj.toLocaleDateString("en-GB", {
+          month: "long",
+          year: "numeric",
+        });
+        monthBucket = { key: monthKey, label: monthLabel, days: [] };
+        monthMap.set(monthKey, monthBucket);
+        months.push(monthBucket);
+      }
+
+      let dayBucket = monthBucket.days.find((d) => d.key === dayKey);
+      if (!dayBucket) {
+        dayBucket = {
+          key: dayKey,
+          weekday: dateObj.toLocaleDateString("en-GB", { weekday: "short" }).toUpperCase(),
+          dayNumber: dateObj.toLocaleDateString("en-GB", { day: "2-digit" }),
+          items: [],
+        };
+        monthBucket.days.push(dayBucket);
+      }
+
+      dayBucket.items.push(a);
+    });
+
+    return months;
+  }, [filteredActivities]);
+
   return (
     <div className="min-h-screen bg-movenotes-bg p-1">
       <div className="mt-2">
@@ -184,36 +235,60 @@ export default function Home() {
           centerPortalTargetId="layout-search-layer"
         />
 
-        <div className="flex flex-col gap-3">
-          {filteredActivities.map((a, idx) => {
-            const showAfterLogTooltip = visible === "after_first_log" && idx === 0;
+        <div className="flex flex-col gap-8">
+          {monthGroups.map((month) => {
+            let renderIndex = 0;
             return (
-              <RecentActivityCard
-                key={a.id}
-                activity={a}
-                signedNoteImages={signedNoteImages}
-                signedNoteThumbs={signedNoteThumbs}
-                noteImageOrientation={noteImageOrientation}
-                onEdit={(activity) => {
-                  hideTooltip();
-                  setEditActivity(activity);
-                }}
-                onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {
-                  setNoteImageOrientation((prev) => ({
-                    ...prev,
-                    [activityId]:
-                      naturalHeight > naturalWidth ? "portrait" : "landscape",
-                  }));
-                }}
-                unitSystem={unitSystem}
-                tooltipVisible={showAfterLogTooltip}
-                onTooltipClose={hideTooltip}
-                onImageClick={onLightboxImageClick}
-                onImageTouchStart={onLightboxImageTouchStart}
-                onImageTouchMove={onLightboxImageTouchMove}
-                onImageTouchEnd={onLightboxImageTouchEnd}
-                disableSwipe={!!lightbox}
-              />
+              <div key={month.key} className="flex flex-col gap-3">
+                <h3 className="px-1 mt-3 mb-1 text-base font-medium text-movenotes-text/60">
+                  {month.label}
+                </h3>
+              <div className="flex flex-col gap-5">
+                  {month.days.map((day) => (
+                    <div key={day.key} className="flex gap-0.5 items-start px-1">
+                      <div className="w-9 sm:w-10 md:w-12 flex-shrink-0 text-left text-movenotes-muted uppercase text-xs font-semibold leading-5 pt-1">
+                        <div>{day.weekday}</div>
+                        <div className="text-base text-movenotes-text">{day.dayNumber}</div>
+                      </div>
+                      <div className="flex-1 flex flex-col gap-3">
+                        {day.items.map((a) => {
+                          const showAfterLogTooltip = visible === "after_first_log" && renderIndex === 0;
+                          const card = (
+                            <RecentActivityCard
+                              key={a.id}
+                              activity={a}
+                              signedNoteImages={signedNoteImages}
+                              signedNoteThumbs={signedNoteThumbs}
+                              noteImageOrientation={noteImageOrientation}
+                              onEdit={(activity) => {
+                                hideTooltip();
+                                setEditActivity(activity);
+                              }}
+                              onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {
+                                setNoteImageOrientation((prev) => ({
+                                  ...prev,
+                                  [activityId]:
+                                    naturalHeight > naturalWidth ? "portrait" : "landscape",
+                                }));
+                              }}
+                              unitSystem={unitSystem}
+                              tooltipVisible={showAfterLogTooltip}
+                              onTooltipClose={hideTooltip}
+                              onImageClick={onLightboxImageClick}
+                              onImageTouchStart={onLightboxImageTouchStart}
+                              onImageTouchMove={onLightboxImageTouchMove}
+                              onImageTouchEnd={onLightboxImageTouchEnd}
+                              disableSwipe={!!lightbox}
+                            />
+                          );
+                          renderIndex += 1;
+                          return card;
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             );
           })}
         </div>

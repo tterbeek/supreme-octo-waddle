@@ -50,7 +50,9 @@ export default function RecentActivityCard({
       ? formatDistance(Number(activity.distance_km), unitSystem)
       : null;
   const equipmentItems: Array<{ id: string; name: string }> =
-    activity.equipment || activity.activity_equipment?.map((item: any) => item?.equipment).filter(Boolean) || [];
+    activity.equipment ||
+    activity.activity_equipment?.map((item: any) => item?.equipment).filter(Boolean) ||
+    [];
   const equipmentName = (() => {
     if (!equipmentItems.length) return "";
     const first = equipmentItems[0];
@@ -104,21 +106,8 @@ export default function RecentActivityCard({
               <span className="text-gray-400">·</span>
             </>
           )}
-          <span>
-            {new Date(activity.date).toLocaleDateString("en-GB", {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-              year: "2-digit"
-            }).replace(/(\d{2})$/, "’$1")}
-          </span>
+          {equipmentName && <span className="text-gray-600">{equipmentName}</span>}
         </div>
-
-        {equipmentName && (
-          <div className="text-xs md:text-sm text-gray-500 my-2">
-            {equipmentName}
-          </div>
-        )}
 
         <div className="flex items-center justify-center gap-3 my-3">
           {(() => {
@@ -177,7 +166,7 @@ export default function RecentActivityCard({
                     rounded-xl border border-warm-200 shadow-sm transition-opacity duration-200
                     ${
                       noteImageOrientation[activity.id] === "portrait"
-                        ? "max-h-80 w-auto max-w-full mx-auto object-contain"
+                        ? "max-h-60 w-auto max-w-full mx-auto object-contain"
                         : "w-full max-h-56 object-cover"
                     }
                     ${imageLoaded ? "opacity-100" : "opacity-0"}
