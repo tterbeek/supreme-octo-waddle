@@ -7,6 +7,7 @@ import AddNoteModal from "../components/AddNoteModal";
 import EditActivityModal from "../features/activities/EditActivityModal";
 import RecentActivityCard from "../components/RecentActivityCard";
 import SearchBar from "../components/SearchBar";
+import LogCTA from "../components/LogCTA";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
@@ -82,6 +83,7 @@ export default function Home() {
     activities,
     filteredActivities,
     refresh: refreshFeed,
+    initialFeedLoaded,
     searchOpen,
     setSearchOpen,
     searchTerm,
@@ -145,6 +147,7 @@ export default function Home() {
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
+  const showFirstLogPrompt = initialFeedLoaded && activities.length === 0;
 
   // --------------------------------------------------
   // DELETE / UNDO
@@ -236,6 +239,12 @@ export default function Home() {
         />
 
         <div className="flex flex-col gap-8">
+          {showFirstLogPrompt && (
+            <LogCTA
+              showFirstLogPrompt={showFirstLogPrompt}
+            />
+          )}
+
           {monthGroups.map((month, idx) => {
             let renderIndex = 0;
             const isFirstMonth = idx === 0;
