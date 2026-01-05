@@ -236,17 +236,22 @@ export default function Home() {
         />
 
         <div className="flex flex-col gap-8">
-          {monthGroups.map((month) => {
+          {monthGroups.map((month, idx) => {
             let renderIndex = 0;
+            const isFirstMonth = idx === 0;
             return (
-              <div key={month.key} className="flex flex-col gap-3">
-                <h3 className="px-1 mt-3 mb-1 text-base font-medium text-movenotes-text/60">
+              <div key={month.key} className="flex flex-col gap-3 -ml-2">
+                <h3
+                  className={`${
+                    isFirstMonth ? "mt-1" : "mt-4"
+                  } mb-1 text-sm md:text-base font-medium text-movenotes-text/60 ml-[-6px]`}
+                >
                   {month.label}
                 </h3>
               <div className="flex flex-col gap-5">
                   {month.days.map((day) => (
-                    <div key={day.key} className="flex gap-0.5 items-start px-1">
-                      <div className="w-9 sm:w-10 md:w-12 flex-shrink-0 text-left text-movenotes-muted uppercase text-xs font-semibold leading-5 pt-1">
+                    <div key={day.key} className="flex gap-1 items-start">
+                      <div className="w-8 sm:w-9 md:w-10 flex-shrink-0 text-left text-movenotes-muted uppercase text-xs font-semibold leading-5 pt-1 ml-[-6px]">
                         <div>{day.weekday}</div>
                         <div className="text-base text-movenotes-text">{day.dayNumber}</div>
                       </div>
