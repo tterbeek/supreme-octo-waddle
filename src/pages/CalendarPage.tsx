@@ -15,6 +15,8 @@ import RecentActivityCard from "../components/RecentActivityCard";
 import { useNoteImages } from "../hooks/useNoteImages";
 import { useLightbox } from "../hooks/useLightbox";
 import { createSignedUrls } from "../services/storage.service";
+import PostLogNoteFlow from "../components/PostLogNoteFlow";
+import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 
 type CalendarActivity = {
   id: string;
@@ -119,6 +121,7 @@ export default function CalendarPage() {
     editActivity,
     setEditActivity,
   } = useHomeModals();
+  const noteFlow = usePostLogNoteFlow();
 
   const today = startOfMonth(new Date());
   const todayKey = formatDateKey(new Date());
@@ -735,7 +738,8 @@ export default function CalendarPage() {
             setShowQuickLog(false);
             setQuickLogDate(null);
           }}
-          onLogged={async (_id) => {
+          onLogged={async (activityId) => {
+            noteFlow.handleLogged(activityId);
             await fetchMonthActivities(today);
           }}
         />
@@ -756,6 +760,11 @@ export default function CalendarPage() {
           zIndexClass="z-[60]"
         />
       )}
+
+      <PostLogNoteFlow
+        flow={noteFlow}
+        onRefreshAfterNote={() => fetchMonthActivities(today)}
+      />
     </div>
   );
 }

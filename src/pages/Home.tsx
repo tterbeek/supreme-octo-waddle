@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import AddActivityModal from "../features/activities/AddActivityModal";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
 import Toast from "../components/Toast";
-import AddNoteModal from "../components/AddNoteModal";
 import EditActivityModal from "../features/activities/EditActivityModal";
 import RecentActivityCard from "../components/RecentActivityCard";
 import SearchBar from "../components/SearchBar";
 import LogCTA from "../components/LogCTA";
+import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
@@ -16,7 +16,7 @@ import { restoreActivity } from "../services/activities.service";
 import { useHomeFeed } from "../hooks/useHomeFeed";
 import { useNoteImages } from "../hooks/useNoteImages";
 import { useLightbox } from "../hooks/useLightbox";
-import { useHomeNotes } from "../hooks/useHomeNotes";
+import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 
 const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
@@ -60,19 +60,9 @@ export default function Home() {
   } = useHomeModals();
 
   // Toasts
-  const [showToast, setShowToast] = useState(false);
   const [showUndoToast, setShowUndoToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const {
-    lastActivityId,
-    setLastActivityId,
-    showNotePrompt,
-    setShowNotePrompt,
-    showNoteSkippedToast,
-    setShowNoteSkippedToast,
-    showNoteSavedToast,
-    setShowNoteSavedToast,
-  } = useHomeNotes();
+  const noteFlow = usePostLogNoteFlow();
 
   // Sidebar
   // Delete / undo
@@ -409,27 +399,11 @@ export default function Home() {
               if (hasDoneOnboarding) {
                 showTooltip("after_first_log");
               }
-              setLastActivityId(activityId);
-              setShowToast(true);
+              noteFlow.handleLogged(activityId);
               await refreshActivities();
             }}
           />
         )}
-
-        {showNotePrompt && lastActivityId && (
-          <AddNoteModal
-            activityId={lastActivityId}
-            onSave={() => {
-              setShowNotePrompt(false);
-              setShowNoteSavedToast(true);
-              refreshActivities();
-            }}
-            onSkip={() => {
-              setShowNotePrompt(false);
-            setShowNoteSkippedToast(true);
-          }}
-        />
-      )}
 
         {editActivity && (
           <EditActivityModal
@@ -452,31 +426,7 @@ export default function Home() {
           <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
         )}
 
-        {showToast && (
-          <Toast
-            message="Activity logged ✅"
-            onClose={() => {
-              setShowToast(false);
-              if (lastActivityId) {
-                setTimeout(() => setShowNotePrompt(true), 250);
-              }
-            }}
-          />
-        )}
-
-        {showNoteSavedToast && (
-          <Toast
-            message="Note saved 💾"
-            onClose={() => setShowNoteSavedToast(false)}
-          />
-        )}
-
-        {showNoteSkippedToast && (
-          <Toast
-            message="Note skipped ✋"
-            onClose={() => setShowNoteSkippedToast(false)}
-          />
-        )}
+        <PostLogNoteFlow flow={noteFlow} onRefreshAfterNote={refreshActivities} />
 
         {showUndoToast && (
           <Toast
