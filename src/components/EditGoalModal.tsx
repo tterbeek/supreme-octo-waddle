@@ -65,12 +65,15 @@ export default function EditGoalModal({
   const save = async () => {
     setSaving(true);
 
+    const newTarget = Number(target);
+    const targetChanged = newTarget !== goal.target;
     await supabase
       .from("goals")
       .update({
         metric,
-        target: Number(target),
+        target: newTarget,
         name: name.trim() || goal.name,
+        ...(targetChanged ? { effective_from: new Date().toISOString() } : {}),
       })
       .eq("id", goal.id);
 

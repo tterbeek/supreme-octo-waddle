@@ -34,11 +34,10 @@ export default function StatsRpcPage() {
     userId,
     goalStats,
     goals,
-    starredGoalIds,
+    goalHistoryDots,
     loading: goalLoading,
     error: goalError,
     refresh: refreshGoals,
-    toggleStar,
     buildGoalForEditing,
     handleGoalDeleted,
   } = useGoalTrackingStats();
@@ -118,9 +117,8 @@ export default function StatsRpcPage() {
         {activeTab === "goalTracking" && (
           <GoalTrackingTab
             goalStats={goalStats}
-            starredGoalIds={starredGoalIds}
+            goalHistoryDots={goalHistoryDots}
             onEditGoal={handleEditGoal}
-            onToggleStar={toggleStar}
             onAddGoal={() => setShowAddGoal(true)}
             onSeeTrends={() => setActiveTab("trends")}
             loading={goalLoading}

@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import type { Goal } from "../types";
 
 const GOAL_RPC = "stats_goal_progress";
+const HISTORY_DOTS_RPC = "get_goal_history_dots";
 
 export type GoalStat = {
   goal_id: string;
@@ -21,6 +22,9 @@ export function useGoalTrackingStats() {
   const [goalStats, setGoalStats] = useState<GoalStat[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [starredGoalIds, setStarredGoalIds] = useState<string[]>([]);
+  const [goalHistoryDots, setGoalHistoryDots] = useState<
+    Record<string, Array<number | null>>
+  >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -48,7 +52,7 @@ export function useGoalTrackingStats() {
 
     setUserId(user.id);
 
-    const [rpcRes, rawGoalsRes, prefsRes] = await Promise.all([
+    const [rpcRes, rawGoalsRes, prefsRes, dotsRes] = await Promise.all([
       supabase.rpc(GOAL_RPC, { user_id: user.id }),
       supabase
         .from("goals")
@@ -56,6 +60,7 @@ export function useGoalTrackingStats() {
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false }),
       supabase.from("goal_preferences").select("goal_id").eq("user_id", user.id),
+      supabase.rpc(HISTORY_DOTS_RPC, { user_id: user.id, max_periods: 5 }),
     ]);
 
     if (rpcRes.error) {
@@ -92,6 +97,27 @@ export function useGoalTrackingStats() {
       setStarredGoalIds([]);
     } else {
       setStarredGoalIds((prefsRes.data || []).map((p) => p.goal_id));
+    }
+
+    if (dotsRes.error) {
+      if (dotsRes.error.code === "42702") {
+        console.warn(
+          `History dots unavailable due to server ambiguity (${HISTORY_DOTS_RPC})`,
+          dotsRes.error
+        );
+      } else {
+        console.error(`Could not load goal history dots (${HISTORY_DOTS_RPC})`, dotsRes.error);
+      }
+      setGoalHistoryDots({});
+    } else {
+      const dotsData = (dotsRes.data as Array<{ goal_id: string; dot_state: number | null }>) || [];
+      const map: Record<string, Array<number | null>> = {};
+      dotsData.forEach((row) => {
+        if (!row.goal_id) return;
+        if (!map[row.goal_id]) map[row.goal_id] = [];
+        map[row.goal_id].push(row.dot_state);
+      });
+      setGoalHistoryDots(map);
     }
 
     setLoading(false);
@@ -170,5 +196,6 @@ export function useGoalTrackingStats() {
     buildGoalForEditing,
     handleGoalDeleted,
     setGoals,
+    goalHistoryDots,
   };
 }

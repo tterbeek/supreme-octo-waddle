@@ -100,6 +100,7 @@ const save = async () => {
     period,
     target: Number(target),
     name: name.trim() || autoName(),
+    effective_from: new Date().toISOString(),
   });
 
   setSaving(false);

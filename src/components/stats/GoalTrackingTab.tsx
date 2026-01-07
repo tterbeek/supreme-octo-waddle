@@ -1,13 +1,16 @@
 import { Target } from "lucide-react";
+import { useMemo, useState } from "react";
 import { ACTIVITY_TYPES } from "../../config/activityTypes";
-import GoalProgressCard from "../GoalProgressCard";
+import GoalDirectionCard from "../GoalDirectionCard";
+import GoalDirectionSheet from "../GoalDirectionSheet";
 import type { GoalStat } from "../../hooks/useGoalTrackingStats";
+import type { GoalDirectionGroup } from "../../lib/goalDirectionUtils";
+import { pickPreferredMetricGoal } from "../../lib/goalDirectionUtils";
 
 type GoalTrackingTabProps = {
   goalStats: GoalStat[];
-  starredGoalIds: string[];
+  goalHistoryDots: Record<string, Array<number | null>>;
   onEditGoal: (goal: GoalStat) => void;
-  onToggleStar: (goalId: string) => void;
   onAddGoal: () => void;
   onSeeTrends: () => void;
   loading?: boolean;
@@ -15,13 +18,13 @@ type GoalTrackingTabProps = {
 
 export default function GoalTrackingTab({
   goalStats,
-  starredGoalIds,
+  goalHistoryDots,
   onEditGoal,
-  onToggleStar,
   onAddGoal,
   onSeeTrends,
   loading = false,
 }: GoalTrackingTabProps) {
+  const [activeGroup, setActiveGroup] = useState<GoalDirectionGroup | null>(null);
   const PERIOD_ORDER: Record<"week" | "month" | "year", number> = {
     week: 1,
     month: 2,
@@ -36,32 +39,48 @@ export default function GoalTrackingTab({
   );
   TYPE_ORDER["any"] = Number.MAX_SAFE_INTEGER;
 
-  const sortedGoals = (goalStats ?? []).slice().sort((a, b) => {
-    const pDiff = PERIOD_ORDER[a.period] - PERIOD_ORDER[b.period];
-    if (pDiff !== 0) return pDiff;
-    const tA = TYPE_ORDER[a.activity_type] ?? 999;
-    const tB = TYPE_ORDER[b.activity_type] ?? 999;
-    return tA - tB;
-  });
+  const groupedGoals = useMemo(() => {
+    const map = new Map<string, GoalDirectionGroup>();
+
+    (goalStats ?? []).forEach((goal) => {
+      const key = `${goal.activity_type}-${goal.period}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          activity_type: goal.activity_type,
+          period: goal.period,
+          goals: [goal],
+        });
+      } else {
+        map.get(key)?.goals.push(goal);
+      }
+    });
+
+    const groups = Array.from(map.values()).map((group) => ({
+      ...group,
+      dotGoal: pickPreferredMetricGoal(group),
+    }));
+
+    return groups.sort((a, b) => {
+      const pDiff = PERIOD_ORDER[a.period] - PERIOD_ORDER[b.period];
+      if (pDiff !== 0) return pDiff;
+      const tA = TYPE_ORDER[a.activity_type] ?? 999;
+      const tB = TYPE_ORDER[b.activity_type] ?? 999;
+      return tA - tB;
+    });
+  }, [goalStats]);
 
   return (
     <>
-      {sortedGoals.map((goal) => (
-        <GoalProgressCard
-          key={goal.goal_id}
-          goal={{
-            ...goal,
-            id: goal.goal_id,
-            progress_current: goal.current_value,
-          }}
-          onClick={() => onEditGoal(goal)}
-          showStar
-          starred={starredGoalIds.includes(goal.goal_id)}
-          onToggleStar={() => onToggleStar(goal.goal_id)}
+      {groupedGoals.map((group) => (
+        <GoalDirectionCard
+          key={`${group.activity_type}-${group.period}`}
+          group={group}
+          goalHistoryDots={goalHistoryDots}
+          onClick={() => setActiveGroup(group)}
         />
       ))}
 
-      {sortedGoals.length === 0 && !loading && (
+      {groupedGoals.length === 0 && !loading && (
         <div className="text-center mt-10 text-movenotes-muted">
           <p className="mb-3">You haven't set any goals yet.</p>
           <p className="text-sm mb-6">
@@ -91,6 +110,18 @@ export default function GoalTrackingTab({
           See all activity stats →
         </button>
       </div>
+
+      {activeGroup && (
+        <GoalDirectionSheet
+          group={activeGroup}
+          onClose={() => setActiveGroup(null)}
+          onEditGoal={(goal) => {
+            setActiveGroup(null);
+            onEditGoal(goal);
+          }}
+          onAddGoal={onAddGoal}
+        />
+      )}
     </>
   );
 }
