@@ -86,7 +86,7 @@ export default function StatsRpcPage() {
 
         <div className="flex justify-center gap-10 mb-6 mt-2">
           {[
-            { id: "goalTracking", label: "Goal Tracking" },
+            { id: "goalTracking", label: "Direction" },
             { id: "trends", label: "Trends" },
           ].map(({ id, label }) => {
             const active = activeTab === id;
