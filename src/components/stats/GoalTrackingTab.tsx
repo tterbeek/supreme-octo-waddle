@@ -99,7 +99,7 @@ export default function GoalTrackingTab({
       >
         <span className="text-xl">+</span>
         <Target className="w-5 h-5" />
-        <span>Goal</span>
+        <span>Direction</span>
       </button>
 
       <div className="text-center mt-8">

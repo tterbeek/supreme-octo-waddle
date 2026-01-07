@@ -111,7 +111,7 @@ const save = async () => {
 
   return (
     <ModalSheet onClose={onClose}>
-      <h2 className="text-lg font-semibold mb-4 text-center">Add Goal</h2>
+      <h2 className="text-lg font-semibold mb-4 text-center">Set direction</h2>
 
       {/* Activity type selector */}
       <div className="flex gap-3 overflow-x-auto pb-3 mb-3">
@@ -222,7 +222,7 @@ const save = async () => {
         disabled={saving}
         className="w-full py-3 rounded-full bg-amber-300 border border-amber-400 text-primary-text font-medium"
       >
-        {saving ? "Saving…" : "Add Goal"}
+        {saving ? "Saving…" : "Set direction"}
       </button>
     </ModalSheet>
   );
