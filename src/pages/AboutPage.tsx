@@ -4,6 +4,39 @@ import { IconRun, IconCamera, IconChartBar, IconBrandAndroid, IconBrandApple } f
 
 
 export default function AboutPage() {
+  const screenshots = [
+    {
+      base: "Screenshot_20260107-102338",
+      title: "Journal",
+      description: "Write what you did and how it felt.",
+      alt: "Journal entry screen in MoveNotes.",
+    },
+    {
+      base: "Screenshot_20260107-102321",
+      title: "Quick log",
+      description: "Log an activity in seconds.",
+      alt: "Quick log screen for adding an activity.",
+    },
+    {
+      base: "Screenshot_20260107-102355",
+      title: "Calendar",
+      description: "See your movement days at a glance.",
+      alt: "Calendar view with movement days highlighted.",
+    },
+    {
+      base: "Screenshot_20260107-102424",
+      title: "Direction",
+      description: "Gentle goals, tracked over time.",
+      alt: "Goals and progress overview screen.",
+    },
+    {
+      base: "Screenshot_20260107-102414",
+      title: "Trends",
+      description: "Notice patterns, not pressure.",
+      alt: "Trends and insights view.",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-movenotes-bg py-10 px-4 text-movenotes-text relative">
       <PublicTopNav />
@@ -85,60 +118,46 @@ export default function AboutPage() {
 
 
 
-        {/* Screenshot placeholders */}
-    {/* Screenshots */}
+        {/* Screenshots */}
 <section className="mb-12">
   <h2 className="text-xl font-semibold text-movenotes-primary mb-3">
     A glimpse inside
   </h2>
   <p className="text-movenotes-muted text-sm mb-6">
-    A few moments from the MoveNotes experience.
+    Swipe through a few moments from the MoveNotes experience.
   </p>
 
-  <div className="grid gap-10">
-
-    {/* Screenshot A */}
-    <figure className="flex flex-col items-center">
-      <div className="w-64 rounded-xl border border-movenotes-border bg-movenotes-bg shadow-sm overflow-hidden">
-        <img
-          src="/images/ScreenshotA.png"
-          alt="Quick log screen in MoveNotes"
-          className="w-full h-auto block"
-        />
-      </div>
-      <figcaption className="text-sm text-movenotes-muted mt-2 text-center">
-        Quick-log an activity in seconds.
-      </figcaption>
-    </figure>
-
-    {/* Screenshot B */}
-    <figure className="flex flex-col items-center">
-      <div className="w-64 rounded-xl border border-movenotes-border bg-movenotes-bg shadow-sm overflow-hidden">
-        <img
-          src="/images/ScreenshotB.png"
-          alt="Home feed with logged activities"
-          className="w-full h-auto block"
-        />
-      </div>
-      <figcaption className="text-sm text-movenotes-muted mt-2 text-center">
-        Your movement journal with notes & photos.
-      </figcaption>
-    </figure>
-
-    {/* Screenshot C */}
-    <figure className="flex flex-col items-center">
-      <div className="w-64 rounded-xl border border-movenotes-border bg-movenotes-bg shadow-sm overflow-hidden">
-        <img
-          src="/images/ScreenshotC.png"
-          alt="Stats view showing gentle progress"
-          className="w-full h-auto block"
-        />
-      </div>
-      <figcaption className="text-sm text-movenotes-muted mt-2 text-center">
-        Gentle weekly & monthly progress.
-      </figcaption>
-    </figure>
-
+  <div className="relative">
+    <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-6 -mx-4 px-4 scroll-smooth">
+      {screenshots.map((shot) => (
+        <figure
+          key={shot.base}
+          className="snap-center shrink-0 w-64 sm:w-72 md:w-80"
+        >
+          <div className="relative rounded-2xl border border-movenotes-border bg-movenotes-bg shadow-sm overflow-hidden">
+            <picture>
+              <source
+                type="image/webp"
+                srcSet={`/images/about_screens/${shot.base}-540.webp 540w, /images/about_screens/${shot.base}-810.webp 810w, /images/about_screens/${shot.base}-1080.webp 1080w`}
+                sizes="(min-width: 768px) 320px, (min-width: 640px) 288px, 75vw"
+              />
+              <img
+                src={`/images/about_screens/${shot.base}-810.jpg`}
+                srcSet={`/images/about_screens/${shot.base}-540.jpg 540w, /images/about_screens/${shot.base}-810.jpg 810w, /images/about_screens/${shot.base}-1080.jpg 1080w`}
+                sizes="(min-width: 768px) 320px, (min-width: 640px) 288px, 75vw"
+                alt={shot.alt}
+                className="w-full h-auto block"
+                loading="lazy"
+              />
+            </picture>
+            <div className="absolute inset-x-0 bottom-0 p-4 text-white bg-gradient-to-t from-black/75 via-black/30 to-transparent">
+              <p className="text-sm font-semibold tracking-wide">{shot.title}</p>
+              <p className="text-xs text-white/90 mt-1">{shot.description}</p>
+            </div>
+          </div>
+        </figure>
+      ))}
+    </div>
   </div>
 </section>
 
