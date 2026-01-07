@@ -1,8 +1,9 @@
-import { Target } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ACTIVITY_TYPES } from "../../config/activityTypes";
+import DirectionAddModal from "../DirectionAddModal";
 import GoalDirectionCard from "../GoalDirectionCard";
 import GoalDirectionSheet from "../GoalDirectionSheet";
+import MicroAdjustmentCreateModal from "../MicroAdjustmentCreateModal";
 import type { GoalStat } from "../../hooks/useGoalTrackingStats";
 import type { GoalDirectionGroup } from "../../lib/goalDirectionUtils";
 import { pickPreferredMetricGoal } from "../../lib/goalDirectionUtils";
@@ -25,6 +26,8 @@ export default function GoalTrackingTab({
   loading = false,
 }: GoalTrackingTabProps) {
   const [activeGroup, setActiveGroup] = useState<GoalDirectionGroup | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showMicroAdjustmentModal, setShowMicroAdjustmentModal] = useState(false);
   const PERIOD_ORDER: Record<"week" | "month" | "year", number> = {
     week: 1,
     month: 2,
@@ -91,15 +94,36 @@ export default function GoalTrackingTab({
         </div>
       )}
 
+      <DirectionAddModal
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onSelectDirection={() => {
+          setShowAddDialog(false);
+          onAddGoal();
+        }}
+        onSelectMicroAdjustment={() => {
+          setShowAddDialog(false);
+          setShowMicroAdjustmentModal(true);
+        }}
+      />
+
+      <MicroAdjustmentCreateModal
+        open={showMicroAdjustmentModal}
+        onClose={() => setShowMicroAdjustmentModal(false)}
+      />
+
       <button
-        onClick={onAddGoal}
-        className="w-full flex items-center justify-center gap-2 
-             bg-amber-300 border border-amber-400 text-primary-text 
-             py-3 rounded-full text-lg font-medium my-4"
+        type="button"
+        aria-label="Add"
+        onClick={() => setShowAddDialog(true)}
+        className="fixed z-40 rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
+        style={{
+          right: "calc(16px + env(safe-area-inset-right))",
+          bottom: "calc(90px + env(safe-area-inset-bottom))",
+        }}
       >
-        <span className="text-xl">+</span>
-        <Target className="w-5 h-5" />
-        <span>Direction</span>
+        <span className="text-2xl leading-none">+</span>
+        <span className="text-sm font-semibold">Add</span>
       </button>
 
       <div className="text-center mt-8">

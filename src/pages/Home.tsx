@@ -8,6 +8,7 @@ import RecentActivityCard from "../components/RecentActivityCard";
 import SearchBar from "../components/SearchBar";
 import LogCTA from "../components/LogCTA";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
+import TinyTweakStrip from "../components/TinyTweakStrip";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
@@ -247,7 +248,8 @@ export default function Home() {
                 >
                   {month.label}
                 </h3>
-              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-5">
+                  {isFirstMonth && <TinyTweakStrip userId={userId} />}
                   {month.days.map((day) => (
                     <div key={day.key} className="flex gap-1 items-start">
                       <div className="w-8 sm:w-9 md:w-10 flex-shrink-0 text-left text-movenotes-muted uppercase text-xs font-semibold leading-5 pt-1 ml-[-6px]">
