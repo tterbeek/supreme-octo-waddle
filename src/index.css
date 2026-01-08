@@ -9,7 +9,7 @@ body {
 /* Hide scrollbars globally (while keeping scroll functionality) */
 html,
 body {
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: auto;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
 }
