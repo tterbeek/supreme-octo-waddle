@@ -5,12 +5,16 @@ type TooltipBubbleProps = {
   children: ReactNode;
   onClose: () => void;
   position?: "top" | "bottom" | "left" | "right";
+  className?: string;
+  wrapperClassName?: string;
 };
 
 export default function TooltipBubble({
   children,
   onClose,
   position = "top",
+  className,
+  wrapperClassName,
 }: TooltipBubbleProps) {
   const positionClasses =
     position === "top"
@@ -21,14 +25,18 @@ export default function TooltipBubble({
       ? "right-full mr-2 top-1/2 -translate-y-1/2"
       : "left-full ml-2 top-1/2 -translate-y-1/2";
 
+  const bubbleClassName = className ?? "max-w-xs";
+
   return (
     <div
-      className={`absolute ${positionClasses} z-50 pointer-events-auto`}
+      className={`absolute ${positionClasses} z-50 pointer-events-auto ${wrapperClassName ?? ""}`}
       onClick={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
     >
-      <div className="relative bg-white text-gray-900 text-sm p-3 rounded-xl shadow-lg border border-warm-200 max-w-xs animate-fadeIn">
+      <div
+        className={`relative bg-white text-gray-900 text-sm p-3 rounded-xl shadow-lg border border-warm-200 animate-fadeIn ${bubbleClassName}`}
+      >
         {children}
         <button
           onClick={onClose}

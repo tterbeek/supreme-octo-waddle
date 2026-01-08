@@ -3,6 +3,7 @@ import { useState } from "react";
 export type TooltipKey =
   | "home_log_button"
   | "after_first_log"
+  | "tiny_tweak_prompt"
   | "stats_trends_info"
   | "presets_info";
 

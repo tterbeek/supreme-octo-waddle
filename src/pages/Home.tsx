@@ -140,6 +140,13 @@ export default function Home() {
     localStorage.getItem("movenotes_onboarding_done") === "true";
   const showFirstLogPrompt = initialFeedLoaded && activities.length === 0;
 
+  useEffect(() => {
+    if (!hasDoneOnboarding || !initialFeedLoaded) return;
+    if (activities.length >= 3) {
+      showTooltip("tiny_tweak_prompt");
+    }
+  }, [activities.length, hasDoneOnboarding, initialFeedLoaded, showTooltip]);
+
   // --------------------------------------------------
   // DELETE / UNDO
   // --------------------------------------------------
@@ -249,7 +256,13 @@ export default function Home() {
                   {month.label}
                 </h3>
                 <div className="flex flex-col gap-5">
-                  {isFirstMonth && <TinyTweakStrip userId={userId} />}
+                  {isFirstMonth && (
+                    <TinyTweakStrip
+                      userId={userId}
+                      tooltipVisible={visible === "tiny_tweak_prompt"}
+                      onTooltipClose={hideTooltip}
+                    />
+                  )}
                   {month.days.map((day) => (
                     <div key={day.key} className="flex gap-1 items-start">
                       <div className="w-8 sm:w-9 md:w-10 flex-shrink-0 text-left text-movenotes-muted uppercase text-xs font-semibold leading-5 pt-1 ml-[-6px]">
