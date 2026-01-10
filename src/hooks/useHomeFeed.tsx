@@ -3,24 +3,7 @@ import { fetchFeedPage } from "../services/activities.service";
 
 const FEED_PAGE_SIZE = 20;
 
-const sortActivitiesByDateAndCreated = (items: any[]) =>
-  [...items].sort((a, b) => {
-    const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-    if (dateDiff !== 0) return dateDiff;
-
-    const bCreated =
-      (b.created_at && new Date(b.created_at).getTime()) ||
-      (b.inserted_at && new Date(b.inserted_at).getTime()) ||
-      (b.updated_at && new Date(b.updated_at).getTime()) ||
-      0;
-    const aCreated =
-      (a.created_at && new Date(a.created_at).getTime()) ||
-      (a.inserted_at && new Date(a.inserted_at).getTime()) ||
-      (a.updated_at && new Date(a.updated_at).getTime()) ||
-      0;
-
-    return bCreated - aCreated;
-  });
+const sortFeedRows = (items: any[]) => [...items];
 
 export function useHomeFeed(userId: string | null) {
   const [activities, setActivities] = useState<any[]>([]);
@@ -35,8 +18,8 @@ export function useHomeFeed(userId: string | null) {
   const refresh = useCallback(async () => {
     if (!userId) return;
     setIsLoading(true);
-    const { data: firstFeed } = await fetchFeedPage(userId, FEED_PAGE_SIZE, 0);
-    setActivities(sortActivitiesByDateAndCreated(firstFeed || []));
+    const { data: firstFeed } = await fetchFeedPage(FEED_PAGE_SIZE, 0);
+    setActivities(sortFeedRows(firstFeed || []));
     setFeedOffset(firstFeed ? firstFeed.length : 0);
     setHasMoreFeed(!!firstFeed && firstFeed.length === FEED_PAGE_SIZE);
     setInitialFeedLoaded(true);
@@ -49,12 +32,12 @@ export function useHomeFeed(userId: string | null) {
     isLoadingMoreRef.current = true;
     try {
       const offset = feedOffset;
-      const { data: more } = await fetchFeedPage(userId, FEED_PAGE_SIZE, offset);
+      const { data: more } = await fetchFeedPage(FEED_PAGE_SIZE, offset);
       if (!more || more.length === 0) {
         setHasMoreFeed(false);
         return;
       }
-      setActivities((prev) => sortActivitiesByDateAndCreated([...prev, ...more]));
+      setActivities((prev) => sortFeedRows([...prev, ...more]));
       setFeedOffset((prev) => prev + more.length);
       if (more.length < FEED_PAGE_SIZE) {
         setHasMoreFeed(false);
@@ -84,11 +67,24 @@ export function useHomeFeed(userId: string | null) {
 
   const filteredActivities = useMemo(() => {
     const normalizedSearch = searchTerm.toLowerCase();
+    if (!normalizedSearch) return activities;
     return activities.filter((a) => {
-      return (
-        a.title?.toLowerCase().includes(normalizedSearch) ||
-        a.notes?.toLowerCase().includes(normalizedSearch) ||
-        a.type?.toLowerCase().includes(normalizedSearch)
+      const metadata =
+        a.metadata && typeof a.metadata === "object" ? a.metadata : null;
+      const metaText =
+        metadata?.tiny_tweak_text || metadata?.tweak_text || metadata?.tweakText;
+      const haystack = [
+        a.title,
+        a.notes,
+        a.type,
+        a.entry_text,
+        a.text,
+        metaText,
+      ];
+      return haystack.some(
+        (value) =>
+          typeof value === "string" &&
+          value.toLowerCase().includes(normalizedSearch)
       );
     });
   }, [activities, searchTerm]);

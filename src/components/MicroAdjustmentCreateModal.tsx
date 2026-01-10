@@ -171,7 +171,11 @@ export default function MicroAdjustmentCreateModal({
 
     const { error } = await supabase
       .from("micro_adjustments")
-      .update({ status: "ended", ended_at: new Date().toISOString() })
+      .update({
+        status: "ended",
+        ended_at: new Date().toISOString(),
+        end_flow_state: "prompt_reflection",
+      })
       .eq("id", activeTweak.id)
       .eq("user_id", user.id)
       .eq("status", "active");
@@ -213,7 +217,11 @@ export default function MicroAdjustmentCreateModal({
     if (isAdjustMode && activeTweak) {
       const { error: endError } = await supabase
         .from("micro_adjustments")
-        .update({ status: "ended", ended_at: new Date().toISOString() })
+        .update({
+          status: "ended",
+          ended_at: new Date().toISOString(),
+          end_flow_state: "prompt_reflection",
+        })
         .eq("id", activeTweak.id)
         .eq("user_id", user.id)
         .eq("status", "active");

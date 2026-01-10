@@ -12,30 +12,15 @@ export async function fetchActivitiesForGoals(userId: string, cutoffStr: string)
 }
 
 export async function fetchFeedPage(
-  userId: string,
   limit: number,
   offset = 0
 ) {
-  const { data, error } = await supabase
-    .from("activities")
-    .select(
-      "*, activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
-    )
-    .eq("user_id", userId)
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+  const { data, error } = await supabase.rpc("get_journal_feed_page", {
+    p_limit: limit,
+    p_offset: offset,
+  });
 
-  const mapped =
-    data?.map((activity: any) => {
-      const equipment =
-        activity.activity_equipment
-          ?.map((item: any) => item?.equipment)
-          .filter(Boolean) || [];
-      return { ...activity, equipment };
-    }) || [];
-
-  return { data: mapped, error };
+  return { data: data || [], error };
 }
 
 export async function restoreActivity(activity: any) {

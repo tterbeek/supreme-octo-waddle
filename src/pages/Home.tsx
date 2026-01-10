@@ -9,6 +9,7 @@ import SearchBar from "../components/SearchBar";
 import LogCTA from "../components/LogCTA";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import TinyTweakStrip from "../components/TinyTweakStrip";
+import JournalEntryCard from "../components/JournalEntryCard";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { formatDistance } from "../lib/units";
@@ -182,11 +183,27 @@ export default function Home() {
     const months: MonthGroup[] = [];
     const monthMap = new Map<string, MonthGroup>();
 
+    const toDayKey = (value: any) => {
+      if (!value) return "";
+      if (typeof value === "string" && value.length >= 10) {
+        return value.slice(0, 10);
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toISOString().slice(0, 10);
+    };
+
+    const getEntryDayKey = (entry: any) => {
+      if (entry.day) return toDayKey(entry.day);
+      if (entry.date) return toDayKey(entry.date);
+      if (entry.journal_created_at) return toDayKey(entry.journal_created_at);
+      return "";
+    };
+
     filteredActivities.forEach((a) => {
-      const iso = typeof a.date === "string" ? a.date : a.date ? new Date(a.date).toISOString() : "";
-      if (!iso) return;
-      const dayKey = iso.slice(0, 10);
-      const monthKey = iso.slice(0, 7); // YYYY-MM
+      const dayKey = getEntryDayKey(a);
+      if (!dayKey) return;
+      const monthKey = dayKey.slice(0, 7); // YYYY-MM
       const dateObj = new Date(dayKey);
 
       let monthBucket = monthMap.get(monthKey);
@@ -279,10 +296,21 @@ export default function Home() {
                       </div>
                       <div className="flex-1 flex flex-col gap-3">
                         {day.items.map((a) => {
-                          const showAfterLogTooltip = visible === "after_first_log" && renderIndex === 0;
-                          const card = (
+                          if (a.entry_kind === "journal_entry") {
+                            return (
+                              <JournalEntryCard
+                                key={`journal-${a.id}`}
+                                entry={a}
+                              />
+                            );
+                          }
+
+                          const showAfterLogTooltip =
+                            visible === "after_first_log" && renderIndex === 0;
+                          renderIndex += 1;
+                          return (
                             <RecentActivityCard
-                              key={a.id}
+                              key={`activity-${a.id}`}
                               activity={a}
                               signedNoteImages={signedNoteImages}
                               signedNoteThumbs={signedNoteThumbs}
@@ -308,8 +336,6 @@ export default function Home() {
                               disableSwipe={!!lightbox}
                             />
                           );
-                          renderIndex += 1;
-                          return card;
                         })}
                       </div>
                     </div>

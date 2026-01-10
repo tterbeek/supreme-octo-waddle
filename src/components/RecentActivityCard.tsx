@@ -147,8 +147,8 @@ export default function RecentActivityCard({
             {activity.notes?.trim() && (
               <p
                 className="
-                  text-[15px] md:text[17px]
-                  text-gray-600 font-[DMSerifDisplay] italic leading-snug
+                  text-[15px] md:text-[17px]
+                  text-movenotes-text/80 font-[DMSerifDisplay] italic leading-snug
                   max-w-xs sm:max-w-sm md:max-w-md mx-auto
                 "
               >

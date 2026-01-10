@@ -6,12 +6,14 @@ type ModalSheetProps = {
   children: ReactNode;
   onClose: () => void;
   enableDragToClose?: boolean;
+  sheetClassName?: string;
 };
 
 export default function ModalSheet({
   children,
   onClose,
   enableDragToClose = true,
+  sheetClassName = "max-w-md",
 }: ModalSheetProps) {
   const [animateIn, setAnimateIn] = useState(false);
   const [dragY, setDragY] = useState(0);
@@ -78,7 +80,7 @@ export default function ModalSheet({
           transform: `translateY(${dragY}px)`,
           touchAction: enableDragToClose ? "none" : "auto",
         }}
-        className={`w-full max-w-md bg-warm-100 rounded-t-2xl p-6 shadow-lg will-change-transform
+        className={`w-full ${sheetClassName} bg-warm-100 rounded-t-2xl p-6 shadow-lg will-change-transform
         transition-transform duration-200
         ${animateIn ? "translate-y-0" : "translate-y-full"}`}
       >
