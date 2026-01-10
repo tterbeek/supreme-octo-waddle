@@ -257,11 +257,19 @@ export default function Home() {
                 </h3>
                 <div className="flex flex-col gap-5">
                   {isFirstMonth && (
-                    <TinyTweakStrip
-                      userId={userId}
-                      tooltipVisible={visible === "tiny_tweak_prompt"}
-                      onTooltipClose={hideTooltip}
-                    />
+                    <div className="flex gap-1 items-start">
+                      <div
+                        aria-hidden="true"
+                        className="w-8 sm:w-9 md:w-10 flex-shrink-0 ml-[-6px]"
+                      />
+                      <div className="flex-1">
+                        <TinyTweakStrip
+                          userId={userId}
+                          tooltipVisible={visible === "tiny_tweak_prompt"}
+                          onTooltipClose={hideTooltip}
+                        />
+                      </div>
+                    </div>
                   )}
                   {month.days.map((day) => (
                     <div key={day.key} className="flex gap-1 items-start">

@@ -15,8 +15,7 @@ type TinyTweak = {
   started_at: string | null;
 };
 
-const ACTIVE_WINDOW_DAYS = 7;
-const ACTIVE_WINDOW_MS = ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+const ACTIVE_ACTIVITY_LIMIT = 7;
 
 export default function TinyTweakStrip({
   userId,
@@ -58,8 +57,21 @@ export default function TinyTweakStrip({
       return;
     }
 
-    const isFresh = Date.now() - startedAt.getTime() <= ACTIVE_WINDOW_MS;
-    if (!isFresh) {
+    const { count, error: countError } = await supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", tweak.started_at);
+
+    if (countError) {
+      console.error("[TinyTweak] Activity count failed:", countError.message);
+      setActiveTweak(tweak);
+      return;
+    }
+
+    const activityCount = count ?? 0;
+    const isWithinLimit = activityCount < ACTIVE_ACTIVITY_LIMIT;
+    if (!isWithinLimit) {
       setActiveTweak(null);
       supabase
         .from("micro_adjustments")
@@ -104,6 +116,8 @@ export default function TinyTweakStrip({
 
   const shouldShowTooltip = tooltipVisible && !activeTweak;
   const shouldRenderStrip = !!activeTweak || shouldShowTooltip || modalMode !== null;
+  const cardClassName =
+    "relative w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto text-left bg-movenotes-bgoverlay border border-movenotes-border/80 rounded-xl px-5 py-4 sm:px-6 sm:py-5 overflow-hidden before:content-[''] before:absolute before:inset-y-0 before:left-0 before:w-[2px] before:bg-movenotes-muted/40 before:rounded-l-xl";
 
   if (!shouldRenderStrip) return null;
 
@@ -148,13 +162,13 @@ export default function TinyTweakStrip({
           <button
             type="button"
             onClick={() => setModalMode("adjust")}
-            className="w-full text-left bg-movenotes-surface border border-movenotes-border rounded-xl px-4 py-3 shadow-sm transition hover:-translate-y-0.5"
+            className={cardClassName}
           >
-            <div className="text-xs uppercase tracking-wide text-movenotes-muted">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-movenotes-text/70">
               Tiny tweak
             </div>
             <div
-              className="text-sm text-movenotes-text font-medium mt-1 overflow-hidden"
+              className="text-sm text-movenotes-text font-medium mt-1 leading-relaxed overflow-hidden"
               style={{
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -167,12 +181,12 @@ export default function TinyTweakStrip({
         ) : (
           <div
             aria-hidden="true"
-            className="w-full text-left bg-movenotes-surface border border-movenotes-border rounded-xl px-4 py-3 shadow-sm opacity-0 pointer-events-none"
+            className={`${cardClassName} opacity-0 pointer-events-none`}
           >
-            <div className="text-xs uppercase tracking-wide text-movenotes-muted">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-movenotes-text/70">
               Tiny tweak
             </div>
-            <div className="text-sm text-movenotes-text font-medium mt-1">
+            <div className="text-sm text-movenotes-text font-medium mt-1 leading-relaxed">
               Placeholder
             </div>
           </div>
