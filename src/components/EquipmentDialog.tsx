@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import ModalSheet from "./ModalSheet";
 import type { Equipment } from "../types";
+import EquipmentFormSheet from "./EquipmentFormSheet";
 
 type EquipmentDialogProps = {
   equipment: Equipment[];
@@ -20,10 +21,6 @@ export default function EquipmentDialog({
 }: EquipmentDialogProps) {
   const [localSelected, setLocalSelected] = useState<string[]>(selectedEquipmentIds);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [name, setName] = useState("");
-  const [notes, setNotes] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalSelected(selectedEquipmentIds);
@@ -37,31 +34,17 @@ export default function EquipmentDialog({
 
   const closeAddForm = () => {
     setShowAddForm(false);
-    setName("");
-    setNotes("");
-    setError(null);
   };
 
-  const handleAddEquipment = async () => {
-    if (!name.trim()) {
-      setError("Name is required");
-      return;
+  const handleAddEquipment = async (name: string, notes: string) => {
+    const created = await onAddEquipment(name, notes);
+    if (!created) {
+      return { ok: false, error: "Could not add equipment right now" };
     }
-    setAdding(true);
-    setError(null);
-    try {
-      const created = await onAddEquipment(name.trim(), notes.trim());
-      if (!created) {
-        setError("Could not add equipment right now");
-        return;
-      }
-      setLocalSelected((prev) =>
-        prev.includes(created.id) ? prev : [...prev, created.id]
-      );
-      closeAddForm();
-    } finally {
-      setAdding(false);
-    }
+    setLocalSelected((prev) =>
+      prev.includes(created.id) ? prev : [...prev, created.id]
+    );
+    return { ok: true };
   };
 
   const handleDone = () => {
@@ -148,52 +131,13 @@ export default function EquipmentDialog({
       </div>
 
       {showAddForm && (
-        <ModalSheet onClose={closeAddForm} enableDragToClose>
-          <h3 className="text-lg font-semibold text-center mb-4">Add new equipment</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm text-gray-700">Name (required)</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full border rounded-md p-2 mt-1"
-                placeholder="e.g. Asics Gel Nimbus"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Give it a name you’ll recognize later.
-              </p>
-            </div>
-            <div>
-              <label className="text-sm text-gray-700">Notes (optional)</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                className="w-full border rounded-md p-2 mt-1 resize-none"
-                placeholder="Anything you want to remember about this."
-              />
-            </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleAddEquipment}
-                disabled={adding}
-                className="flex-1 bg-movenotes-primary text-primary-text py-2 rounded-full border border-amber-400 font-medium disabled:opacity-60"
-              >
-                {adding ? "Adding..." : "Add equipment"}
-              </button>
-              <button
-                type="button"
-                onClick={closeAddForm}
-                className="px-4 py-2 rounded-full border border-gray-300 text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </ModalSheet>
+        <EquipmentFormSheet
+          title="Add new equipment"
+          primaryLabel="Add equipment"
+          savingLabel="Adding..."
+          onSubmit={handleAddEquipment}
+          onClose={closeAddForm}
+        />
       )}
     </ModalSheet>
   );

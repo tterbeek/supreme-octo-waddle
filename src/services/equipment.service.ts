@@ -17,6 +17,21 @@ export async function fetchActiveEquipment(userId: string) {
   return (data || []) as Equipment[];
 }
 
+export async function fetchAllEquipment(userId: string) {
+  const { data, error } = await supabase
+    .from("equipment")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[Equipment] Error fetching equipment:", error.message);
+    return [];
+  }
+
+  return (data || []) as Equipment[];
+}
+
 export async function createEquipment(params: {
   userId: string;
   name: string;
@@ -36,6 +51,44 @@ export async function createEquipment(params: {
 
   if (error) {
     console.error("[Equipment] Error creating equipment:", error.message);
+    return { equipment: null, error };
+  }
+
+  return { equipment: (data as Equipment) || null, error: null };
+}
+
+export async function updateEquipment(
+  equipmentId: string,
+  updates: { name: string; notes?: string | null }
+) {
+  const { data, error } = await supabase
+    .from("equipment")
+    .update({
+      name: updates.name,
+      notes: updates.notes ?? null,
+    })
+    .eq("id", equipmentId)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[Equipment] Error updating equipment:", error.message);
+    return { equipment: null, error };
+  }
+
+  return { equipment: (data as Equipment) || null, error: null };
+}
+
+export async function setEquipmentActive(equipmentId: string, isActive: boolean) {
+  const { data, error } = await supabase
+    .from("equipment")
+    .update({ is_active: isActive })
+    .eq("id", equipmentId)
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error("[Equipment] Error updating equipment status:", error.message);
     return { equipment: null, error };
   }
 

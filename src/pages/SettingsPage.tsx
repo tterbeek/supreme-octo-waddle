@@ -153,22 +153,31 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* MANAGE PRESETS */}
-      <Link
-        to="/presets"
-        className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
-      >
-        <FileText className="w-5 h-5 text-movenotes-primary" />
-        <span>Manage Presets</span>
-      </Link>
-
       {/* ACTIVITY PREFERENCES */}
       <Link
         to="/settings/activity-preferences"
         className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
       >
         <FileText className="w-5 h-5 text-movenotes-primary" />
-        <span>Activity Preferences</span>
+        <span>Activity type preferences</span>
+      </Link>
+
+      {/* MANAGE PRESETS */}
+      <Link
+        to="/presets"
+        className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
+      >
+        <FileText className="w-5 h-5 text-movenotes-primary" />
+        <span>Manage presets</span>
+      </Link>
+
+      {/* MANAGE EQUIPMENT */}
+      <Link
+        to="/settings/equipment"
+        className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
+      >
+        <FileText className="w-5 h-5 text-movenotes-primary" />
+        <span>Manage equipment</span>
       </Link>
 
       {/* EXPORT */}
@@ -178,7 +187,7 @@ export default function SettingsPage() {
         className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
       >
         <Download className="w-5 h-5 text-movenotes-primary" />
-        <span>{exporting ? "Exporting..." : "Export My Data"}</span>
+        <span>{exporting ? "Exporting..." : "Export data"}</span>
       </button>
 
       {/* DELETE ACCOUNT */}
@@ -188,7 +197,7 @@ export default function SettingsPage() {
         className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 text-movenotes-text active:scale-95 disabled:opacity-70"
       >
         <Trash2 className="w-5 h-5 text-movenotes-primary" />
-        <span>{deleting ? "Opening mail…" : "Request Account Deletion"}</span>
+        <span>{deleting ? "Opening mail..." : "Delete account"}</span>
       </button>
 
       {/* LOGOUT */}
@@ -197,7 +206,7 @@ export default function SettingsPage() {
         className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-8 active:scale-95"
       >
         <LogOut className="w-5 h-5" />
-        <span>Logout</span>
+        <span>Log out</span>
       </button>
 
       {/* Legal Links */}
