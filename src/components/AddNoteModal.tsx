@@ -29,6 +29,7 @@ export default function AddNoteModal({
     typeof window !== "undefined" ? window.innerWidth <= 768 : false
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const writingSoundRef = useRef<HTMLAudioElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -217,33 +218,64 @@ export default function AddNoteModal({
               className="w-full border border-movenotes-border rounded-lg p-2 bg-movenotes-bg text-movenotes-text resize-none focus:ring-2 focus:ring-movenotes-primary outline-none mb-4 overflow-hidden"
             />
 
-            <div ref={belowNoteRef} className="mb-3 space-y-3">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
-                >
-                  <Camera className="w-4 h-4 text-amber-700" />
-                  <span>Snap or attach</span>
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    markInteraction();
-                    setSelectedFile(file);
-                    setUploadProgress(0);
-                    setUploadError(null);
-                  }}
-                  className="hidden"
-                />
-                {selectedFile && (
+              <div ref={belowNoteRef} className="mb-3 space-y-3">
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+                  >
+                    <Camera className="w-4 h-4 text-amber-700" />
+                    <span>Snap or attach</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+                  >
+                    <Camera className="w-4 h-4 text-amber-700" />
+                    <span>Open camera</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+                  >
+                    <Camera className="w-4 h-4 text-amber-700" />
+                    <span>Choose photo</span>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      markInteraction();
+                      setSelectedFile(file);
+                      setUploadProgress(0);
+                      setUploadError(null);
+                    }}
+                    className="hidden"
+                  />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      markInteraction();
+                      setSelectedFile(file);
+                      setUploadProgress(0);
+                      setUploadError(null);
+                    }}
+                    className="hidden"
+                  />
+                  {selectedFile && (
+                    <button
+                      type="button"
                     onClick={() => {
                       setSelectedFile(null);
                     }}

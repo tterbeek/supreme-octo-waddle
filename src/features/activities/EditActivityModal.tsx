@@ -58,6 +58,7 @@ export default function EditActivityModal({
     animateIn,
     dragY,
     fileInputRef,
+    cameraInputRef,
     distanceDisplay,
     handleDistanceChange,
     activityType,
@@ -224,15 +225,45 @@ export default function EditActivityModal({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+              className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
             >
               <Camera className="w-4 h-4 text-amber-700" />
               <span>Snap or attach</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+            >
+              <Camera className="w-4 h-4 text-amber-700" />
+              <span>Open camera</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+            >
+              <Camera className="w-4 h-4 text-amber-700" />
+              <span>Choose photo</span>
             </button>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setSelectedFile(file);
+                setUploadError(null);
+                setUploadProgress(0);
+              }}
+              className="hidden"
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;

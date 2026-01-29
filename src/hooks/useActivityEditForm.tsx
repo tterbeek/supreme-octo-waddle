@@ -71,6 +71,7 @@ export function useActivityEditForm({
   const originalThumbPath = useRef<string | null>(activity.note_thumb_image_url || null);
   const openedAtRef = useRef<number>(Date.now());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const distanceDisplay =
     distanceKm == null
@@ -400,6 +401,7 @@ export function useActivityEditForm({
     animateIn,
     dragY,
     fileInputRef,
+    cameraInputRef,
     handleDistanceChange,
     distanceDisplay,
     handleSave,
