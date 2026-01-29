@@ -55,7 +55,7 @@ export default function TrendsTab({
 
       {!error && (
         <div className="space-y-8 mt-3">
-          <h2 className="text-xl font-semibold text-movenotes-primary mb-1 text-center">
+          <h2 className="text-lg font-bold text-movenotes-primary mb-1 text-center">
             Your movement over time
           </h2>
 

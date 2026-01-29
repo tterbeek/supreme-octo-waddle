@@ -1,11 +1,16 @@
 // src/components/AddGoalModal.tsx
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "./ModalSheet";
 import type { Goal } from "../types";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { kmToMiles, milesToKm } from "../lib/units";
+import {
+  getCachedUserActivityTypes,
+  subscribeUserActivityTypes,
+  type UserActivityTypeRow,
+} from "../lib/userActivityTypesCache";
 
 interface AddGoalModalProps {
   onClose: () => void;
@@ -30,7 +35,12 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
   const [target, setTarget] = useState("");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userActivityTypes, setUserActivityTypes] = useState<UserActivityTypeRow[]>(
+    []
+  );
   const { unitSystem } = useUnitSystem();
+  const [hasUserPickedType, setHasUserPickedType] = useState(false);
 
   const autoName = () => {
     const typeLabel = ACTIVITY_TYPES[activityType]?.label || "Activity";
@@ -70,6 +80,73 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
     const kmValue = unitSystem === "imperial" ? milesToKm(numeric) : numeric;
     setTarget(String(kmValue));
   };
+
+  const getMetricsForType = (typeId: string) => {
+    const cfg = ACTIVITY_TYPES[typeId];
+    if (typeId === "any") return ["count"] as Array<Goal["metric"]>;
+    const metrics: Array<Goal["metric"] | "duration"> = [];
+    if (cfg?.defaultFields.includes("distance_km")) metrics.push("distance");
+    if (cfg?.defaultFields.includes("duration_min"))
+      metrics.push("duration" as Goal["metric"]);
+    metrics.push("count");
+    return metrics;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled) return;
+      setUserId(user?.id ?? null);
+    };
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    const cached = getCachedUserActivityTypes(userId);
+    if (cached?.length) {
+      setUserActivityTypes(cached);
+    }
+    const unsubscribe = subscribeUserActivityTypes(userId, setUserActivityTypes);
+    return () => {
+      unsubscribe();
+    };
+  }, [userId]);
+
+  const orderedActivityTypes = useMemo(() => {
+    const anyType = ACTIVITY_TYPES["any"];
+    if (!userActivityTypes.length) {
+      const defaults = Object.values(ACTIVITY_TYPES).filter((t) => t.id !== "any");
+      return anyType ? [anyType, ...defaults] : defaults;
+    }
+    const enabled = userActivityTypes
+      .filter((row) => row.is_enabled)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((row) => ACTIVITY_TYPES[row.activity_type])
+      .filter(Boolean);
+    return anyType ? [anyType, ...enabled] : enabled;
+  }, [userActivityTypes]);
+
+  useEffect(() => {
+    if (hasUserPickedType) return;
+    if (!orderedActivityTypes.length) return;
+    const preferred =
+      orderedActivityTypes.length > 1
+        ? orderedActivityTypes[1]
+        : orderedActivityTypes[0];
+    if (!preferred || preferred.id === activityType) return;
+    setActivityType(preferred.id);
+    const metricsForNewType = getMetricsForType(preferred.id);
+    if (!metricsForNewType.includes(metric)) {
+      setMetric(metricsForNewType[0]);
+    }
+  }, [orderedActivityTypes, hasUserPickedType, activityType, metric]);
 
 const save = async () => {
   if (!target) return;
@@ -115,23 +192,15 @@ const save = async () => {
 
       {/* Activity type selector */}
       <div className="flex gap-3 overflow-x-auto pb-3 mb-3">
-        {Object.values(ACTIVITY_TYPES).map((t) => {
+        {orderedActivityTypes.map((t) => {
           const Icon = t.Icon;
           return (
             <button
               key={t.id}
               onClick={() => {
+                setHasUserPickedType(true);
                 setActivityType(t.id);
-                let metricsForNewType: Array<Goal["metric"] | "duration"> = [];
-                const cfg = ACTIVITY_TYPES[t.id];
-                if (t.id === "any") {
-                  metricsForNewType = ["count"];
-                } else {
-                  if (cfg?.defaultFields.includes("distance_km")) metricsForNewType.push("distance");
-                  if (cfg?.defaultFields.includes("duration_min"))
-                    metricsForNewType.push("duration" as Goal["metric"]);
-                  metricsForNewType.push("count");
-                }
+                const metricsForNewType = getMetricsForType(t.id);
                 if (!metricsForNewType.includes(metric)) {
                   setMetric(metricsForNewType[0]);
                 }

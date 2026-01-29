@@ -116,6 +116,7 @@ export default function StatsRpcPage() {
 
         {activeTab === "goalTracking" && (
           <GoalTrackingTab
+            userId={userId}
             goalStats={goalStats}
             goalHistoryDots={goalHistoryDots}
             onEditGoal={handleEditGoal}

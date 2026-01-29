@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
+import {
+  getCachedUserActivityTypes,
+  setCachedUserActivityTypes,
+  type UserActivityTypeRow,
+} from "../lib/userActivityTypesCache";
 
 const TRENDS_META_RPC = "stats_activity_trend_meta";
 const TRENDS_SERIES_RPC = "stats_activity_trend_series";
@@ -88,6 +93,9 @@ export function useActivityTrends(userId: string | null, enabled: boolean) {
   const [activityPreferences, setActivityPreferences] = useState<
     Record<string, "distance" | "duration">
   >({});
+  const [userActivityTypes, setUserActivityTypes] = useState<UserActivityTypeRow[]>(
+    []
+  );
   const [trendsLoading, setTrendsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -135,6 +143,46 @@ export function useActivityTrends(userId: string | null, enabled: boolean) {
       setActivityPreferences(map);
     };
     loadPrefs();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, enabled]);
+
+  useEffect(() => {
+    if (!userId || !enabled) return;
+    let cancelled = false;
+
+    const loadActivityTypes = async () => {
+      const cached = getCachedUserActivityTypes(userId);
+      if (cached?.length) {
+        setUserActivityTypes(cached);
+      }
+
+      const { error: seedError } = await supabase.rpc(
+        "ensure_user_activity_types_seeded"
+      );
+      if (seedError) {
+        console.warn("[Trends] Could not seed activity types:", seedError.message);
+      }
+
+      const { data, error: typesError } = await supabase
+        .from("user_activity_types")
+        .select("activity_type, sort_order, is_enabled")
+        .eq("user_id", userId)
+        .order("sort_order", { ascending: true });
+
+      if (typesError) {
+        console.warn("[Trends] Could not load activity types:", typesError.message);
+        return;
+      }
+      if (cancelled) return;
+      const rows = (data || []) as UserActivityTypeRow[];
+      setUserActivityTypes(rows);
+      setCachedUserActivityTypes(userId, rows);
+    };
+
+    loadActivityTypes();
+
     return () => {
       cancelled = true;
     };
@@ -251,16 +299,37 @@ export function useActivityTrends(userId: string | null, enabled: boolean) {
     [trendMeta, getDefaultMetric]
   );
 
+  const orderedMetas = useMemo(() => {
+    if (!userActivityTypes.length) return metasWithDefault;
+
+    const enabled = userActivityTypes.filter((row) => row.is_enabled);
+    if (!enabled.length) return [];
+
+    const orderMap = new Map(
+      enabled.map((row) => [row.activity_type, row.sort_order])
+    );
+    const enabledSet = new Set(enabled.map((row) => row.activity_type));
+
+    return metasWithDefault
+      .filter((meta) => enabledSet.has(meta.activity_type))
+      .sort((a, b) => {
+        const orderA = orderMap.get(a.activity_type) ?? 9999;
+        const orderB = orderMap.get(b.activity_type) ?? 9999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.activity_type.localeCompare(b.activity_type);
+      });
+  }, [metasWithDefault, userActivityTypes]);
+
   const hasTrendRows = useMemo(
     () =>
-      metasWithDefault.some((meta) => {
+      orderedMetas.some((meta) => {
         const activeMetric =
           selectedMetric[meta.activity_type] ??
           (getDefaultMetric(meta) as "distance" | "duration");
         const key = `${meta.activity_type}:${activeMetric}`;
         return (trendData[key]?.length || 0) > 0;
       }),
-    [metasWithDefault, selectedMetric, trendData, getDefaultMetric]
+    [orderedMetas, selectedMetric, trendData, getDefaultMetric]
   );
 
   return {
@@ -270,7 +339,7 @@ export function useActivityTrends(userId: string | null, enabled: boolean) {
     trendsLoading,
     error,
     onToggleMetric,
-    metasWithDefault,
+    metasWithDefault: orderedMetas,
     hasTrendRows,
     getDefaultMetric,
     canToggle,

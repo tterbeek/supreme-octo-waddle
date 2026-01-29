@@ -28,6 +28,30 @@ export interface ActivityTypeConfig {
   optionalFields: ActivityField[];
 }
 
+export const SETTINGS_ACTIVITY_TYPE_IDS = [
+  "run",
+  "ride",
+  "walk",
+  "strength",
+  "yoga",
+  "hike",
+  "swim",
+  "restore",
+  "other",
+] as const;
+
+export const METRIC_OVERRIDE_ACTIVITY_TYPE_IDS = [
+  "run",
+  "ride",
+  "walk",
+  "hike",
+  "swim",
+  "other",
+] as const;
+
+export const supportsMetricOverride = (activityType: string) =>
+  (METRIC_OVERRIDE_ACTIVITY_TYPE_IDS as readonly string[]).includes(activityType);
+
 export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
   any: {
     id: "any",
@@ -94,7 +118,7 @@ export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
     defaultFields: ["duration_min"],
     optionalFields: ["distance_km"],
   },
-    restore: {
+  restore: {
     id: "restore",
     label: "Restore",
     equipmentLabel: "Restore",

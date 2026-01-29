@@ -1,8 +1,10 @@
-import { ACTIVITY_TYPES } from "../config/activityTypes";
+import {
+  ACTIVITY_TYPES,
+  METRIC_OVERRIDE_ACTIVITY_TYPE_IDS,
+} from "../config/activityTypes";
 
 export function getConfigurableActivities() {
-  return Object.values(ACTIVITY_TYPES).filter(
-    (activity) =>
-      activity.defaultFields.length === 1 && activity.optionalFields.length === 1
+  return METRIC_OVERRIDE_ACTIVITY_TYPE_IDS.map((id) => ACTIVITY_TYPES[id]).filter(
+    (activity): activity is (typeof ACTIVITY_TYPES)[string] => Boolean(activity)
   );
 }

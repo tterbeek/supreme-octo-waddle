@@ -97,10 +97,6 @@ export default function GoalDirectionCard({
         {Icon && <Icon size={20} strokeWidth={1.8} />}
         <div className="flex items-center gap-2 text-base font-medium">
           <span>{getActivityLabel(group.activity_type)}</span>
-          <span className="text-movenotes-muted font-normal">·</span>
-          <span className="capitalize">
-            {group.period}
-          </span>
         </div>
       </div>
 
