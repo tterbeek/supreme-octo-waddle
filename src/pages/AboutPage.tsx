@@ -54,20 +54,33 @@ export default function AboutPage() {
     About MoveNotes
   </h1>
 
-  <div className="text-center text-movenotes-text/90 text-lg mb-10 leading-relaxed max-w-2xl mx-auto space-y-4">
+  <div className="text-center text-movenotes-muted text-lg mb-6 leading-relaxed max-w-2xl mx-auto space-y-4">
     <p>MoveNotes is a quiet place to notice your movement.</p>
-    <p>It's not about performance, streaks, or improvement.</p>
-    <p>It's not about optimizing your body or collecting data.</p>
-    <p>MoveNotes is for paying attention — gently, without pressure.</p>
-    <p>
-      After a walk, a run, a ride, or any kind of movement, you can leave a short
-      note about how it felt. Nothing to complete. Nothing to prove. Just noticing
-      what's already there.
-    </p>
+    <p>It's not about performance or optimization.</p>
+    <p>It's about paying attention — gently, without pressure.</p>
     <p>You don't need to change your routine or commit to anything.</p>
-    <p>MoveNotes works best when approached slowly.</p>
-    <p>It's a small, independent project, made slowly in Brussels.</p>
   </div>
+
+  <div className="max-w-2xl mx-auto mb-8">
+    <div className="h-px bg-movenotes-border/60" />
+  </div>
+
+  {/* How it works */}
+  <section className="mb-10">
+    <h2 className="text-xl font-semibold text-movenotes-primary mb-3">
+      How it works
+    </h2>
+    <p className="leading-relaxed mb-4">
+      After a walk, a run, a ride, or any kind of movement, you can leave a short
+      note about how it felt.
+    </p>
+    <p className="leading-relaxed mb-4">
+      Nothing to complete. Nothing to prove.
+    </p>
+    <p className="leading-relaxed">
+      Just noticing what's already there.
+    </p>
+  </section>
 
         {/* Why */}
         <section className="mb-10">
@@ -78,14 +91,20 @@ export default function AboutPage() {
             MoveNotes is a simple, private movement journal for people who enjoy moving
             without constant tracking pressure.
           </p>
-          <p className="leading-relaxed mb-4">
+          <p className="leading-relaxed">
             There's no pace stress, no heart-rate dashboards, and no social comparison — just
             a calm place to reflect on runs, walks, rides, yoga, strength training, hikes,
             and more.
           </p>
-          <p className="leading-relaxed">
-            Instead of measuring performance, MoveNotes makes space for reflection: how
-            movement feels, how it fits into your day, and how your body responds over time.
+        </section>
+
+        {/* A small note */}
+        <section className="mb-10">
+          <h2 className="text-xl font-semibold text-movenotes-primary mb-3">
+            A small note
+          </h2>
+          <p className="leading-relaxed text-movenotes-muted">
+            MoveNotes is a small, independent project, made slowly in Brussels.
           </p>
         </section>
 
