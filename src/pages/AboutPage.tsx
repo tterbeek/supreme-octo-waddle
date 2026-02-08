@@ -54,11 +54,20 @@ export default function AboutPage() {
     About MoveNotes
   </h1>
 
-  <p className="text-center text-movenotes-text/90 text-lg mb-10 leading-relaxed max-w-2xl mx-auto">
-    MoveNotes is a simple, private movement journal that helps you log your 
-    activities, reflect on how they felt, and appreciate your movement journey — 
-    without GPS pressure or social comparison.
-  </p>
+  <div className="text-center text-movenotes-text/90 text-lg mb-10 leading-relaxed max-w-2xl mx-auto space-y-4">
+    <p>MoveNotes is a quiet place to notice your movement.</p>
+    <p>It's not about performance, streaks, or improvement.</p>
+    <p>It's not about optimizing your body or collecting data.</p>
+    <p>MoveNotes is for paying attention — gently, without pressure.</p>
+    <p>
+      After a walk, a run, a ride, or any kind of movement, you can leave a short
+      note about how it felt. Nothing to complete. Nothing to prove. Just noticing
+      what's already there.
+    </p>
+    <p>You don't need to change your routine or commit to anything.</p>
+    <p>MoveNotes works best when approached slowly.</p>
+    <p>It's a small, independent project, made slowly in Brussels.</p>
+  </div>
 
         {/* Why */}
         <section className="mb-10">
@@ -66,10 +75,17 @@ export default function AboutPage() {
             Why MoveNotes?
           </h2>
           <p className="leading-relaxed mb-4">
-            MoveNotes was created for people who enjoy moving without constant tracking
-            pressure. No pace stress, no heart-rate dashboards, no competition — just
-            a calm place to reflect on runs, walks, rides, yoga, strength training,
-            hikes, and more.
+            MoveNotes is a simple, private movement journal for people who enjoy moving
+            without constant tracking pressure.
+          </p>
+          <p className="leading-relaxed mb-4">
+            There's no pace stress, no heart-rate dashboards, and no social comparison — just
+            a calm place to reflect on runs, walks, rides, yoga, strength training, hikes,
+            and more.
+          </p>
+          <p className="leading-relaxed">
+            Instead of measuring performance, MoveNotes makes space for reflection: how
+            movement feels, how it fits into your day, and how your body responds over time.
           </p>
         </section>
 
