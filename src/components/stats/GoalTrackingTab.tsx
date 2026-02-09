@@ -19,7 +19,6 @@ type GoalTrackingTabProps = {
   goalHistoryDots: Record<string, Array<number | null>>;
   onEditGoal: (goal: GoalStat) => void;
   onAddGoal: () => void;
-  onSeeTrends: () => void;
   loading?: boolean;
 };
 
@@ -29,7 +28,6 @@ export default function GoalTrackingTab({
   goalHistoryDots,
   onEditGoal,
   onAddGoal,
-  onSeeTrends,
   loading = false,
 }: GoalTrackingTabProps) {
   const [activeGroup, setActiveGroup] = useState<GoalDirectionGroup | null>(null);
@@ -200,15 +198,6 @@ export default function GoalTrackingTab({
         <span className="text-2xl leading-none">+</span>
         <span className="text-sm font-semibold">Add</span>
       </button>
-
-      <div className="text-center mt-8">
-        <button
-          onClick={onSeeTrends}
-          className="text-movenotes-accent underline text-sm"
-        >
-          See all activity stats →
-        </button>
-      </div>
 
       {activeGroup && (
         <GoalDirectionSheet

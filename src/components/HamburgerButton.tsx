@@ -10,7 +10,7 @@ export default function HamburgerButton({
   return (
     <button
       onClick={onClick}
-      className="relative w-8 h-8 flex flex-col justify-center items-center"
+      className="relative w-8 h-8 flex flex-col justify-center items-start"
     >
       {/* Top bar */}
       <motion.div

@@ -71,20 +71,17 @@ export default function StatsRpcPage() {
   };
 
   return (
-    <div className="min-h-screen bg-movenotes-bg p-2">
-      <div className="p-2 max-w-md mx-auto">
-        <div
-          className="mb-4 relative flex items-center justify-center"
-          ref={statsHeaderRef}
-        >
-          {visible === "stats_trends_info" && (
-            <TooltipBubble position="bottom" onClose={hideTooltip}>
-              Your stats update automatically as you log activities.
-            </TooltipBubble>
-          )}
-        </div>
+    <div className="min-h-screen bg-movenotes-bg">
+      <div className="relative h-0" ref={statsHeaderRef}>
+        {visible === "stats_trends_info" && (
+          <TooltipBubble position="bottom" onClose={hideTooltip}>
+            Your stats update automatically as you log activities.
+          </TooltipBubble>
+        )}
+      </div>
 
-        <div className="flex justify-center gap-10 mb-6 mt-2">
+      <div className="sticky top-0 z-40 -mt-2 bg-movenotes-bg/95 backdrop-blur border-b border-movenotes-border/60 mb-6">
+        <div className="flex items-center gap-2 px-0 py-2">
           {[
             { id: "goalTracking", label: "Direction" },
             { id: "trends", label: "Trends" },
@@ -94,53 +91,50 @@ export default function StatsRpcPage() {
               <button
                 key={id}
                 onClick={() => setActiveTab(id as "goalTracking" | "trends")}
-                className="relative pb-1 text-base"
+                className="relative flex-1 text-center text-sm font-medium pb-2"
               >
                 <span
                   className={
-                    active
-                      ? "text-movenotes-primary font-semibold"
-                      : "text-movenotes-muted"
+                    active ? "text-movenotes-text" : "text-movenotes-muted"
                   }
                 >
                   {label}
                 </span>
 
                 {active && (
-                  <span className="absolute left-0 right-0 -bottom-0.5 h-0.5 bg-movenotes-primary rounded-full" />
+                  <span className="absolute left-4 right-4 -bottom-0.5 h-0.5 rounded-full bg-movenotes-text/70" />
                 )}
               </button>
             );
           })}
         </div>
+      </div>
 
-        {activeTab === "goalTracking" && (
+      {activeTab === "goalTracking" && (
           <GoalTrackingTab
             userId={userId}
             goalStats={goalStats}
             goalHistoryDots={goalHistoryDots}
             onEditGoal={handleEditGoal}
             onAddGoal={() => setShowAddGoal(true)}
-            onSeeTrends={() => setActiveTab("trends")}
             loading={goalLoading}
           />
-        )}
+      )}
 
-        {activeTab === "trends" && (
-          <TrendsTab
-            metasWithDefault={metasWithDefault}
-            selectedMetric={selectedMetric}
-            trendData={trendData}
-            getDefaultMetric={getDefaultMetric}
-            onToggleMetric={onToggleMetric}
-            canToggle={canToggle}
-            hasTrendRows={hasTrendRows}
-            trendsLoading={trendsLoading}
-            error={trendError ?? goalError}
-            unitSystem={unitSystem}
-          />
-        )}
-      </div>
+      {activeTab === "trends" && (
+        <TrendsTab
+          metasWithDefault={metasWithDefault}
+          selectedMetric={selectedMetric}
+          trendData={trendData}
+          getDefaultMetric={getDefaultMetric}
+          onToggleMetric={onToggleMetric}
+          canToggle={canToggle}
+          hasTrendRows={hasTrendRows}
+          trendsLoading={trendsLoading}
+          error={trendError ?? goalError}
+          unitSystem={unitSystem}
+        />
+      )}
 
       {showAddGoal && (
         <AddGoalModal

@@ -24,6 +24,7 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import IntroPage from "./pages/IntroPage";
 import { UnitProvider } from "./contexts/UnitContext";
 import CalendarPage from "./pages/CalendarPage";
+import PhotosPage from "./pages/PhotosPage";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -129,7 +130,7 @@ export default function App() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
-            className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl min-h-screen p-4 bg-movenotes-bg text-movenotes-text"
+            className="min-h-screen w-full bg-movenotes-bg text-movenotes-text"
           >
             <Routes>
               {/* 🌿 Public routes (always visible) */}
@@ -178,6 +179,15 @@ export default function App() {
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
                         <CalendarPage />
+                      </Layout>
+                    }
+                  />
+
+                  <Route
+                    path="/photos"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <PhotosPage />
                       </Layout>
                     }
                   />
