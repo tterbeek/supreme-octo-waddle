@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { useHomeFeed } from "../hooks/useHomeFeed";
 import { useNoteImages } from "../hooks/useNoteImages";
@@ -51,11 +52,16 @@ export default function PhotosPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [chromeVisible, setChromeVisible] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
+  const [fullReady, setFullReady] = useState<Record<string, boolean>>({});
   const ignoreClickRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const preloadedRef = useRef<Set<string>>(new Set());
+  const suppressGridTapUntilRef = useRef(0);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const { setChromeHidden } = useLayoutChrome();
 
-  const { activities, initialFeedLoaded } = useHomeFeed(userId);
+  const { activities, initialFeedLoaded, loadMore, hasMoreFeed, isLoading } =
+    useHomeFeed(userId);
   const { signedNoteImages, signedNoteThumbs, resolveFor } = useNoteImages(NOTE_BUCKET);
 
   useEffect(() => {
@@ -80,6 +86,31 @@ export default function PhotosPage() {
   }, [photoActivities]);
 
   useEffect(() => {
+    if (!initialFeedLoaded) return;
+    if (photoActivities.length >= 10) return;
+    if (!hasMoreFeed || isLoading) return;
+    loadMore();
+  }, [photoActivities.length, hasMoreFeed, initialFeedLoaded, isLoading, loadMore]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target) return;
+    if (!hasMoreFeed) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        if (isLoading) return;
+        loadMore();
+      },
+      { rootMargin: "200px 0px" }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMoreFeed, isLoading, loadMore]);
+
+  useEffect(() => {
     return resolveFor(photoActivities);
   }, [photoActivities, resolveFor]);
 
@@ -89,9 +120,14 @@ export default function PhotosPage() {
   }, [activeId, orderedPhotos]);
 
   const activeActivity = activeIndex >= 0 ? orderedPhotos[activeIndex] : null;
-  const activeImage = activeActivity
-    ? signedNoteImages[activeActivity.id] || signedNoteThumbs[activeActivity.id]
+  const activeFullImage = activeActivity ? signedNoteImages[activeActivity.id] : "";
+  const activeThumbImage = activeActivity
+    ? signedNoteThumbs[activeActivity.id] || signedNoteImages[activeActivity.id]
     : "";
+  const activeImage =
+    activeActivity && activeFullImage && fullReady[activeActivity.id]
+      ? activeFullImage
+      : activeThumbImage || activeFullImage;
   const activeNoteText = activeActivity ? getNoteText(activeActivity) : "";
 
   useEffect(() => {
@@ -121,6 +157,37 @@ export default function PhotosPage() {
     };
   }, [activeId]);
 
+  useEffect(() => {
+    if (!activeActivity) return;
+    if (!activeId) return;
+    const preload = (id: string | null) => {
+      if (!id) return;
+      const url = signedNoteImages[id];
+      if (!url) return;
+      if (preloadedRef.current.has(id)) return;
+      preloadedRef.current.add(id);
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+      img.onload = () => {
+        setFullReady((prev) => ({ ...prev, [id]: true }));
+      };
+      img.onerror = () => {
+        preloadedRef.current.delete(id);
+      };
+    };
+
+    const prevId = activeIndex > 0 ? orderedPhotos[activeIndex - 1]?.id : null;
+    const nextId =
+      activeIndex >= 0 && activeIndex < orderedPhotos.length - 1
+        ? orderedPhotos[activeIndex + 1]?.id
+        : null;
+
+    preload(activeId);
+    preload(prevId);
+    preload(nextId);
+  }, [activeActivity, activeId, activeIndex, orderedPhotos, signedNoteImages]);
+
   const openViewer = (activityId: string) => {
     setActiveId(activityId);
     setChromeVisible(false);
@@ -131,13 +198,14 @@ export default function PhotosPage() {
     setActiveId(null);
     setChromeVisible(false);
     setNoteExpanded(false);
+    suppressGridTapUntilRef.current = Date.now() + 400;
   };
 
   const goToIndex = (nextIndex: number) => {
     const next = orderedPhotos[nextIndex];
     if (!next) return;
     setActiveId(next.id);
-    setChromeVisible(true);
+    setChromeVisible(false);
     setNoteExpanded(false);
   };
 
@@ -200,39 +268,51 @@ export default function PhotosPage() {
     handleTap();
   };
 
+  const handleBackClose = (event: React.SyntheticEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeViewer();
+  };
+
   const hasPhotos = orderedPhotos.length > 0;
 
   return (
     <div className="min-h-screen bg-movenotes-bg p-2">
       <div className="mt-2">
         {hasPhotos ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {orderedPhotos.map((activity) => {
-              const thumbUrl =
-                signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {orderedPhotos.map((activity) => {
+                const thumbUrl =
+                  signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
 
-              return (
-                <button
-                  key={activity.id}
-                  type="button"
-                  onClick={() => openViewer(activity.id)}
-                  className="relative aspect-square overflow-hidden rounded-xl border border-movenotes-border bg-movenotes-surface shadow-sm"
-                  aria-label="Open activity photo"
-                >
-                  {thumbUrl ? (
-                    <img
-                      src={thumbUrl}
-                      alt="Activity"
-                      loading="lazy"
-                      className="h-full w-full object-cover object-center"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-movenotes-bg" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={activity.id}
+                    type="button"
+                    onClick={() => {
+                      if (Date.now() < suppressGridTapUntilRef.current) return;
+                      openViewer(activity.id);
+                    }}
+                    className="relative aspect-square overflow-hidden rounded-xl border border-movenotes-border bg-movenotes-surface shadow-sm"
+                    aria-label="Open activity photo"
+                  >
+                    {thumbUrl ? (
+                      <img
+                        src={thumbUrl}
+                        alt="Activity"
+                        loading="lazy"
+                        className="h-full w-full object-cover object-center"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-movenotes-bg" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div ref={loadMoreRef} className="h-6" />
+          </>
         ) : (
           initialFeedLoaded && (
             <div className="text-center text-movenotes-muted text-sm py-16">
@@ -268,14 +348,14 @@ export default function PhotosPage() {
             <>
               <button
                 type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  closeViewer();
-                }}
-                className="absolute top-4 left-4 rounded-full bg-black/40 px-3 py-2 text-sm text-white/90 backdrop-blur"
+                onClick={handleBackClose}
+                onPointerUp={handleBackClose}
+                onTouchStart={(event) => event.stopPropagation()}
+                onTouchEnd={handleBackClose}
+                className="absolute top-4 left-4 rounded-full bg-black/40 p-2 text-white/90 backdrop-blur"
                 aria-label="Back to photos"
               >
-                Back
+                <IconArrowLeft size={20} strokeWidth={2} />
               </button>
 
               <div className="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
