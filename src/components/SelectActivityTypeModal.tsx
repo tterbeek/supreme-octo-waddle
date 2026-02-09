@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ModalSheet from "./ModalSheet";
-import { ACTIVITY_TYPES } from "../config/activityTypes";
+import { ACTIVITY_TYPES, SETTINGS_ACTIVITY_TYPE_IDS } from "../config/activityTypes";
 import { supabase } from "../supabaseClient";
 import {
   getCachedUserActivityTypes,
@@ -19,6 +19,28 @@ export function SelectActivityTypeModal({ open, onClose, onSelect }: Props) {
   const [loading, setLoading] = useState(true);
   const [showHidden, setShowHidden] = useState(false);
 
+  const fallbackActivityTypes = () =>
+    SETTINGS_ACTIVITY_TYPE_IDS.map((activity_type, index) => ({
+      activity_type,
+      sort_order: index + 1,
+      is_enabled: true,
+    }));
+
+  const withTimeout = async <T,>(promise: PromiseLike<T>, timeoutMs: number) => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error("Request timed out"));
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([promise, timeout]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  };
+
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
@@ -30,46 +52,74 @@ export function SelectActivityTypeModal({ open, onClose, onSelect }: Props) {
         setLoading(true);
       }
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      try {
+        const authResult = await withTimeout(supabase.auth.getUser(), 8000);
+        const user = authResult?.data?.user;
+        if (!user) {
+          if (!hasLocalData) {
+            setActivityTypes(fallbackActivityTypes());
+          }
+          return;
+        }
 
-      const cached = getCachedUserActivityTypes(user.id);
-      if (cached?.length) {
-        setActivityTypes(cached);
-        setLoading(false);
-      }
+        const cached = getCachedUserActivityTypes(user.id);
+        if (cached?.length) {
+          setActivityTypes(cached);
+          if (!hasLocalData) {
+            setLoading(false);
+          }
+        }
 
-      const { error: seedError } = await supabase.rpc(
-        "ensure_user_activity_types_seeded"
-      );
-      if (seedError) {
-        console.warn("[SelectActivityTypeModal] Seed error:", seedError.message);
-      }
+        try {
+          const { error: seedError } = await withTimeout(
+            supabase.rpc("ensure_user_activity_types_seeded"),
+            8000
+          );
+          if (seedError) {
+            console.warn("[SelectActivityTypeModal] Seed error:", seedError.message);
+          }
+        } catch (seedError) {
+          console.warn("[SelectActivityTypeModal] Seed error:", seedError);
+        }
 
-      const { data, error } = await supabase
-        .from("user_activity_types")
-        .select("activity_type, sort_order, is_enabled")
-        .eq("user_id", user.id)
-        .order("sort_order", { ascending: true });
-
-      if (cancelled) return;
-      if (error) {
-        console.warn(
-          "[SelectActivityTypeModal] Load error:",
-          error.message || error
+        const { data, error } = await withTimeout(
+          supabase
+            .from("user_activity_types")
+            .select("activity_type, sort_order, is_enabled")
+            .eq("user_id", user.id)
+            .order("sort_order", { ascending: true }),
+          8000
         );
-        setActivityTypes([]);
-      } else {
+
+        if (cancelled) return;
+        if (error) {
+          console.warn(
+            "[SelectActivityTypeModal] Load error:",
+            error.message || error
+          );
+          if (!cached?.length && !hasLocalData) {
+            setActivityTypes(fallbackActivityTypes());
+          }
+          return;
+        }
+
         const rows = (data || []) as UserActivityTypeRow[];
-        setActivityTypes(rows);
-        setCachedUserActivityTypes(user.id, rows);
+        if (rows.length > 0) {
+          setActivityTypes(rows);
+          setCachedUserActivityTypes(user.id, rows);
+        } else if (!hasLocalData) {
+          setActivityTypes(fallbackActivityTypes());
+        }
+      } catch (error) {
+        console.warn("[SelectActivityTypeModal] Load error:", error);
+        if (!hasLocalData) {
+          setActivityTypes(fallbackActivityTypes());
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     load();
