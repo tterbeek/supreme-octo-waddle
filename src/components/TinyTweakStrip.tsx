@@ -21,6 +21,7 @@ type TinyTweak = {
 };
 
 const ACTIVE_ACTIVITY_LIMIT = 7;
+const ACTIVE_DAY_LIMIT = 7;
 
 export default function TinyTweakStrip({
   userId,
@@ -154,8 +155,11 @@ export default function TinyTweakStrip({
     }
 
     const activityCount = count ?? 0;
-    const isWithinLimit = activityCount < ACTIVE_ACTIVITY_LIMIT;
-    if (!isWithinLimit) {
+    const daysSinceStart =
+      (Date.now() - startedAt.getTime()) / (1000 * 60 * 60 * 24);
+    const shouldEndForReflection =
+      activityCount >= ACTIVE_ACTIVITY_LIMIT && daysSinceStart > ACTIVE_DAY_LIMIT;
+    if (shouldEndForReflection) {
       const endedAt = new Date().toISOString();
       setActiveTweak(null);
       const { error: endError } = await supabase
