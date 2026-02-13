@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { List } from "react-window";
 import type { ListImperativeAPI, RowComponentProps } from "react-window";
-import { createPortal } from "react-dom";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "../components/ModalSheet";
 import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
@@ -10,13 +9,14 @@ import EditActivityModal from "../features/activities/EditActivityModal";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { getCurrentUser } from "../services/auth.service";
 import { useUnitSystem } from "../contexts/UnitContext";
-import { formatDistance } from "../lib/units";
 import RecentActivityCard from "../components/RecentActivityCard";
 import { useNoteImages } from "../hooks/useNoteImages";
-import { useLightbox } from "../hooks/useLightbox";
+import GalleryLightbox from "../components/GalleryLightbox";
+import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import { createSignedUrls } from "../services/storage.service";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
+import { buildGalleryItemsForActivity } from "../lib/photos";
 
 type CalendarActivity = {
   id: string;
@@ -31,6 +31,13 @@ type CalendarActivity = {
   created_at?: string | null;
   note_image_url?: string | null;
   note_thumb_image_url?: string | null;
+  photos?: Array<{
+    id: string;
+    image_path?: string | null;
+    thumb_path?: string | null;
+    sort_order?: number | null;
+    created_at?: string | null;
+  }>;
   equipment?: Array<{
     id: string;
     name: string;
@@ -101,15 +108,7 @@ export default function CalendarPage() {
     setNoteImageOrientation,
     resolveFor: resolveNoteImages,
   } = useNoteImages(NOTE_BUCKET);
-  const {
-    lightbox,
-    closeLightbox,
-    handleOverlayClick: handleLightboxOverlayClick,
-    onImageClick: onLightboxImageClick,
-    onImageTouchStart: onLightboxImageTouchStart,
-    onImageTouchMove: onLightboxImageTouchMove,
-    onImageTouchEnd: onLightboxImageTouchEnd,
-  } = useLightbox();
+  const gallery = useGalleryLightbox(NOTE_BUCKET);
 
   const {
     showTypeSelector,
@@ -178,7 +177,7 @@ export default function CalendarPage() {
         const { data, error: monthError } = await supabase
           .from("activities")
           .select(
-            "id, user_id, type, date, title, notes, distance_km, duration_min, feeling, effort, note_image_url, note_thumb_image_url, created_at, activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
+            "id, user_id, type, date, title, notes, distance_km, duration_min, feeling, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
           )
           .eq("user_id", userId)
           .gte("date", formatDateKey(monthStart))
@@ -622,11 +621,11 @@ export default function CalendarPage() {
                   unitSystem={unitSystem}
                   tooltipVisible={false}
                   onTooltipClose={() => {}}
-                  onImageClick={(e, url, act) => onLightboxImageClick(e, url, act)}
-                  onImageTouchStart={onLightboxImageTouchStart}
-                  onImageTouchMove={onLightboxImageTouchMove}
-                  onImageTouchEnd={(e, url, act) => onLightboxImageTouchEnd(e, url, act)}
-                  disableSwipe
+                  onOpenGallery={(activity) => {
+                    const items = buildGalleryItemsForActivity(activity);
+                    gallery.openGallery(items, 0);
+                  }}
+                  disableSwipe={gallery.open}
                 />
               ))}
             </div>
@@ -654,70 +653,15 @@ export default function CalendarPage() {
         </button>
       )}
 
-      {lightbox &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex flex-col"
-            onClick={handleLightboxOverlayClick}
-          >
-            <button
-              aria-label="Close"
-              className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
-              onClick={(e) => {
-                e.stopPropagation();
-                closeLightbox();
-              }}
-            >
-              ×
-            </button>
-            <div className="flex-1 flex items-center justify-center p-4">
-              <div className="relative flex items-center justify-center max-w-5xl w-full max-h-[85vh]">
-                <div className="absolute inset-4 rounded-3xl pointer-events-none shadow-md shadow-[rgba(0,0,0,0.15)]" />
-                <img
-                  src={lightbox.url}
-                  alt="Activity note full size"
-                  className="relative max-h-[85vh] max-w-[90vw] w-auto h-auto object-contain rounded-3xl"
-                />
-                <div
-                  className="absolute inset-0 rounded-3xl pointer-events-none"
-                  style={{
-                    background:
-                      "radial-gradient(circle at center, transparent 60%, rgba(0,0,0,0.18) 100%)",
-                  }}
-                />
-              </div>
-            </div>
-            <div className="pb-6 px-6 text-center text-sm text-white/80">
-              {lightbox.activity?.date && (
-                <span>
-                  {new Date(lightbox.activity.date).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-              )}
-              {lightbox.activity?.distance_km && <span className="mx-2">•</span>}
-              {lightbox.activity?.distance_km && (
-                <span>
-                  {formatDistance(Number(lightbox.activity.distance_km), unitSystem)}
-                </span>
-              )}
-              {lightbox.activity?.duration_min && (
-                <>
-                  <span className="mx-2">•</span>
-                  <span>{Number(lightbox.activity.duration_min)} min</span>
-                </>
-              )}
-              {lightbox.activity?.type && <span className="mx-2">•</span>}
-              {lightbox.activity?.type && (
-                <span className="uppercase">{lightbox.activity.type}</span>
-              )}
-            </div>
-          </div>,
-          document.body
-        )}
+      <GalleryLightbox
+        open={gallery.open}
+        items={gallery.items}
+        activeIndex={gallery.activeIndex}
+        onActiveIndexChange={gallery.setActiveIndex}
+        onClose={gallery.closeGallery}
+        signedImages={gallery.signedImages}
+        signedThumbs={gallery.signedThumbs}
+      />
 
       <SelectActivityTypeModal
         open={showTypeSelector}

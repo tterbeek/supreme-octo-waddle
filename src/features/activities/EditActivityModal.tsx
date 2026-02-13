@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trash2, Camera, ChevronDown } from "lucide-react";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { useActivityEditForm } from "../../hooks/useActivityEditForm";
+import { MAX_ACTIVITY_PHOTOS } from "../../lib/photos";
 import EquipmentDialog from "../../components/EquipmentDialog";
 import DistanceDurationFields from "../../components/quick-log/DistanceDurationFields";
 import FeelingSelector from "../../components/quick-log/FeelingSelector";
@@ -45,15 +46,15 @@ export default function EditActivityModal({
     setSelectedEquipmentIds,
     note,
     setNote,
-    noteImageUrl,
-    setNoteImageUrl,
-    selectedFile,
-    setSelectedFile,
+    selectedFiles,
+    setSelectedFiles,
+    removeExistingPhotos,
+    setRemoveExistingPhotos,
+    existingPhotoTotal,
+    appendFiles,
     uploading,
     uploadError,
     uploadProgress,
-    setUploadError,
-    setUploadProgress,
     saving,
     animateIn,
     dragY,
@@ -250,12 +251,10 @@ export default function EditActivityModal({
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setSelectedFile(file);
-                setUploadError(null);
-                setUploadProgress(0);
+                appendFiles(e.target.files);
+                e.currentTarget.value = "";
               }}
               className="hidden"
             />
@@ -264,33 +263,64 @@ export default function EditActivityModal({
               type="file"
               accept="image/*"
               capture="environment"
+              multiple
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setSelectedFile(file);
-                setUploadError(null);
-                setUploadProgress(0);
+                appendFiles(e.target.files);
+                e.currentTarget.value = "";
               }}
               className="hidden"
             />
-            {noteImageUrl && (
+            {existingPhotoTotal > 0 && !removeExistingPhotos && (
               <button
                 type="button"
                 className="text-xs text-red-600 underline"
                 onClick={() => {
-                  setNoteImageUrl(null);
-                  setSelectedFile(null);
+                  setRemoveExistingPhotos(true);
                 }}
               >
-                Remove current image
+                Remove existing photos
               </button>
             )}
-            {selectedFile && (
-              <span className="text-xs text-gray-600">
-                Selected: {selectedFile.name}
-              </span>
+            {removeExistingPhotos && existingPhotoTotal > 0 && (
+              <button
+                type="button"
+                className="text-xs text-gray-600 underline"
+                onClick={() => setRemoveExistingPhotos(false)}
+              >
+                Undo remove ({existingPhotoTotal})
+              </button>
+            )}
+            {selectedFiles.length > 0 && (
+              <button
+                type="button"
+                className="text-xs text-red-600 underline"
+                onClick={() => setSelectedFiles([])}
+              >
+                Clear selected
+              </button>
             )}
           </div>
+          {(existingPhotoTotal > 0 || selectedFiles.length > 0) && (
+            <div className="text-xs text-gray-600">
+              {removeExistingPhotos ? 0 : existingPhotoTotal}/{MAX_ACTIVITY_PHOTOS} existing · {selectedFiles.length}/{MAX_ACTIVITY_PHOTOS} selected
+            </div>
+          )}
+          {selectedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+              {selectedFiles.map((file, index) => (
+                <button
+                  key={`${file.name}-${index}`}
+                  type="button"
+                  onClick={() =>
+                    setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  className="px-2 py-1 rounded-full border border-warm-200 bg-white/70 hover:bg-white"
+                >
+                  {file.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {uploadError && (

@@ -12,12 +12,13 @@ import TinyTweakStrip from "../components/TinyTweakStrip";
 import JournalEntryCard from "../components/JournalEntryCard";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
-import { formatDistance } from "../lib/units";
 import { getCurrentUser } from "../services/auth.service";
 import { restoreActivity } from "../services/activities.service";
 import { useHomeFeed } from "../hooks/useHomeFeed";
 import { useNoteImages } from "../hooks/useNoteImages";
-import { useLightbox } from "../hooks/useLightbox";
+import GalleryLightbox from "../components/GalleryLightbox";
+import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
+import { buildGalleryItemsForActivity } from "../lib/photos";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 
@@ -39,15 +40,7 @@ export default function Home() {
     resolveFor: resolveNoteImages,
   } = useNoteImages(NOTE_BUCKET);
   const { visible, hideTooltip, showTooltip } = useTooltipManager();
-  const {
-    lightbox,
-    closeLightbox,
-    handleOverlayClick: handleLightboxOverlayClick,
-    onImageClick: onLightboxImageClick,
-    onImageTouchStart: onLightboxImageTouchStart,
-    onImageTouchMove: onLightboxImageTouchMove,
-    onImageTouchEnd: onLightboxImageTouchEnd,
-  } = useLightbox();
+  const gallery = useGalleryLightbox(NOTE_BUCKET);
 
   // Quick log / edit modals
   const {
@@ -329,11 +322,11 @@ export default function Home() {
                               unitSystem={unitSystem}
                               tooltipVisible={showAfterLogTooltip}
                               onTooltipClose={hideTooltip}
-                              onImageClick={onLightboxImageClick}
-                              onImageTouchStart={onLightboxImageTouchStart}
-                              onImageTouchMove={onLightboxImageTouchMove}
-                              onImageTouchEnd={onLightboxImageTouchEnd}
-                              disableSwipe={!!lightbox}
+                              onOpenGallery={(activity) => {
+                                const items = buildGalleryItemsForActivity(activity);
+                                gallery.openGallery(items, 0);
+                              }}
+                              disableSwipe={gallery.open}
                             />
                           );
                         })}
@@ -373,70 +366,15 @@ export default function Home() {
           }}
         />
 
-        {lightbox && (
-          <div
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col"
-            onClick={handleLightboxOverlayClick}
-          >
-            <button
-              aria-label="Close"
-              className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
-              onClick={(e) => {
-                e.stopPropagation();
-                closeLightbox();
-              }}
-            >
-              ×
-            </button>
-            <div className="flex-1 flex items-center justify-center p-4">
-              <div className="relative flex items-center justify-center max-w-5xl w-full max-h-[85vh]">
-                <div className="absolute inset-4 rounded-3xl pointer-events-none shadow-md shadow-[rgba(0,0,0,0.15)]" />
-                <img
-                  src={lightbox.url}
-                  alt="Activity note full size"
-                  className="relative max-h-[85vh] max-w-[90vw] w-auto h-auto object-contain rounded-3xl"
-                />
-                <div className="absolute inset-0 rounded-3xl pointer-events-none"
-                  style={{
-                    background:
-                      "radial-gradient(circle at center, transparent 60%, rgba(0,0,0,0.18) 100%)",
-                  }}
-                />
-              </div>
-            </div>
-            <div className="pb-6 px-6 text-center text-sm text-white/80">
-              {lightbox.activity?.date && (
-                <span>
-                  {new Date(lightbox.activity.date).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-              )}
-              {lightbox.activity?.distance_km && (
-                <span className="mx-2">•</span>
-              )}
-              {lightbox.activity?.distance_km && (
-                <span>
-                  {formatDistance(Number(lightbox.activity.distance_km), unitSystem)}
-                </span>
-              )}
-              {lightbox.activity?.duration_min && (
-                <>
-                  <span className="mx-2">•</span>
-                  <span>{Number(lightbox.activity.duration_min)} min</span>
-                </>
-              )}
-              {lightbox.activity?.type && (
-                <span className="mx-2">•</span>
-              )}
-              {lightbox.activity?.type && (
-                <span className="uppercase">{lightbox.activity.type}</span>
-              )}
-            </div>
-          </div>
-        )}
+        <GalleryLightbox
+          open={gallery.open}
+          items={gallery.items}
+          activeIndex={gallery.activeIndex}
+          onActiveIndexChange={gallery.setActiveIndex}
+          onClose={gallery.closeGallery}
+          signedImages={gallery.signedImages}
+          signedThumbs={gallery.signedThumbs}
+        />
 
         {showQuickLog && (
           <AddActivityModal

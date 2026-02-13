@@ -5,6 +5,8 @@ import { Camera } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { getCurrentUser } from "../services/auth.service";
 import { compressImage, createThumbnail, uploadActivityImage } from "../services/activityMedia.service";
+import { fetchActivityPhotoCount, insertActivityPhotos } from "../services/activityPhotos.service";
+import { MAX_ACTIVITY_PHOTOS } from "../lib/photos";
 
 interface AddNoteModalProps {
   activityId: string;
@@ -22,7 +24,7 @@ export default function AddNoteModal({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [visible, setVisible] = useState(true);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(
@@ -42,6 +44,27 @@ export default function AddNoteModal({
   // 🔐 Mark ANY interaction
   const markInteraction = () => {
     userInteracted.current = true;
+  };
+
+  const appendFiles = (files: FileList | null) => {
+    if (!files) return;
+    const incoming = Array.from(files);
+    if (incoming.length === 0) return;
+
+    const available = MAX_ACTIVITY_PHOTOS - selectedFiles.length;
+    if (available <= 0) {
+      setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+      return;
+    }
+
+    const next = [...selectedFiles, ...incoming.slice(0, available)];
+    if (incoming.length > available) {
+      setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+    } else {
+      setUploadError(null);
+    }
+    setSelectedFiles(next);
+    setUploadProgress(0);
   };
 
   // 🎵 Preload sound
@@ -74,7 +97,7 @@ export default function AddNoteModal({
 
   useEffect(() => {
     adjustTextareaHeight();
-  }, [note, selectedFile, uploadError, uploading, saving, adjustTextareaHeight]);
+  }, [note, selectedFiles.length, uploadError, uploading, saving, adjustTextareaHeight]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -93,52 +116,85 @@ export default function AddNoteModal({
   const handleSave = async () => {
     markInteraction(); // user clearly acted
 
-    if (!note.trim() && !selectedFile) {
+    if (!note.trim() && selectedFiles.length === 0) {
       onSkip();
       return;
     }
 
     setSaving(true);
     setUploadError(null);
-    let imageUrl: string | null = null;
-    let thumbUrl: string | null = null;
+    let coverImageUrl: string | null = null;
+    let coverThumbUrl: string | null = null;
 
     try {
-      if (selectedFile) {
+      const { count: existingCount, error: countError } =
+        await fetchActivityPhotoCount(activityId);
+      if (countError) throw countError;
+
+      if (existingCount + selectedFiles.length > MAX_ACTIVITY_PHOTOS) {
+        setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos total.`);
+        setSaving(false);
+        return;
+      }
+
+      if (selectedFiles.length > 0) {
         setUploading(true);
-        setUploadProgress(10);
-
-        const compressed = await compressImage(selectedFile);
-        setUploadProgress(40);
-
-        const thumbnail = await createThumbnail(selectedFile);
-        setUploadProgress(60);
+        const totalSteps = selectedFiles.length * 3 + 1;
+        let step = 0;
+        const bump = () => {
+          step += 1;
+          setUploadProgress(Math.round((step / totalSteps) * 100));
+        };
 
         const user = await getCurrentUser();
         if (!user) throw new Error("No user");
 
-        const { imagePath, thumbPath } = await uploadActivityImage(
+        const uploads: Array<{ imagePath: string; thumbPath: string | null }> = [];
+
+        for (const file of selectedFiles) {
+          const compressed = await compressImage(file);
+          bump();
+          const thumbnail = await createThumbnail(file);
+          bump();
+
+          const { imagePath, thumbPath } = await uploadActivityImage(
+            user.id,
+            activityId,
+            compressed,
+            thumbnail
+          );
+          bump();
+          uploads.push({ imagePath, thumbPath: thumbPath ?? null });
+        }
+
+        if (uploads.length > 0) {
+          const rows = uploads.map((upload, index) => ({
+            imagePath: upload.imagePath,
+            thumbPath: upload.thumbPath ?? null,
+            sortOrder: existingCount + index,
+          }));
+        const { error: insertError } = await insertActivityPhotos(
           user.id,
           activityId,
-          compressed,
-          thumbnail
+          rows
         );
+          if (insertError) throw insertError;
+        }
 
-        setUploadProgress(85);
-        // Store the storage paths; frontend will request signed URLs
-        imageUrl = imagePath;
-        thumbUrl = thumbPath;
+        coverImageUrl = uploads[0]?.imagePath ?? null;
+        coverThumbUrl = uploads[0]?.thumbPath ?? null;
       }
 
-      await supabase
-        .from("activities")
-        .update({
-          notes: note || null,
-          note_updated_at: new Date().toISOString(),
-          note_image_url: imageUrl,
-          note_thumb_image_url: thumbUrl,
-        })
-        .eq("id", activityId);
+      const updatePayload: Record<string, any> = {
+        notes: note || null,
+        note_updated_at: new Date().toISOString(),
+      };
+      if (selectedFiles.length > 0 && existingCount === 0) {
+        updatePayload.note_image_url = coverImageUrl;
+        updatePayload.note_thumb_image_url = coverThumbUrl;
+      }
+
+      await supabase.from("activities").update(updatePayload).eq("id", activityId);
 
       setUploadProgress(100);
       setSaving(false);
@@ -172,7 +228,7 @@ export default function AddNoteModal({
           className="fixed inset-0 bg-black/40 flex items-end justify-center z-50"
           // ⛔ Close ONLY if user has NOT interacted
           onClick={() => {
-            const nothingEntered = !note.trim() && !selectedFile;
+            const nothingEntered = !note.trim() && selectedFiles.length === 0;
             if (!userInteracted.current || nothingEntered) {
               setVisible(false);
               setTimeout(onSkip, 400);
@@ -218,73 +274,87 @@ export default function AddNoteModal({
               className="w-full border border-movenotes-border rounded-lg p-2 bg-movenotes-bg text-movenotes-text resize-none focus:ring-2 focus:ring-movenotes-primary outline-none mb-4 overflow-hidden"
             />
 
-              <div ref={belowNoteRef} className="mb-3 space-y-3">
-                <div className="flex items-center gap-3">
+            <div ref={belowNoteRef} className="mb-3 space-y-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+                >
+                  <Camera className="w-4 h-4 text-amber-700" />
+                  <span>Snap or attach</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+                >
+                  <Camera className="w-4 h-4 text-amber-700" />
+                  <span>Open camera</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+                >
+                  <Camera className="w-4 h-4 text-amber-700" />
+                  <span>Choose photo</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    markInteraction();
+                    appendFiles(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                  className="hidden"
+                />
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  onChange={(e) => {
+                    markInteraction();
+                    appendFiles(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                  className="hidden"
+                />
+                {selectedFiles.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
-                  >
-                    <Camera className="w-4 h-4 text-amber-700" />
-                    <span>Snap or attach</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
-                  >
-                    <Camera className="w-4 h-4 text-amber-700" />
-                    <span>Open camera</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
-                  >
-                    <Camera className="w-4 h-4 text-amber-700" />
-                    <span>Choose photo</span>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      markInteraction();
-                      setSelectedFile(file);
-                      setUploadProgress(0);
-                      setUploadError(null);
-                    }}
-                    className="hidden"
-                  />
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      markInteraction();
-                      setSelectedFile(file);
-                      setUploadProgress(0);
-                      setUploadError(null);
-                    }}
-                    className="hidden"
-                  />
-                  {selectedFile && (
-                    <button
-                      type="button"
-                    onClick={() => {
-                      setSelectedFile(null);
-                    }}
+                    onClick={() => setSelectedFiles([])}
                     className="text-xs text-red-600 underline"
                   >
-                    Remove image
+                    Remove all images
                   </button>
                 )}
               </div>
+
+              {selectedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                  <span>
+                    {selectedFiles.length}/{MAX_ACTIVITY_PHOTOS} selected
+                  </span>
+                  {selectedFiles.map((file, index) => (
+                    <button
+                      key={`${file.name}-${index}`}
+                      type="button"
+                      onClick={() =>
+                        setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
+                      }
+                      className="px-2 py-1 rounded-full border border-movenotes-border bg-white/70 hover:bg-white"
+                    >
+                      {file.name}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {(uploading || saving) && (
                 <div>

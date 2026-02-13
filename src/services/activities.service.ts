@@ -15,7 +15,7 @@ export async function fetchFeedPage(
   limit: number,
   offset = 0
 ) {
-  const { data, error } = await supabase.rpc("get_journal_feed_page", {
+  const { data, error } = await supabase.rpc("get_journal_feed_page_v2", {
     p_limit: limit,
     p_offset: offset,
   });

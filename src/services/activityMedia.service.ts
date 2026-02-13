@@ -78,7 +78,11 @@ export async function uploadActivityImage(
   file: Blob,
   thumbnail?: Blob | null
 ) {
-  const fileName = `${activityId}-${Date.now()}.jpg`;
+  const uniqueId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const fileName = `${activityId}-${uniqueId}.jpg`;
   const path = `${userId}/${fileName}`;
   const thumbPath = thumbnail ? `${userId}/thumb/${fileName}` : null;
 

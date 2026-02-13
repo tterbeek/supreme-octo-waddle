@@ -5,6 +5,7 @@ import {
 } from "../lib/resolveActivityFields";
 import { resolveEditFields } from "../lib/resolveEditActivityFields";
 import { kmToMiles, milesToKm } from "../lib/units";
+import { getActivityPhotos, MAX_ACTIVITY_PHOTOS } from "../lib/photos";
 import { getCurrentUser } from "../services/auth.service";
 import { fetchActivityPreference } from "../services/quickLog.service";
 import {
@@ -13,6 +14,10 @@ import {
   uploadActivityImage,
   deleteActivityImages,
 } from "../services/activityMedia.service";
+import {
+  deleteActivityPhotosByActivity,
+  insertActivityPhotos,
+} from "../services/activityPhotos.service";
 import { updateActivity, deleteActivity } from "../services/activity.service";
 import {
   createEquipment,
@@ -56,7 +61,8 @@ export function useActivityEditForm({
   const [note, setNote] = useState(activity.notes || "");
   const [noteImageUrl, setNoteImageUrl] = useState(activity.note_image_url || null);
   const [noteThumbImageUrl, setNoteThumbImageUrl] = useState(activity.note_thumb_image_url || null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [removeExistingPhotos, setRemoveExistingPhotos] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -67,11 +73,12 @@ export function useActivityEditForm({
   const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const startY = useRef<number | null>(null);
-  const originalImagePath = useRef<string | null>(activity.note_image_url || null);
-  const originalThumbPath = useRef<string | null>(activity.note_thumb_image_url || null);
   const openedAtRef = useRef<number>(Date.now());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const existingPhotos = getActivityPhotos(activity);
+  const existingPhotoTotal = existingPhotos.length;
+  const existingPhotoCount = removeExistingPhotos ? 0 : existingPhotoTotal;
 
   const distanceDisplay =
     distanceKm == null
@@ -110,6 +117,9 @@ export function useActivityEditForm({
     setShowOptionalDuration(activity.duration_min != null);
     setEquipment([]);
     setSelectedEquipmentIds([]);
+    setSelectedFiles([]);
+    setRemoveExistingPhotos(false);
+    setUploadError(null);
 
     const loadPreference = async () => {
       setPreference(undefined);
@@ -150,11 +160,38 @@ export function useActivityEditForm({
     };
   }, [activity.id, activityType]);
 
+  const appendFiles = (files: FileList | null) => {
+    if (!files) return;
+    const incoming = Array.from(files);
+    if (incoming.length === 0) return;
+
+    const available = MAX_ACTIVITY_PHOTOS - existingPhotoCount - selectedFiles.length;
+    if (available <= 0) {
+      setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+      return;
+    }
+
+    const next = [...selectedFiles, ...incoming.slice(0, available)];
+    if (incoming.length > available) {
+      setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+    } else {
+      setUploadError(null);
+    }
+    setSelectedFiles(next);
+    setUploadProgress(0);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setUploadError(null);
-    let imageUrl = noteImageUrl;
-    let thumbUrl = noteThumbImageUrl;
+    const existingCover =
+      !removeExistingPhotos && existingPhotos.length > 0 ? existingPhotos[0] : null;
+    let imageUrl = removeExistingPhotos
+      ? null
+      : existingCover?.image_path ?? noteImageUrl;
+    let thumbUrl = removeExistingPhotos
+      ? null
+      : existingCover?.thumb_path ?? noteThumbImageUrl;
     const deletePaths: string[] = [];
 
     const distanceValue =
@@ -175,49 +212,75 @@ export function useActivityEditForm({
     const feelingValue = Number(rating) || null;
 
     try {
-      if (selectedFile) {
+      if (existingPhotoCount + selectedFiles.length > MAX_ACTIVITY_PHOTOS) {
+        setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos total.`);
+        setSaving(false);
+        return;
+      }
+
+      if (removeExistingPhotos && existingPhotos.length > 0) {
+        const { data, error } = await deleteActivityPhotosByActivity(activity.id);
+        if (error) throw error;
+        data.forEach((row) => {
+          if (row.image_path) deletePaths.push(row.image_path);
+          if (row.thumb_path) deletePaths.push(row.thumb_path);
+        });
+        if (activity.note_image_url) deletePaths.push(activity.note_image_url);
+        if (activity.note_thumb_image_url) deletePaths.push(activity.note_thumb_image_url);
+      }
+
+      if (selectedFiles.length > 0) {
         setUploading(true);
-        setUploadProgress(10);
-
-        const compressed = await compressImage(selectedFile);
-
-        setUploadProgress(40);
-
-        const thumbnail = await createThumbnail(selectedFile);
-
-        setUploadProgress(55);
+        const totalSteps = selectedFiles.length * 3 + 1;
+        let step = 0;
+        const bump = () => {
+          step += 1;
+          setUploadProgress(Math.round((step / totalSteps) * 100));
+        };
 
         const currentUserId = await ensureUserId();
         if (!currentUserId) throw new Error("No user");
 
-        const { imagePath, thumbPath } = await uploadActivityImage(
+        const uploads: Array<{ imagePath: string; thumbPath: string | null }> = [];
+
+        for (const file of selectedFiles) {
+          const compressed = await compressImage(file);
+          bump();
+          const thumbnail = await createThumbnail(file);
+          bump();
+
+          const { imagePath, thumbPath } = await uploadActivityImage(
+            currentUserId,
+            activity.id,
+            compressed,
+            thumbnail
+          );
+          bump();
+          uploads.push({ imagePath, thumbPath: thumbPath ?? null });
+        }
+
+        const insertRows = uploads.map((upload, index) => ({
+          imagePath: upload.imagePath,
+          thumbPath: upload.thumbPath ?? null,
+          sortOrder: existingPhotoCount + index,
+        }));
+        const { error: insertError } = await insertActivityPhotos(
           currentUserId,
           activity.id,
-          compressed,
-          thumbnail
+          insertRows
         );
+        if (insertError) throw insertError;
 
-        setUploadProgress(80);
-        imageUrl = imagePath;
-        thumbUrl = thumbPath || null;
-
-        if (originalImagePath.current && originalImagePath.current !== imageUrl) {
-          deletePaths.push(originalImagePath.current);
-        }
-        if (originalThumbPath.current && originalThumbPath.current !== thumbUrl) {
-          deletePaths.push(originalThumbPath.current);
+        const coverFromExisting = !removeExistingPhotos && existingPhotos.length > 0;
+        if (!coverFromExisting) {
+          imageUrl = uploads[0]?.imagePath ?? null;
+          thumbUrl = uploads[0]?.thumbPath ?? null;
         }
       }
 
-      if (noteImageUrl === null && selectedFile === null && activity.note_image_url) {
+      if (removeExistingPhotos && selectedFiles.length === 0) {
         imageUrl = null;
         thumbUrl = null;
-        if (originalImagePath.current) {
-          deletePaths.push(originalImagePath.current);
-        }
-        if (originalThumbPath.current) {
-          deletePaths.push(originalThumbPath.current);
-        }
       }
 
       const { error } = await updateActivity({
@@ -242,13 +305,7 @@ export function useActivityEditForm({
           await deleteActivityImages(deletePaths);
         } catch (removeErr: any) {
           console.warn("[EditActivity] Failed to delete old images", removeErr?.message || removeErr);
-        } finally {
-          originalImagePath.current = imageUrl;
-          originalThumbPath.current = thumbUrl;
         }
-      } else {
-        originalImagePath.current = imageUrl;
-        originalThumbPath.current = thumbUrl;
       }
 
       const { error: equipmentError } = await replaceActivityEquipment(
@@ -278,14 +335,24 @@ export function useActivityEditForm({
   const handleDelete = async () => {
     if (!confirm("Delete this activity?")) return;
 
-    const pathsToDelete = [
-      activity.note_image_url,
-      activity.note_thumb_image_url,
-    ].filter(Boolean) as string[];
+    const pathsToDelete = new Set<string>();
+    if (activity.note_image_url) pathsToDelete.add(activity.note_image_url);
+    if (activity.note_thumb_image_url) pathsToDelete.add(activity.note_thumb_image_url);
 
-    if (pathsToDelete.length > 0) {
+    try {
+      const { data, error } = await deleteActivityPhotosByActivity(activity.id);
+      if (error) throw error;
+      data.forEach((row) => {
+        if (row.image_path) pathsToDelete.add(row.image_path);
+        if (row.thumb_path) pathsToDelete.add(row.thumb_path);
+      });
+    } catch (removeErr: any) {
+      console.warn("[EditActivity] Could not delete activity photos", removeErr?.message || removeErr);
+    }
+
+    if (pathsToDelete.size > 0) {
       try {
-        await deleteActivityImages(pathsToDelete);
+        await deleteActivityImages(Array.from(pathsToDelete));
       } catch (removeErr: any) {
         console.warn("[EditActivity] Could not delete image from storage", removeErr?.message || removeErr);
       }
@@ -390,8 +457,13 @@ export function useActivityEditForm({
     setNoteImageUrl,
     noteThumbImageUrl,
     setNoteThumbImageUrl,
-    selectedFile,
-    setSelectedFile,
+    selectedFiles,
+    setSelectedFiles,
+    removeExistingPhotos,
+    setRemoveExistingPhotos,
+    existingPhotoCount,
+    existingPhotoTotal,
+    appendFiles,
     uploading,
     uploadError,
     uploadProgress,

@@ -4,6 +4,7 @@ import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { formatDistance, type UnitSystem } from "../lib/units";
+import { getActivityPhotos } from "../lib/photos";
 
 type RecentActivityCardProps = {
   activity: any;
@@ -15,14 +16,7 @@ type RecentActivityCardProps = {
   unitSystem: UnitSystem;
   tooltipVisible: boolean;
   onTooltipClose: () => void;
-  onImageClick: (e: React.MouseEvent<HTMLImageElement>, url: string, activity: any) => void;
-  onImageTouchStart: (e: React.TouchEvent<HTMLImageElement>) => void;
-  onImageTouchMove: (e: React.TouchEvent<HTMLImageElement>) => void;
-  onImageTouchEnd: (
-    e: React.TouchEvent<HTMLImageElement>,
-    url: string,
-    activity: any
-  ) => void;
+  onOpenGallery: (activity: any) => void;
   disableSwipe?: boolean;
 };
 
@@ -36,10 +30,7 @@ export default function RecentActivityCard({
   unitSystem,
   tooltipVisible,
   onTooltipClose,
-  onImageClick,
-  onImageTouchStart,
-  onImageTouchMove,
-  onImageTouchEnd,
+  onOpenGallery,
   disableSwipe = false,
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -64,6 +55,7 @@ export default function RecentActivityCard({
   })();
   const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
   const fullUrl = signedNoteImages[activity.id] || thumbUrl;
+  const photoCount = getActivityPhotos(activity).length;
 
   useEffect(() => {
     setImageLoaded(false);
@@ -157,7 +149,7 @@ export default function RecentActivityCard({
             )}
 
             {thumbUrl && (
-              <div>
+              <div className="relative inline-block">
                 <img
                   src={thumbUrl}
                   alt="Activity note"
@@ -171,18 +163,21 @@ export default function RecentActivityCard({
                     }
                     ${imageLoaded ? "opacity-100" : "opacity-0"}
                   `}
-                  onClick={(e) => fullUrl && onImageClick(e, fullUrl, activity)}
-                  onTouchStart={onImageTouchStart}
-                  onTouchMove={onImageTouchMove}
-                  onTouchEnd={(e) =>
-                    fullUrl && onImageTouchEnd(e, fullUrl, activity)
-                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (fullUrl) onOpenGallery(activity);
+                  }}
                   onLoad={(e) => {
                     const { naturalWidth, naturalHeight } = e.currentTarget;
                     onNoteImageLoad(activity.id, naturalWidth, naturalHeight);
                     setImageLoaded(true);
                   }}
                 />
+                {photoCount > 1 && (
+                  <span className="absolute bottom-2 right-2 rounded-full bg-black/70 text-white text-[11px] font-semibold px-2 py-0.5">
+                    {photoCount}
+                  </span>
+                )}
               </div>
             )}
           </div>

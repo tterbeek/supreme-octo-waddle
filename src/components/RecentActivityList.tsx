@@ -14,14 +14,7 @@ type RecentActivityListProps = {
   tooltipVisibleIndex: number | null;
   onTooltipClose: () => void;
   onEdit: (activity: any) => void;
-  onImageClick: (e: React.MouseEvent<HTMLImageElement>, url: string, activity: any) => void;
-  onImageTouchStart: (e: React.TouchEvent<HTMLImageElement>) => void;
-  onImageTouchMove: (e: React.TouchEvent<HTMLImageElement>) => void;
-  onImageTouchEnd: (
-    e: React.TouchEvent<HTMLImageElement>,
-    url: string,
-    activity: any
-  ) => void;
+  onOpenGallery: (activity: any) => void;
 };
 
 export default function RecentActivityList({
@@ -35,10 +28,7 @@ export default function RecentActivityList({
   tooltipVisibleIndex,
   onTooltipClose,
   onEdit,
-  onImageClick,
-  onImageTouchStart,
-  onImageTouchMove,
-  onImageTouchEnd,
+  onOpenGallery,
 }: RecentActivityListProps) {
   return (
     <div className="flex flex-col gap-3 mt-2">
@@ -62,10 +52,7 @@ export default function RecentActivityList({
             unitSystem={unitSystem}
             tooltipVisible={showAfterLogTooltip}
             onTooltipClose={onTooltipClose}
-            onImageClick={onImageClick}
-            onImageTouchStart={onImageTouchStart}
-            onImageTouchMove={onImageTouchMove}
-            onImageTouchEnd={onImageTouchEnd}
+            onOpenGallery={onOpenGallery}
             disableSwipe={lightboxOpen}
           />
         );
