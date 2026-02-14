@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Frown, Laugh, Meh, Smile, Zap } from "lucide-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
@@ -34,15 +34,6 @@ export default function RecentActivityCard({
   disableSwipe = false,
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
-  const photoTapRef = useRef(0);
-
-  const markPhotoTap = (e: React.SyntheticEvent) => {
-    e.stopPropagation();
-    if ("preventDefault" in e) {
-      e.preventDefault();
-    }
-    photoTapRef.current = Date.now();
-  };
   const typeConfig = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES["other"];
   const TypeIcon = typeConfig.Icon;
   const formattedDistance =
@@ -78,8 +69,9 @@ export default function RecentActivityCard({
           max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
           sm:p-6 md:p-7
         "
-        onClick={() => {
-          if (Date.now() - photoTapRef.current < 600) return;
+        onClick={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest?.("[data-photo-trigger]")) return;
           onEdit(activity);
         }}
       >
@@ -163,11 +155,14 @@ export default function RecentActivityCard({
               <div
                 className="relative inline-block"
                 data-photo-trigger="true"
-                onPointerDown={markPhotoTap}
-                onPointerUp={markPhotoTap}
-                onClickCapture={markPhotoTap}
-                onTouchStart={markPhotoTap}
-                onTouchEnd={markPhotoTap}
+                onPointerUp={(e) => {
+                  e.stopPropagation();
+                  if (photoCount > 0) onOpenGallery(activity);
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  if (photoCount > 0) onOpenGallery(activity);
+                }}
               >
                 <img
                   src={thumbUrl}
@@ -183,11 +178,6 @@ export default function RecentActivityCard({
                     ${imageLoaded ? "opacity-100" : "opacity-0"}
                   `}
                   data-photo-trigger="true"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    photoTapRef.current = Date.now();
-                    if (photoCount > 0) onOpenGallery(activity);
-                  }}
                   onLoad={(e) => {
                     const { naturalWidth, naturalHeight } = e.currentTarget;
                     onNoteImageLoad(activity.id, naturalWidth, naturalHeight);
