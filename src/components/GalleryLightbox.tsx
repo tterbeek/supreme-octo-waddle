@@ -30,9 +30,11 @@ export default function GalleryLightbox({
   const [chromeVisible, setChromeVisible] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [fullReady, setFullReady] = useState<Record<string, boolean>>({});
+  const [isClosing, setIsClosing] = useState(false);
   const ignoreClickRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const preloadedRef = useRef<Set<string>>(new Set());
+  const closeTimeoutRef = useRef<number | null>(null);
 
   const activeItem = items[activeIndex];
 
@@ -55,6 +57,11 @@ export default function GalleryLightbox({
       setNoteExpanded(false);
       setFullReady({});
       preloadedRef.current.clear();
+      setIsClosing(false);
+      if (closeTimeoutRef.current) {
+        window.clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
       return;
     }
     setChromeVisible(false);
@@ -75,12 +82,22 @@ export default function GalleryLightbox({
     };
   }, [open]);
 
+  const requestClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    closeTimeoutRef.current = window.setTimeout(() => {
+      closeTimeoutRef.current = null;
+      onClose();
+    }, 180);
+  };
+
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isClosing) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        requestClose();
         return;
       }
       if (event.key === "ArrowLeft") {
@@ -96,7 +113,7 @@ export default function GalleryLightbox({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeIndex, items.length, onActiveIndexChange, onClose, open]);
+  }, [activeIndex, isClosing, items.length, onActiveIndexChange, open, requestClose]);
 
   useEffect(() => {
     if (!open || !activeItem) return;
@@ -127,10 +144,12 @@ export default function GalleryLightbox({
   }, [activeIndex, activeItem, items, open, signedImages]);
 
   const handleTap = () => {
+    if (isClosing) return;
     setChromeVisible((prev) => !prev);
   };
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (isClosing) return;
     const touch = event.touches[0];
     if (!touch) return;
     ignoreClickRef.current = true;
@@ -138,6 +157,7 @@ export default function GalleryLightbox({
   };
 
   const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (isClosing) return;
     if (!touchStartRef.current) return;
     const touch = event.changedTouches[0];
     if (!touch) return;
@@ -168,6 +188,7 @@ export default function GalleryLightbox({
   };
 
   const handleOverlayClick = () => {
+    if (isClosing) return;
     if (ignoreClickRef.current) {
       ignoreClickRef.current = false;
       return;
@@ -178,7 +199,7 @@ export default function GalleryLightbox({
   const handleBackClose = (event: SyntheticEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    onClose();
+    requestClose();
   };
 
   const hasItems = open && items.length > 0;
