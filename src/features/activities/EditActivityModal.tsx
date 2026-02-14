@@ -245,7 +245,7 @@ export default function EditActivityModal({
               className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
             >
               <Camera className="w-4 h-4 text-amber-700" />
-              <span>Choose photo</span>
+              <span>Choose photos</span>
             </button>
             <input
               ref={fileInputRef}
@@ -263,7 +263,6 @@ export default function EditActivityModal({
               type="file"
               accept="image/*"
               capture="environment"
-              multiple
               onChange={(e) => {
                 appendFiles(e.target.files);
                 e.currentTarget.value = "";
