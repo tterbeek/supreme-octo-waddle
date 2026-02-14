@@ -210,8 +210,15 @@ export default function GalleryLightbox({
           <button
             type="button"
             onClick={handleBackClose}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
             onPointerUp={handleBackClose}
-            onTouchStart={(event) => event.stopPropagation()}
+            onTouchStart={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
             onTouchEnd={handleBackClose}
             className="absolute top-4 left-4 rounded-full bg-black/40 p-2 text-white/90 backdrop-blur"
             aria-label="Back"
