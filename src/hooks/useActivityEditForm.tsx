@@ -373,7 +373,7 @@ export function useActivityEditForm({
 
   const handleOverlayClick = () => {
     const elapsed = Date.now() - openedAtRef.current;
-    if (elapsed < 400) {
+    if (elapsed < 200) {
       return;
     }
     onClose();

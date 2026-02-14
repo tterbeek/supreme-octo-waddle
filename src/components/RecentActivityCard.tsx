@@ -35,6 +35,14 @@ export default function RecentActivityCard({
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const photoTapRef = useRef(0);
+
+  const markPhotoTap = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    if ("preventDefault" in e) {
+      e.preventDefault();
+    }
+    photoTapRef.current = Date.now();
+  };
   const typeConfig = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES["other"];
   const TypeIcon = typeConfig.Icon;
   const formattedDistance =
@@ -71,7 +79,7 @@ export default function RecentActivityCard({
           sm:p-6 md:p-7
         "
         onClick={() => {
-          if (Date.now() - photoTapRef.current < 500) return;
+          if (Date.now() - photoTapRef.current < 600) return;
           onEdit(activity);
         }}
       >
@@ -155,14 +163,11 @@ export default function RecentActivityCard({
               <div
                 className="relative inline-block"
                 data-photo-trigger="true"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  photoTapRef.current = Date.now();
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                  photoTapRef.current = Date.now();
-                }}
+                onPointerDown={markPhotoTap}
+                onPointerUp={markPhotoTap}
+                onClickCapture={markPhotoTap}
+                onTouchStart={markPhotoTap}
+                onTouchEnd={markPhotoTap}
               >
                 <img
                   src={thumbUrl}
