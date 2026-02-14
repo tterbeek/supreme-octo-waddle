@@ -103,21 +103,10 @@ export default function TrendsTab({
               };
             });
 
-            const currentIdx = rows.findIndex((r) => r.isCurrent);
-            const lastCompletedIdx = rows
-              .map((r, idx) => ({ idx, isCurrent: r.isCurrent }))
-              .filter((r) => !r.isCurrent)
-              .map((r) => r.idx)
-              .pop();
-
             const rowsWithLines = rows.map((row, idx) => {
               const isCurrent = row.isCurrent;
-              const isLastCompleted = idx === lastCompletedIdx;
               const valueSolid = isCurrent ? null : row.value;
-              const valueCurrent =
-                isCurrent || (isLastCompleted && currentIdx !== -1)
-                  ? row.value
-                  : null;
+              const valueCurrent = isCurrent ? row.value : null;
 
               return {
                 ...row,
@@ -212,11 +201,9 @@ export default function TrendsTab({
                     <Line
                       type="monotone"
                       dataKey="valueCurrent"
-                      stroke="#5A7A69"
-                      strokeWidth={3}
-                      strokeDasharray="4 4"
-                      dot={{ r: 3 }}
-                      connectNulls
+                      stroke="transparent"
+                      strokeWidth={0}
+                      dot={{ r: 4, fill: "#5A7A69", stroke: "#5A7A69" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>

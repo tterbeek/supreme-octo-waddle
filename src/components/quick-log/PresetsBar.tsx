@@ -15,9 +15,31 @@ export default function PresetsBar({
   onSelectCustom,
   onOpenMore,
 }: PresetsBarProps) {
+  const orderedPresets = (() => {
+    if (!presets.length) return [];
+    if (!activePreset) return presets;
+    const rest = presets.filter((p) => p.id !== activePreset.id);
+    return [activePreset, ...rest];
+  })();
+
+  const maxVisible = 15;
+  const visiblePresets = orderedPresets.slice(0, maxVisible);
+  const hasMore = orderedPresets.length > maxVisible;
+
   return (
     <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-      {presets.slice(0, 3).map((p) => (
+      <button
+        onClick={onSelectCustom}
+        className={`px-3 py-1 rounded-full text-sm border transition whitespace-nowrap ${
+          activePreset === null
+            ? "bg-amber-50 border-amber-300 text-gray-800"
+            : "border-gray-300 text-gray-600"
+        }`}
+      >
+        Custom
+      </button>
+
+      {visiblePresets.map((p) => (
         <button
           key={p.id}
           onClick={() => onSelectPreset(p)}
@@ -31,18 +53,7 @@ export default function PresetsBar({
         </button>
       ))}
 
-      <button
-        onClick={onSelectCustom}
-        className={`px-3 py-1 rounded-full text-sm border transition whitespace-nowrap ${
-          activePreset === null
-            ? "bg-amber-50 border-amber-300 text-gray-800"
-            : "border-gray-300 text-gray-600"
-        }`}
-      >
-        Custom
-      </button>
-
-      {presets.length > 3 && (
+      {hasMore && (
         <button
           onClick={onOpenMore}
           className="px-3 py-1 rounded-full text-sm border border-gray-300 text-gray-600 whitespace-nowrap"
