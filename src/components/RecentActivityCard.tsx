@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Frown, Laugh, Meh, Smile, Zap } from "lucide-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
@@ -34,6 +34,7 @@ export default function RecentActivityCard({
   disableSwipe = false,
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const photoTapRef = useRef(0);
   const typeConfig = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES["other"];
   const TypeIcon = typeConfig.Icon;
   const formattedDistance =
@@ -69,9 +70,8 @@ export default function RecentActivityCard({
           max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
           sm:p-6 md:p-7
         "
-        onClick={(e) => {
-          const target = e.target as HTMLElement | null;
-          if (target?.closest?.("[data-photo-trigger]")) return;
+        onClick={() => {
+          if (Date.now() - photoTapRef.current < 500) return;
           onEdit(activity);
         }}
       >
@@ -152,7 +152,18 @@ export default function RecentActivityCard({
             )}
 
             {thumbUrl && (
-              <div className="relative inline-block" data-photo-trigger="true">
+              <div
+                className="relative inline-block"
+                data-photo-trigger="true"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  photoTapRef.current = Date.now();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  photoTapRef.current = Date.now();
+                }}
+              >
                 <img
                   src={thumbUrl}
                   alt="Activity note"
@@ -169,6 +180,7 @@ export default function RecentActivityCard({
                   data-photo-trigger="true"
                   onClick={(e) => {
                     e.stopPropagation();
+                    photoTapRef.current = Date.now();
                     if (photoCount > 0) onOpenGallery(activity);
                   }}
                   onLoad={(e) => {
