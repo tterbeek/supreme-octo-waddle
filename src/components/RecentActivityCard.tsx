@@ -54,7 +54,6 @@ export default function RecentActivityCard({
       : first.name;
   })();
   const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
-  const fullUrl = signedNoteImages[activity.id] || thumbUrl;
   const photoCount = getActivityPhotos(activity).length;
 
   useEffect(() => {
