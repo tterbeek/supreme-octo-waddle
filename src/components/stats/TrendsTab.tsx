@@ -103,7 +103,7 @@ export default function TrendsTab({
               };
             });
 
-            const rowsWithLines = rows.map((row, idx) => {
+            const rowsWithLines = rows.map((row) => {
               const isCurrent = row.isCurrent;
               const valueSolid = isCurrent ? null : row.value;
               const valueCurrent = isCurrent ? row.value : null;
