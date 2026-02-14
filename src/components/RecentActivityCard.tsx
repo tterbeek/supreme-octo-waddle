@@ -167,9 +167,10 @@ export default function RecentActivityCard({
                     }
                     ${imageLoaded ? "opacity-100" : "opacity-0"}
                   `}
+                  data-photo-trigger="true"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (fullUrl) onOpenGallery(activity);
+                    if (photoCount > 0) onOpenGallery(activity);
                   }}
                   onLoad={(e) => {
                     const { naturalWidth, naturalHeight } = e.currentTarget;
