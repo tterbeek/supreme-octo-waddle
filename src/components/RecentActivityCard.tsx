@@ -70,7 +70,11 @@ export default function RecentActivityCard({
           max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl
           sm:p-6 md:p-7
         "
-        onClick={() => onEdit(activity)}
+        onClick={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest?.("[data-photo-trigger]")) return;
+          onEdit(activity);
+        }}
       >
         {tooltipVisible && (
           <TooltipBubble position="top" onClose={onTooltipClose}>
@@ -149,7 +153,7 @@ export default function RecentActivityCard({
             )}
 
             {thumbUrl && (
-              <div className="relative inline-block">
+              <div className="relative inline-block" data-photo-trigger="true">
                 <img
                   src={thumbUrl}
                   alt="Activity note"
