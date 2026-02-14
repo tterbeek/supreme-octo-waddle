@@ -174,9 +174,9 @@ export default function GalleryLightbox({
 
     if (absX > absY && absX > SWIPE_THRESHOLD) {
       if (dx < 0) {
-        if (activeIndex > 0) onActiveIndexChange(activeIndex - 1);
-      } else if (dx > 0) {
         if (activeIndex < items.length - 1) onActiveIndexChange(activeIndex + 1);
+      } else if (dx > 0) {
+        if (activeIndex > 0) onActiveIndexChange(activeIndex - 1);
       }
       return;
     }
@@ -280,7 +280,7 @@ export default function GalleryLightbox({
       )}
 
       {dotsVisible && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5">
+        <div className="absolute bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5">
           {items.map((item, index) => (
             <span
               key={item.key}
