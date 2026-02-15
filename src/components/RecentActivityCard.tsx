@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
 import { Frown, Laugh, Meh, Smile, Zap } from "lucide-react";
+import {
+  IconBoxMultiple2,
+  IconBoxMultiple3,
+  IconBoxMultiple4,
+  IconBoxMultiple5,
+  IconBoxMultiple6,
+  IconBoxMultiple7,
+  IconBoxMultiple8,
+  IconBoxMultiple9,
+} from "@tabler/icons-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
@@ -55,6 +65,17 @@ export default function RecentActivityCard({
   })();
   const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
   const photoCount = getActivityPhotos(activity).length;
+  const countIcon = (() => {
+    if (photoCount <= 1) return null;
+    if (photoCount === 2) return IconBoxMultiple2;
+    if (photoCount === 3) return IconBoxMultiple3;
+    if (photoCount === 4) return IconBoxMultiple4;
+    if (photoCount === 5) return IconBoxMultiple5;
+    if (photoCount === 6) return IconBoxMultiple6;
+    if (photoCount === 7) return IconBoxMultiple7;
+    if (photoCount === 8) return IconBoxMultiple8;
+    return IconBoxMultiple9;
+  })();
 
   useEffect(() => {
     setImageLoaded(false);
@@ -184,9 +205,12 @@ export default function RecentActivityCard({
                     setImageLoaded(true);
                   }}
                 />
-                {photoCount > 1 && (
+                {countIcon && (
                   <span className="absolute bottom-2 right-2 rounded-full bg-black/70 text-white text-[11px] font-semibold px-2 py-0.5">
-                    {photoCount}
+                    {(() => {
+                      const CountIcon = countIcon;
+                      return <CountIcon size={14} strokeWidth={2} />;
+                    })()}
                   </span>
                 )}
               </div>

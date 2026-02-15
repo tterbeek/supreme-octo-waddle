@@ -280,7 +280,7 @@ export default function GalleryLightbox({
       )}
 
       {dotsVisible && (
-        <div className="absolute bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5">
+        <div className="absolute bottom-28 sm:bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5">
           {items.map((item, index) => (
             <span
               key={item.key}
