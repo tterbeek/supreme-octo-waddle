@@ -34,7 +34,9 @@ export default function SavePresetFooter({
             className="accent-movenotes-primary"
             onChange={onToggleSaveAsPreset}
           />
-          <span className="text-sm text-gray-700">Save activity as preset</span>
+          <span className="text-sm text-gray-700">
+            Save activity for reuse (preset)
+          </span>
         </label>
 
         {saveAsPreset && (

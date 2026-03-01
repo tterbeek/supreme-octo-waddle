@@ -14,6 +14,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Sidebar from "./components/Sidebar";
 import Layout from "./components/Layout";
+import OnboardingWizard from "./components/OnboardingWizard";
 import OnboardingCarousel from "./components/OnboardingCarousel";
 import SettingsPage from "./pages/SettingsPage";
 import AboutPage from "./pages/AboutPage";
@@ -31,6 +32,9 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showCarousel, setShowCarousel] = useState(
+    () => !localStorage.getItem("movenotes_carousel_done")
+  );
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem("movenotes_onboarding_done")
   );
@@ -113,11 +117,23 @@ export default function App() {
     setShowOnboarding(false);
   };
 
+  const completeCarousel = () => {
+    localStorage.setItem("movenotes_carousel_done", "true");
+    setShowCarousel(false);
+  };
+
   return (
     <UnitProvider>
       <BrowserRouter>
-        {showOnboarding && user && (
+        {showCarousel && user && (
           <OnboardingCarousel
+            onComplete={completeCarousel}
+            onSkip={completeCarousel}
+          />
+        )}
+
+        {!showCarousel && showOnboarding && user && (
+          <OnboardingWizard
             onComplete={completeOnboarding}
             onSkip={completeOnboarding}
           />

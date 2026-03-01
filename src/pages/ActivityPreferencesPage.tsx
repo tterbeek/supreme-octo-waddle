@@ -46,7 +46,11 @@ function normalizeActivityTypes(rows: UserActivityTypeRow[]) {
   });
 }
 
-export default function ActivityPreferencesPage() {
+export default function ActivityPreferencesPage({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const [activityTypes, setActivityTypes] = useState<UserActivityTypeRow[]>([]);
   const [prefs, setPrefs] = useState<PreferenceMap>({});
   const [userId, setUserId] = useState<string | null>(null);
@@ -345,15 +349,19 @@ export default function ActivityPreferencesPage() {
 
   return (
     <>
-      <div className="px-6 pb-6 pt-3 max-w-3xl mx-auto">
-        <h1 className="text-lg font-bold mb-2 text-gray-600 text-center">
-          Activity preferences
-        </h1>
-        <p className="text-sm text-gray-600 mb-6">
-          {isMobile
-            ? "Choose which activities matter to you, and in what order they appear."
-            : "Choose which activities matter to you, how they’re ordered, and how they’re measured by default."}
-        </p>
+      <div className={`px-6 pb-6 ${embedded ? "pt-1" : "pt-3"} max-w-3xl mx-auto`}>
+        {!embedded && (
+          <>
+            <h1 className="text-lg font-bold mb-2 text-gray-600 text-center">
+              Activity preferences
+            </h1>
+            <p className="text-sm text-gray-600 mb-6">
+              {isMobile
+                ? "Choose which activities matter to you, and in what order they appear."
+                : "Choose which activities matter to you, how they’re ordered, and how they’re measured by default."}
+            </p>
+          </>
+        )}
 
         {error && (
           <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
@@ -394,6 +402,8 @@ export default function ActivityPreferencesPage() {
                     const systemDefault = getSystemDefaultMetric(row.activity_type);
                     const override = prefs[row.activity_type];
                     const selected = override ?? systemDefault;
+                    const metricLabel =
+                      selected === "distance" ? "Distance" : "Duration";
                     const showMetric = supportsMetricOverride(row.activity_type);
                     const isSaving = savingMetric === row.activity_type;
                     const canDrag = !reordering && !savingToggle;
@@ -542,6 +552,9 @@ export default function ActivityPreferencesPage() {
                               <div>
                                 <div className="text-sm font-semibold text-gray-800">
                                   {config.label}
+                                  <span className="text-xs font-medium text-gray-400 ml-2">
+                                    ·&nbsp;{metricLabel}
+                                  </span>
                                 </div>
                               </div>
                             </div>

@@ -122,9 +122,25 @@ export default function SettingsPage() {
     setDeleting(false);
   };
 
+  const handleRestartOnboarding = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("movenotes_onboarding_done");
+    }
+    window.location.href = "/";
+  };
+
   return (
     <div className="p-6 max-w-lg mx-auto">
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">Settings</h1>
+
+      {/* RESTART WIZARD */}
+      <button
+        onClick={handleRestartOnboarding}
+        className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
+      >
+        <FileText className="w-5 h-5 text-movenotes-primary" />
+        <span>Restart onboarding wizard</span>
+      </button>
 
       {/* UNIT PREFERENCE */}
       <div className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">

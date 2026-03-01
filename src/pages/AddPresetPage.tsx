@@ -4,7 +4,15 @@ import { useNavigate } from "react-router-dom";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { kmToMiles, milesToKm } from "../lib/units";
 
-export default function AddPresetPage() {
+type AddPresetPageProps = {
+  embedded?: boolean;
+  onSaved?: () => void;
+};
+
+export default function AddPresetPage({
+  embedded = false,
+  onSaved,
+}: AddPresetPageProps) {
   const navigate = useNavigate();
   const [type, setType] = useState<"run" | "ride">("run");
   const [name, setName] = useState("");
@@ -40,11 +48,16 @@ export default function AddPresetPage() {
       distance_km: distanceKm ?? null
     });
 
+    if (embedded) {
+      onSaved?.();
+      return;
+    }
+
     navigate("/presets");
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
+    <div className={`p-4 ${embedded ? "max-w-2xl" : "max-w-md"} mx-auto`}>
       <label className="block text-sm text-gray-600 mb-1">Type</label>
       <select
         value={type}

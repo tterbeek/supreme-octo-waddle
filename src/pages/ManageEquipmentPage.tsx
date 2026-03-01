@@ -178,7 +178,11 @@ const getSystemDefaultMetric = (activityType: string): Metric => {
 
 const getTypeConfig = (type: string) => ACTIVITY_TYPES[type] ?? ACTIVITY_TYPES["other"];
 
-export default function ManageEquipmentPage() {
+export default function ManageEquipmentPage({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [usageMap, setUsageMap] = useState<Record<string, EquipmentUsage>>({});
   const [preferences, setPreferences] = useState<PreferenceMap>({});
@@ -391,15 +395,19 @@ export default function ManageEquipmentPage() {
   };
 
   return (
-    <div className="mb-4">
-      <div className="relative flex items-center justify-center">
-        <h1 className="text-lg font-bold text-gray-600 text-center">
-          Manage equipment
-        </h1>
-      </div>
-      <p className="text-sm text-gray-500 text-center mt-1 mb-4">
-        Things you move with
-      </p>
+    <div className={`mb-4 ${embedded ? "px-6 pb-8" : ""}`}>
+      {!embedded && (
+        <>
+          <div className="relative flex items-center justify-center">
+            <h1 className="text-lg font-bold text-gray-600 text-center">
+              Manage equipment
+            </h1>
+          </div>
+          <p className="text-sm text-gray-500 text-center mt-1 mb-4">
+            Things you move with
+          </p>
+        </>
+      )}
 
       {error && (
         <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
@@ -452,11 +460,17 @@ export default function ManageEquipmentPage() {
         type="button"
         aria-label="Add equipment"
         onClick={() => setShowAddForm(true)}
-        className="fixed z-40 rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
-        style={{
-          right: "calc(16px + env(safe-area-inset-right))",
-          bottom: "calc(90px + env(safe-area-inset-bottom))",
-        }}
+        className={`rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary ${
+          embedded ? "w-full mt-4" : "fixed z-40"
+        }`}
+        style={
+          embedded
+            ? undefined
+            : {
+                right: "calc(16px + env(safe-area-inset-right))",
+                bottom: "calc(90px + env(safe-area-inset-bottom))",
+              }
+        }
       >
         <span className="text-2xl leading-none">+</span>
         <span className="text-sm font-semibold">Add equipment</span>
