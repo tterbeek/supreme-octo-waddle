@@ -95,7 +95,7 @@ export default function ActivityPreferencesPage({
     activeMetricType && supportsMetricOverride(activeMetricType)
       ? prefs[activeMetricType] ?? getSystemDefaultMetric(activeMetricType)
       : null;
-  const showMetricModal = Boolean(isMobile && activeMetricType && activeMetricConfig);
+  const showMetricModal = Boolean(activeMetricType && activeMetricConfig);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -407,7 +407,7 @@ export default function ActivityPreferencesPage({
                     const showMetric = supportsMetricOverride(row.activity_type);
                     const isSaving = savingMetric === row.activity_type;
                     const canDrag = !reordering && !savingToggle;
-                    const canOpenMetric = isMobile;
+                    const canOpenMetric = showMetric;
 
                     return (
                       <li
@@ -558,34 +558,6 @@ export default function ActivityPreferencesPage({
                                 </div>
                               </div>
                             </div>
-                            {showMetric && (
-                              <div className="hidden md:flex flex-wrap items-center gap-2 md:ml-[50px] md:mt-[3px]">
-                                {(["distance", "duration"] as Metric[]).map(
-                                  (choice) => {
-                                    const label =
-                                      choice === "distance" ? "Distance" : "Duration";
-                                    const isActive = selected === choice;
-                                    return (
-                                      <button
-                                        key={choice}
-                                        type="button"
-                                        onClick={() =>
-                                          updateMetricPreference(row.activity_type, choice)
-                                        }
-                                        className={`px-3 py-1.5 text-xs rounded-full border transition ${
-                                          isActive
-                                            ? "bg-movenotes-primary text-primary-text border-movenotes-primary"
-                                            : "border-warm-200/70 text-gray-500/90 opacity-90"
-                                        } ${isSaving ? "opacity-60" : ""}`}
-                                        disabled={isSaving}
-                                      >
-                                        {label}
-                                      </button>
-                                    );
-                                  }
-                                )}
-                              </div>
-                            )}
                           </div>
                         </div>
 
