@@ -115,6 +115,7 @@ export async function createPresetFromActivity(params: {
       distance_km: params.distanceValue,
       duration_min: params.durationValue,
       effort: params.effortValue,
+      last_used_at: new Date().toISOString(),
     },
   ]);
 

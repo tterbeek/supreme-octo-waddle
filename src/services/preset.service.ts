@@ -56,7 +56,7 @@ export type UpsertPresetPayload = {
 export async function createPreset(payload: UpsertPresetPayload) {
   const { data, error } = await supabase
     .from("presets")
-    .insert(payload)
+    .insert({ ...payload, last_used_at: new Date().toISOString() })
     .select()
     .single();
 
