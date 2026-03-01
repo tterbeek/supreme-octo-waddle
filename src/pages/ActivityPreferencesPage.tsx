@@ -405,7 +405,6 @@ export default function ActivityPreferencesPage({
                     const metricLabel =
                       selected === "distance" ? "Distance" : "Duration";
                     const showMetric = supportsMetricOverride(row.activity_type);
-                    const isSaving = savingMetric === row.activity_type;
                     const canDrag = !reordering && !savingToggle;
                     const canOpenMetric = showMetric;
 
