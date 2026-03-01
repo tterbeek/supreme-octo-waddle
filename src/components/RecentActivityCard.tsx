@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Frown, Laugh, Meh, Smile, Zap } from "lucide-react";
 import {
   IconBoxMultiple2,
@@ -44,6 +44,9 @@ export default function RecentActivityCard({
   disableSwipe = false,
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const pointerTypeRef = useRef<string | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchMovedRef = useRef(false);
   const typeConfig = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES["other"];
   const TypeIcon = typeConfig.Icon;
   const formattedDistance =
@@ -176,13 +179,35 @@ export default function RecentActivityCard({
               <div
                 className="relative inline-block"
                 data-photo-trigger="true"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  pointerTypeRef.current = e.pointerType;
+                  if (e.pointerType === "touch") {
+                    touchStartRef.current = { x: e.clientX, y: e.clientY };
+                    touchMovedRef.current = false;
+                  }
+                }}
+                onPointerMove={(e) => {
+                  if (pointerTypeRef.current !== "touch") return;
+                  if (!touchStartRef.current) return;
+                  const dx = Math.abs(e.clientX - touchStartRef.current.x);
+                  const dy = Math.abs(e.clientY - touchStartRef.current.y);
+                  if (dx > 8 || dy > 8) {
+                    touchMovedRef.current = true;
+                  }
+                }}
                 onPointerUp={(e) => {
                   e.stopPropagation();
+                  if (pointerTypeRef.current === "touch") {
+                    const moved = touchMovedRef.current;
+                    touchStartRef.current = null;
+                    if (moved) return;
+                  }
                   if (photoCount > 0) onOpenGallery(activity);
                 }}
-                onTouchEnd={(e) => {
-                  e.stopPropagation();
-                  if (photoCount > 0) onOpenGallery(activity);
+                onPointerCancel={() => {
+                  touchStartRef.current = null;
+                  touchMovedRef.current = false;
                 }}
               >
                 <img
@@ -199,6 +224,13 @@ export default function RecentActivityCard({
                     ${imageLoaded ? "opacity-100" : "opacity-0"}
                   `}
                   data-photo-trigger="true"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (pointerTypeRef.current && pointerTypeRef.current !== "mouse") {
+                      return;
+                    }
+                    if (photoCount > 0) onOpenGallery(activity);
+                  }}
                   onLoad={(e) => {
                     const { naturalWidth, naturalHeight } = e.currentTarget;
                     onNoteImageLoad(activity.id, naturalWidth, naturalHeight);
