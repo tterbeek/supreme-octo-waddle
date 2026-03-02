@@ -35,6 +35,11 @@ export default function GalleryLightbox({
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const preloadedRef = useRef<Set<string>>(new Set());
   const closeTimeoutRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const [imageSizes, setImageSizes] = useState<Record<string, { w: number; h: number }>>(
+    {}
+  );
 
   const activeItem = items[activeIndex];
 
@@ -148,6 +153,32 @@ export default function GalleryLightbox({
     setChromeVisible((prev) => !prev);
   };
 
+  const isPointInsideImage = (clientX: number, clientY: number) => {
+    if (!containerRef.current || !activeItem) return true;
+    const size = imageSizes[activeItem.key];
+    if (!size || !size.w || !size.h) return true;
+    const rect = containerRef.current.getBoundingClientRect();
+    const scale = Math.min(rect.width / size.w, rect.height / size.h);
+    const displayW = size.w * scale;
+    const displayH = size.h * scale;
+    const offsetX = rect.left + (rect.width - displayW) / 2;
+    const offsetY = rect.top + (rect.height - displayH) / 2;
+    return (
+      clientX >= offsetX &&
+      clientX <= offsetX + displayW &&
+      clientY >= offsetY &&
+      clientY <= offsetY + displayH
+    );
+  };
+
+  const shouldCloseAtPoint = (clientX: number, clientY: number, target?: EventTarget | null) => {
+    if (isClosing) return false;
+    if (target && target instanceof HTMLElement) {
+      if (target.closest("[data-gallery-ui]")) return false;
+    }
+    return !isPointInsideImage(clientX, clientY);
+  };
+
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (isClosing) return;
     const touch = event.touches[0];
@@ -168,6 +199,10 @@ export default function GalleryLightbox({
     const absY = Math.abs(dy);
 
     if (absX < 10 && absY < 10) {
+      if (shouldCloseAtPoint(touch.clientX, touch.clientY, event.target)) {
+        requestClose();
+        return;
+      }
       handleTap();
       return;
     }
@@ -187,11 +222,20 @@ export default function GalleryLightbox({
     }
   };
 
-  const handleOverlayClick = () => {
+  const handleOverlayClick = (event: SyntheticEvent) => {
     if (isClosing) return;
     if (ignoreClickRef.current) {
       ignoreClickRef.current = false;
       return;
+    }
+    const mouseEvent = event as unknown as { clientX?: number; clientY?: number; target?: EventTarget };
+    const clientX = mouseEvent.clientX;
+    const clientY = mouseEvent.clientY;
+    if (clientX != null && clientY != null) {
+      if (shouldCloseAtPoint(clientX, clientY, mouseEvent.target)) {
+        requestClose();
+        return;
+      }
     }
     handleTap();
   };
@@ -206,6 +250,7 @@ export default function GalleryLightbox({
 
   const content = hasItems ? (
     <div
+      ref={containerRef}
       className="fixed inset-0 z-[80] bg-black text-white"
       role="dialog"
       aria-modal="true"
@@ -215,10 +260,19 @@ export default function GalleryLightbox({
     >
       {activeImage ? (
         <img
+          ref={imageRef}
           src={activeImage}
           alt="Activity"
           className="h-full w-full object-contain"
           draggable={false}
+          onLoad={(event) => {
+            const img = event.currentTarget;
+            if (!activeItem || !img.naturalWidth || !img.naturalHeight) return;
+            setImageSizes((prev) => ({
+              ...prev,
+              [activeItem.key]: { w: img.naturalWidth, h: img.naturalHeight },
+            }));
+          }}
         />
       ) : (
         <div className="h-full w-full flex items-center justify-center text-white/70">
@@ -243,11 +297,15 @@ export default function GalleryLightbox({
             onTouchEnd={handleBackClose}
             className="absolute top-4 left-4 rounded-full bg-black/40 p-2 text-white/90 backdrop-blur"
             aria-label="Back"
+            data-gallery-ui
           >
             <IconArrowLeft size={20} strokeWidth={2} />
           </button>
 
-          <div className="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
+          <div
+            className="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-black/75 via-black/35 to-transparent"
+            data-gallery-ui
+          >
             {!noteExpanded ? (
               <p
                 className="text-sm leading-snug text-white/90"
@@ -280,7 +338,10 @@ export default function GalleryLightbox({
       )}
 
       {dotsVisible && (
-        <div className="absolute bottom-28 sm:bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5">
+        <div
+          className="absolute bottom-28 sm:bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5"
+          data-gallery-ui
+        >
           {items.map((item, index) => (
             <span
               key={item.key}
