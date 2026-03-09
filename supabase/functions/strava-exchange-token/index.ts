@@ -127,6 +127,17 @@ Deno.serve(async (req) => {
     );
 
   if (upsertError) {
+    if (
+      upsertError.code === "23505" &&
+      upsertError.message?.includes?.(
+        "user_strava_connections_strava_athlete_id_key"
+      )
+    ) {
+      return jsonResponse(409, {
+        error:
+          "This Strava account is already connected to another MoveNotes user.",
+      });
+    }
     return jsonResponse(400, { error: upsertError.message });
   }
 

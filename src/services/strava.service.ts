@@ -17,6 +17,63 @@ export type UserStravaConnection = {
   last_synced_at?: string | null;
 };
 
+const parseErrorPayload = (payload: unknown): string | null => {
+  if (!payload) return null;
+  if (typeof payload === "string") {
+    try {
+      const parsed = JSON.parse(payload) as { error?: unknown; message?: unknown };
+      if (typeof parsed?.error === "string" && parsed.error.trim()) return parsed.error;
+      if (typeof parsed?.message === "string" && parsed.message.trim()) {
+        return parsed.message;
+      }
+    } catch {
+      if (payload.trim()) return payload;
+    }
+    return null;
+  }
+  if (typeof payload === "object") {
+    const maybe = payload as { error?: unknown; message?: unknown };
+    if (typeof maybe.error === "string" && maybe.error.trim()) return maybe.error;
+    if (typeof maybe.message === "string" && maybe.message.trim()) return maybe.message;
+  }
+  return null;
+};
+
+const getFunctionErrorMessage = async (
+  error: any,
+  fallback: string
+): Promise<string> => {
+  const context = error?.context;
+
+  // supabase-js may provide a real Response in `context`.
+  if (context && typeof context === "object") {
+    if (typeof context.clone === "function" && typeof context.text === "function") {
+      try {
+        const text = await context.clone().text();
+        const fromText = parseErrorPayload(text);
+        if (fromText) return fromText;
+      } catch {
+        // continue
+      }
+    }
+
+    // Or a plain object payload.
+    const fromObject = parseErrorPayload(context);
+    if (fromObject) return fromObject;
+  }
+
+  // Some versions put payload in details/hint.
+  const fromDetails = parseErrorPayload(error?.details);
+  if (fromDetails) return fromDetails;
+  const fromHint = parseErrorPayload(error?.hint);
+  if (fromHint) return fromHint;
+
+  if (typeof error?.message === "string" && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+};
+
 const getRequiredClientId = () => {
   const clientId = import.meta.env.VITE_STRAVA_CLIENT_ID;
   if (!clientId) {
@@ -98,18 +155,11 @@ export const exchangeStravaCode = async (code: string) => {
   );
 
   if (error) {
-    const contextResponse = (error as any)?.context as Response | undefined;
-    if (contextResponse) {
-      try {
-        const body = await contextResponse.json();
-        if (body?.error && typeof body.error === "string") {
-          throw new Error(body.error);
-        }
-      } catch {
-        // fall through to generic message
-      }
-    }
-    throw new Error(error.message || "Could not complete Strava connection.");
+    const message = await getFunctionErrorMessage(
+      error,
+      "Could not complete Strava connection."
+    );
+    throw new Error(message);
   }
 
   return data;
@@ -160,18 +210,11 @@ export const disconnectUserStrava = async () => {
   });
 
   if (error) {
-    const contextResponse = (error as any)?.context as Response | undefined;
-    if (contextResponse) {
-      try {
-        const body = await contextResponse.json();
-        if (body?.error && typeof body.error === "string") {
-          throw new Error(body.error);
-        }
-      } catch {
-        // fall through to generic message
-      }
-    }
-    throw new Error(error.message || "Could not disconnect Strava.");
+    const message = await getFunctionErrorMessage(
+      error,
+      "Could not disconnect Strava."
+    );
+    throw new Error(message);
   }
 };
 
@@ -184,18 +227,11 @@ export const importRecentStravaActivities = async (perPage = 50, page = 1) => {
   );
 
   if (error) {
-    const contextResponse = (error as any)?.context as Response | undefined;
-    if (contextResponse) {
-      try {
-        const body = await contextResponse.json();
-        if (body?.error && typeof body.error === "string") {
-          throw new Error(body.error);
-        }
-      } catch {
-        // fall through to generic message
-      }
-    }
-    throw new Error(error.message || "Could not import Strava activities.");
+    const message = await getFunctionErrorMessage(
+      error,
+      "Could not import Strava activities."
+    );
+    throw new Error(message);
   }
 
   return data as {
