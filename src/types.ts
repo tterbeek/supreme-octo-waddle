@@ -41,3 +41,26 @@ export type Goal = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type MoveNotesActivityType =
+  | "run"
+  | "ride"
+  | "walk"
+  | "strength"
+  | "yoga"
+  | "hike"
+  | "swim"
+  | "restore"
+  | "other";
+
+export type StravaActivity = {
+  id: number;
+  name?: string | null;
+  sport_type?: string | null;
+  type?: string | null;
+  start_date?: string | null;
+  start_date_local?: string | null;
+  moving_time?: number | null;
+  elapsed_time?: number | null;
+  distance?: number | null;
+};

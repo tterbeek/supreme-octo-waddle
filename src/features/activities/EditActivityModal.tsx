@@ -14,6 +14,7 @@ type EditActivityModalProps = {
   onUpdated: () => void;
   onDeleted: () => void;
   zIndexClass?: string;
+  reflectionOnly?: boolean;
 };
 
 export default function EditActivityModal({
@@ -22,6 +23,7 @@ export default function EditActivityModal({
   onUpdated,
   onDeleted,
   zIndexClass = "z-50",
+  reflectionOnly = false,
 }: EditActivityModalProps) {
   const { unitSystem } = useUnitSystem();
   const {
@@ -116,19 +118,21 @@ export default function EditActivityModal({
         <div className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4" />
 
         <h2 className="text-lg font-semibold text-center mb-4">
-          Edit Activity
+          {reflectionOnly ? "Add reflection" : "Edit Activity"}
         </h2>
 
         <div className="space-y-5">
-          <div>
-            <label className="text-sm text-gray-700">Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full border border-warm-200 rounded-lg p-3 mt-1"
-            />
-          </div>
+          {!reflectionOnly && (
+            <div>
+              <label className="text-sm text-gray-700">Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full border border-warm-200 rounded-lg p-3 mt-1"
+              />
+            </div>
+          )}
 
           <div className="space-y-4">
             <FeelingSelector value={rating} onChange={setRating} />
@@ -137,77 +141,79 @@ export default function EditActivityModal({
             )}
           </div>
 
-          <div className="pb-2">
-            <button
-              type="button"
-              className="w-full flex items-center justify-between text-gray-800"
-              onClick={() => {
-                const next = !detailsOpen;
-                setDetailsOpen(next);
-                if (next) {
-                  setShowOptionalDistance(true);
-                  setShowOptionalDuration(true);
-                }
-              }}
-            >
-              <div className="text-left">
-                <div className="text-sm font-medium">Details</div>
-                <div className="text-xs text-gray-400">
-                  Distance, time, equipment
+          {!reflectionOnly && (
+            <div className="pb-2">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between text-gray-800"
+                onClick={() => {
+                  const next = !detailsOpen;
+                  setDetailsOpen(next);
+                  if (next) {
+                    setShowOptionalDistance(true);
+                    setShowOptionalDuration(true);
+                  }
+                }}
+              >
+                <div className="text-left">
+                  <div className="text-sm font-medium">Details</div>
+                  <div className="text-xs text-gray-400">
+                    Distance, time, equipment
+                  </div>
                 </div>
-              </div>
-              <ChevronDown
-                className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
-                  detailsOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-            <div
-              className={`overflow-hidden transition-all duration-200 ${
-                detailsOpen ? "max-h-[900px] opacity-100 pt-3" : "max-h-0 opacity-0"
-              }`}
-            >
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm text-gray-600">Date</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full border border-warm-200 rounded-lg p-2.5"
-                  />
-                </div>
-
-                <DistanceDurationFields
-                  defaultFields={defaultFields}
-                  optionalFields={optionalFields}
-                  showOptionalDistance={showOptionalDistance}
-                  showOptionalDuration={showOptionalDuration}
-                  displayDistance={distanceDisplay}
-                  duration={duration}
-                  unitSystem={unitSystem}
-                  onDistanceChange={handleDistanceChange}
-                  onDurationChange={setDuration}
-                  onShowDistance={() => {}}
-                  onShowDuration={() => {}}
-                  forceShowOptional
-                  suppressAddButtons
-                  dense
+                <ChevronDown
+                  className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                    detailsOpen ? "rotate-180" : ""
+                  }`}
                 />
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-200 ${
+                  detailsOpen ? "max-h-[900px] opacity-100 pt-3" : "max-h-0 opacity-0"
+                }`}
+              >
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm text-gray-600">Date</label>
+                    <input
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full border border-warm-200 rounded-lg p-2.5"
+                    />
+                  </div>
 
-                <div>
-                  <div className="text-sm text-gray-600 mb-1">Equipment</div>
-                  <button
-                    type="button"
-                    onClick={() => setShowEquipmentDialog(true)}
-                    className="w-full border border-warm-200 rounded-lg p-3 text-left text-gray-800"
-                  >
-                    {equipmentSummary || <span className="text-gray-400">None selected</span>}
-                  </button>
+                  <DistanceDurationFields
+                    defaultFields={defaultFields}
+                    optionalFields={optionalFields}
+                    showOptionalDistance={showOptionalDistance}
+                    showOptionalDuration={showOptionalDuration}
+                    displayDistance={distanceDisplay}
+                    duration={duration}
+                    unitSystem={unitSystem}
+                    onDistanceChange={handleDistanceChange}
+                    onDurationChange={setDuration}
+                    onShowDistance={() => {}}
+                    onShowDuration={() => {}}
+                    forceShowOptional
+                    suppressAddButtons
+                    dense
+                  />
+
+                  <div>
+                    <div className="text-sm text-gray-600 mb-1">Equipment</div>
+                    <button
+                      type="button"
+                      onClick={() => setShowEquipmentDialog(true)}
+                      className="w-full border border-warm-200 rounded-lg p-3 text-left text-gray-800"
+                    >
+                      {equipmentSummary || <span className="text-gray-400">None selected</span>}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Notes */}
           <div className="space-y-2">
@@ -344,20 +350,22 @@ export default function EditActivityModal({
           disabled={saving}
           className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50 mt-4"
         >
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? "Saving..." : reflectionOnly ? "Save reflection" : "Save Changes"}
         </button>
 
-        <button
-          onClick={handleDelete}
-          className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition"
-        >
-          <Trash2 className="inline w-4 h-4 mr-1 -mt-0.5" />
-          Delete Activity
-        </button>
+        {!reflectionOnly && (
+          <button
+            onClick={handleDelete}
+            className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition"
+          >
+            <Trash2 className="inline w-4 h-4 mr-1 -mt-0.5" />
+            Delete Activity
+          </button>
+        )}
       </div>
     </div>
 
-    {showEquipmentDialog && (
+    {showEquipmentDialog && !reflectionOnly && (
       <EquipmentDialog
         equipment={equipment}
         selectedEquipmentIds={selectedEquipmentIds}

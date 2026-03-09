@@ -10,6 +10,7 @@ import { useHomeModals } from "../hooks/useHomeModals";
 import { getCurrentUser } from "../services/auth.service";
 import { useUnitSystem } from "../contexts/UnitContext";
 import RecentActivityCard from "../components/RecentActivityCard";
+import Toast from "../components/Toast";
 import { useNoteImages } from "../hooks/useNoteImages";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
@@ -17,11 +18,16 @@ import { createSignedUrls } from "../services/storage.service";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { buildGalleryItemsForActivity } from "../lib/photos";
+import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
 
 type CalendarActivity = {
   id: string;
   date: string;
   type: string;
+  source?: string | null;
+  raw_sport_type?: string | null;
+  raw_type?: string | null;
+  started_at?: string | null;
   title?: string | null;
   notes?: string | null;
   distance_km?: number | null;
@@ -92,6 +98,8 @@ export default function CalendarPage() {
   >({});
   const [loadingMonths, setLoadingMonths] = useState<Record<string, boolean>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [dayThumbs, setDayThumbs] = useState<Record<string, string>>({});
   const [quickLogDate, setQuickLogDate] = useState<string | null>(null);
   const [minMonthIndex, setMinMonthIndex] = useState<number | null>(null);
@@ -177,7 +185,7 @@ export default function CalendarPage() {
         const { data, error: monthError } = await supabase
           .from("activities")
           .select(
-            "id, user_id, type, date, title, notes, distance_km, duration_min, feeling, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
+            "id, user_id, type, source, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
           )
           .eq("user_id", userId)
           .gte("date", formatDateKey(monthStart))
@@ -262,8 +270,8 @@ export default function CalendarPage() {
   const sortedSelectedActivities = useMemo(() => {
     if (selectedDayActivities.length <= 1) return selectedDayActivities;
     return [...selectedDayActivities].sort((a, b) => {
-      const aTime = new Date(a.created_at || a.date).getTime();
-      const bTime = new Date(b.created_at || b.date).getTime();
+      const aTime = new Date(a.started_at || a.created_at || a.date).getTime();
+      const bTime = new Date(b.started_at || b.created_at || b.date).getTime();
       return bTime - aTime;
     });
   }, [selectedDayActivities]);
@@ -274,11 +282,47 @@ export default function CalendarPage() {
     setShowTypeSelector(true);
   };
 
+  const refreshLoadedCalendarData = useCallback(async () => {
+    if (!userId) return;
+    setMonthActivities({});
+    setLoadingMonths({});
+    setDayThumbs({});
+    setSelectedDate(null);
+    try {
+      const first = await fetchFirstActivityDate();
+      const minIndex = first ? toMonthIndex(first) - 1 : todayMonthIndex - 12;
+      setMinMonthIndex(minIndex);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to refresh calendar");
+    }
+  }, [fetchFirstActivityDate, todayMonthIndex, userId]);
+
+  const playWritingSound = () => {
+    const audio = new Audio("/sounds/writing.mp3");
+    audio.play().catch(() => {
+      // Ignore autoplay restrictions.
+    });
+  };
+
   useEffect(() => {
     if (!sortedSelectedActivities.length) return;
     const cleanup = resolveNoteImages(sortedSelectedActivities);
     return cleanup;
   }, [sortedSelectedActivities, resolveNoteImages]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const handleStravaSyncComplete = () => {
+      void refreshLoadedCalendarData();
+    };
+    window.addEventListener(STRAVA_SYNC_COMPLETED_EVENT, handleStravaSyncComplete);
+    return () => {
+      window.removeEventListener(
+        STRAVA_SYNC_COMPLETED_EVENT,
+        handleStravaSyncComplete
+      );
+    };
+  }, [refreshLoadedCalendarData, userId]);
 
   useEffect(() => {
     const pickBestPhoto = (day: string, list: CalendarActivity[]) => {
@@ -625,6 +669,7 @@ export default function CalendarPage() {
                     const items = buildGalleryItemsForActivity(activity);
                     gallery.openGallery(items, 0);
                   }}
+                  onAddReflection={(activity) => setReflectionActivity(activity)}
                   disableSwipe={gallery.open}
                 />
               ))}
@@ -703,6 +748,28 @@ export default function CalendarPage() {
           }}
           zIndexClass="z-[60]"
         />
+      )}
+
+      {reflectionActivity && (
+        <EditActivityModal
+          activity={reflectionActivity}
+          reflectionOnly
+          onClose={() => setReflectionActivity(null)}
+          onUpdated={() => {
+            setReflectionActivity(null);
+            setToastMessage("Reflection saved ✍️");
+            playWritingSound();
+            fetchMonthActivities(today);
+          }}
+          onDeleted={() => {
+            setReflectionActivity(null);
+          }}
+          zIndexClass="z-[60]"
+        />
+      )}
+
+      {toastMessage && (
+        <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
       )}
 
       <PostLogNoteFlow

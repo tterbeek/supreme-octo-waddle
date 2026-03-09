@@ -21,6 +21,7 @@ import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import { buildGalleryItemsForActivity } from "../lib/photos";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
+import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
 
 const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
@@ -57,6 +58,7 @@ export default function Home() {
   // Toasts
   const [showUndoToast, setShowUndoToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
   const noteFlow = usePostLogNoteFlow();
 
   // Sidebar
@@ -129,6 +131,20 @@ export default function Home() {
     return cleanup;
   }, [activities, resolveNoteImages]);
 
+  useEffect(() => {
+    if (!userId) return;
+    const handleStravaSyncComplete = () => {
+      void refreshFeed();
+    };
+    window.addEventListener(STRAVA_SYNC_COMPLETED_EVENT, handleStravaSyncComplete);
+    return () => {
+      window.removeEventListener(
+        STRAVA_SYNC_COMPLETED_EVENT,
+        handleStravaSyncComplete
+      );
+    };
+  }, [refreshFeed, userId]);
+
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
@@ -155,6 +171,13 @@ export default function Home() {
     lastDeletedRef.current = null;
     setShowUndoToast(false);
     refreshActivities();
+  };
+
+  const playWritingSound = () => {
+    const audio = new Audio("/sounds/writing.mp3");
+    audio.play().catch(() => {
+      // Ignore autoplay restrictions.
+    });
   };
 
   // --------------------------------------------------
@@ -326,6 +349,7 @@ export default function Home() {
                                 const items = buildGalleryItemsForActivity(activity);
                                 gallery.openGallery(items, 0);
                               }}
+                              onAddReflection={(activity) => setReflectionActivity(activity)}
                               disableSwipe={gallery.open}
                             />
                           );
@@ -405,6 +429,23 @@ export default function Home() {
               setToastMessage("Activity deleted 🗑️");
               setEditActivity(null);
               refreshActivities();
+            }}
+          />
+        )}
+
+        {reflectionActivity && (
+          <EditActivityModal
+            activity={reflectionActivity}
+            reflectionOnly
+            onClose={() => setReflectionActivity(null)}
+            onUpdated={() => {
+              setReflectionActivity(null);
+              setToastMessage("Reflection saved ✍️");
+              playWritingSound();
+              refreshActivities();
+            }}
+            onDeleted={() => {
+              setReflectionActivity(null);
             }}
           />
         )}

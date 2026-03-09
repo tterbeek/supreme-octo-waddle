@@ -27,6 +27,7 @@ type RecentActivityCardProps = {
   tooltipVisible: boolean;
   onTooltipClose: () => void;
   onOpenGallery: (activity: any) => void;
+  onAddReflection?: (activity: any) => void;
   disableSwipe?: boolean;
 };
 
@@ -41,6 +42,7 @@ export default function RecentActivityCard({
   tooltipVisible,
   onTooltipClose,
   onOpenGallery,
+  onAddReflection,
   disableSwipe = false,
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -68,6 +70,35 @@ export default function RecentActivityCard({
   })();
   const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
   const photoCount = getActivityPhotos(activity).length;
+  const stravaSource = activity.source === "strava";
+  const isImportedActivity =
+    (typeof activity.source === "string" && activity.source !== "manual") ||
+    Boolean(activity.external_source);
+  const stravaSportLabel = (() => {
+    if (!stravaSource) return null;
+    const raw = activity.raw_sport_type || activity.raw_type;
+    if (!raw || typeof raw !== "string") return "Strava";
+    const spaced = raw
+      .replace(/_/g, " ")
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .trim();
+    return `Strava · ${spaced}`;
+  })();
+  const feelingValue =
+    typeof activity.feeling === "number" && Number.isFinite(activity.feeling)
+      ? activity.feeling
+      : null;
+  const effortValue =
+    typeof activity.effort === "number" && Number.isFinite(activity.effort)
+      ? Math.max(0, Math.trunc(activity.effort))
+      : 0;
+  const showFeeling = (feelingValue ?? 0) > 0;
+  const showEffort = effortValue > 0;
+  const hasNotes = Boolean(activity.notes?.trim?.());
+  const hasPhoto = photoCount > 0 || Boolean(thumbUrl);
+  const hasReflection = hasNotes || showFeeling || showEffort || hasPhoto;
+  const showAddReflection =
+    isImportedActivity && Boolean(onAddReflection) && !hasReflection;
   const countIcon = (() => {
     if (photoCount <= 1) return null;
     if (photoCount === 2) return IconBoxMultiple2;
@@ -112,6 +143,10 @@ export default function RecentActivityCard({
           </span>
         </div>
 
+        {stravaSportLabel && (
+          <div className="text-xs text-gray-500 mb-1">{stravaSportLabel}</div>
+        )}
+
         <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1 flex-wrap">
           {formattedDistance && (
             <>
@@ -128,38 +163,32 @@ export default function RecentActivityCard({
           {equipmentName && <span className="text-gray-600">{equipmentName}</span>}
         </div>
 
-        <div className="flex items-center justify-center gap-3 my-3">
-          {(() => {
-            const f = Number(activity.feeling) || 0;
-            const base = "w-5 h-5 md:w-6 md:h-6";
-            if (f <= 1)
-              return (
-                <Frown className={`${base} text-movenotes-accent`} />
-              );
-            if (f === 2)
-              return <Meh className={`${base} text-movenotes-accent`} />;
-            if (f === 3)
-              return (
-                <Smile className={`${base} text-movenotes-accent`} />
-              );
-            if (f >= 4)
-              return (
-                <Laugh className={`${base} text-movenotes-accent`} />
-              );
-            return null;
-          })()}
+        {(showFeeling || showEffort) && (
+          <div className="flex items-center justify-center gap-3 my-3">
+            {(() => {
+              const f = feelingValue ?? 0;
+              const base = "w-5 h-5 md:w-6 md:h-6";
+              if (f <= 1)
+                return <Frown className={`${base} text-movenotes-accent`} />;
+              if (f === 2)
+                return <Meh className={`${base} text-movenotes-accent`} />;
+              if (f === 3)
+                return <Smile className={`${base} text-movenotes-accent`} />;
+              if (f >= 4)
+                return <Laugh className={`${base} text-movenotes-accent`} />;
+              return null;
+            })()}
 
-          <div className="flex items-center gap-1 md:gap-1.5">
-            {Array.from({ length: Number(activity.effort) || 0 }).map(
-              (_, i) => (
+            <div className="flex items-center gap-1 md:gap-1.5">
+              {Array.from({ length: effortValue }).map((_, i) => (
                 <Zap
                   key={i}
                   className="w-4 h-4 md:w-5 md:h-5 text-movenotes-accent"
                 />
-              )
-            )}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {(activity.notes?.trim() || thumbUrl) && (
           <div className="mt-3 space-y-2">
@@ -247,6 +276,21 @@ export default function RecentActivityCard({
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {showAddReflection && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddReflection?.(activity);
+              }}
+              className="text-xs text-movenotes-primary underline"
+            >
+              Add reflection
+            </button>
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -20,12 +20,18 @@ import SettingsPage from "./pages/SettingsPage";
 import AboutPage from "./pages/AboutPage";
 import ActivityPreferencesPage from "./pages/ActivityPreferencesPage";
 import ManageEquipmentPage from "./pages/ManageEquipmentPage";
+import StravaCallbackPage from "./pages/StravaCallbackPage";
+import ConnectionsPage from "./pages/ConnectionsPage";
 import { AdminRoute } from "./components/AdminRoute";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import IntroPage from "./pages/IntroPage";
 import { UnitProvider } from "./contexts/UnitContext";
 import CalendarPage from "./pages/CalendarPage";
 import PhotosPage from "./pages/PhotosPage";
+import {
+  STRAVA_SYNC_COMPLETED_EVENT,
+  syncStravaIfStale,
+} from "./services/strava.service";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -38,6 +44,7 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem("movenotes_onboarding_done")
   );
+  const autoSyncUserRef = useRef<string | null>(null);
 
 
   // 🌅 Splash logic
@@ -90,6 +97,36 @@ export default function App() {
       sub?.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      autoSyncUserRef.current = null;
+      return;
+    }
+    if (autoSyncUserRef.current === user.id) return;
+    autoSyncUserRef.current = user.id;
+
+    let cancelled = false;
+    const runAutoSync = async () => {
+      try {
+        const didSync = await syncStravaIfStale({
+          staleMinutes: 30,
+          perPage: 50,
+          page: 1,
+        });
+        if (!cancelled && didSync) {
+          window.dispatchEvent(new Event(STRAVA_SYNC_COMPLETED_EVENT));
+        }
+      } catch (err: any) {
+        console.warn("[Strava] Auto-sync skipped:", err?.message || err);
+      }
+    };
+
+    void runAutoSync();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   console.log(
     `[Render] showSplash=${showSplash} | authReady=${authReady} | user=${user ? user.email : "none"}`
@@ -153,6 +190,7 @@ export default function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/settings/strava/callback" element={<StravaCallbackPage />} />
 
               {/* 🔐 Auth routes */}
               {!user ? (
@@ -267,6 +305,15 @@ export default function App() {
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
                         <ManageEquipmentPage />
+                      </Layout>
+                    }
+                  />
+
+                  <Route
+                    path="/settings/connections"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <ConnectionsPage />
                       </Layout>
                     }
                   />
