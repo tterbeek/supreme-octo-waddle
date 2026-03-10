@@ -180,13 +180,15 @@ export default function ManageCirclePage() {
     try {
       const token = await createCircleInviteLink(userId);
       const link = `${window.location.origin}/circle/invite/${token}`;
-      const payload = `Hi, I want to share my movement story with you on MoveNotes please add me to your circle with following link: ${link}`;
+      const shareText =
+        "Hi, I want to share my movement story with you on MoveNotes please add me to your circle with following link:";
+      const payload = `${shareText} ${link}`;
 
       if (navigator.share) {
         try {
           await navigator.share({
             title: "MoveNotes social circle invite",
-            text: payload,
+            text: shareText,
             url: link,
           });
           return;
