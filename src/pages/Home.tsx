@@ -22,6 +22,12 @@ import { buildGalleryItemsForActivity } from "../lib/photos";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
+import {
+  fetchOwnSharedActivityIds,
+  hasCircleAccess,
+  shareActivityWithConnections,
+  unshareActivity,
+} from "../services/circle.service";
 
 const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
 
@@ -59,6 +65,11 @@ export default function Home() {
   const [showUndoToast, setShowUndoToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
+  const [circleEnabled, setCircleEnabled] = useState(false);
+  const [sharingActivityId, setSharingActivityId] = useState<string | null>(null);
+  const [sharedWithCircleByActivity, setSharedWithCircleByActivity] = useState<
+    Record<string, boolean>
+  >({});
   const noteFlow = usePostLogNoteFlow();
 
   // Sidebar
@@ -113,6 +124,12 @@ export default function Home() {
         if (!user) return;
 
         setUserId(user.id);
+        try {
+          const canUseCircle = await hasCircleAccess(user.id);
+          setCircleEnabled(canUseCircle);
+        } catch {
+          setCircleEnabled(false);
+        }
 
         await refreshFeed();
       } finally {
@@ -179,6 +196,65 @@ export default function Home() {
       // Ignore autoplay restrictions.
     });
   };
+
+  const handleShareWithCircle = async (activity: any) => {
+    if (!userId || !activity?.id) return;
+    setSharingActivityId(activity.id);
+    try {
+      const isShared = Boolean(sharedWithCircleByActivity[activity.id]);
+      if (isShared) {
+        await unshareActivity(activity.id, userId);
+        setSharedWithCircleByActivity((prev) => {
+          const next = { ...prev };
+          delete next[activity.id];
+          return next;
+        });
+        setToastMessage("Removed from Circle");
+      } else {
+        await shareActivityWithConnections(activity.id, userId);
+        setSharedWithCircleByActivity((prev) => ({ ...prev, [activity.id]: true }));
+        setToastMessage("Shared with Circle");
+      }
+    } catch (err: any) {
+      setToastMessage(err?.message || "Could not share with Circle.");
+    } finally {
+      setSharingActivityId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!userId || !circleEnabled) {
+      setSharedWithCircleByActivity({});
+      return;
+    }
+
+    const activityIds = activities
+      .filter((item) => item?.entry_kind !== "journal_entry")
+      .map((item) => String(item.id));
+    if (!activityIds.length) {
+      setSharedWithCircleByActivity({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const sharedIds = await fetchOwnSharedActivityIds(userId, activityIds);
+        if (cancelled) return;
+        const next: Record<string, boolean> = {};
+        sharedIds.forEach((id) => {
+          next[id] = true;
+        });
+        setSharedWithCircleByActivity(next);
+      } catch {
+        if (!cancelled) setSharedWithCircleByActivity({});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activities, circleEnabled, userId]);
 
   // --------------------------------------------------
   // RENDER
@@ -350,6 +426,10 @@ export default function Home() {
                                 gallery.openGallery(items, 0);
                               }}
                               onAddReflection={(activity) => setReflectionActivity(activity)}
+                              canShareWithCircle={circleEnabled}
+                              onShareWithCircle={handleShareWithCircle}
+                              sharedWithCircle={Boolean(sharedWithCircleByActivity[a.id])}
+                              sharingWithCircle={sharingActivityId === a.id}
                               disableSwipe={gallery.open}
                             />
                           );

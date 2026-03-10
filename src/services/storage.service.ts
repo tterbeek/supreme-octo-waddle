@@ -11,6 +11,7 @@ export async function createSignedUrls(
         .from(bucket)
         .createSignedUrl(path, expiresIn);
       if (error) {
+        console.warn(`[storage] createSignedUrl failed (${bucket}/${path}): ${error.message}`);
         return [path, null] as const;
       }
       return [path, data?.signedUrl || null] as const;

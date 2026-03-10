@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { Download, LogOut, Trash2, FileText, Link2 } from "lucide-react";
+import { IconAffiliate } from "@tabler/icons-react";
 import { useUnitSystem } from "../contexts/UnitContext";
 
 export default function SettingsPage() {
@@ -198,11 +199,20 @@ export default function SettingsPage() {
 
       {/* CONNECTIONS */}
       <Link
+        to="/settings/circle"
+        className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
+      >
+        <IconAffiliate className="w-5 h-5 text-movenotes-primary" />
+        <span>Manage social circle</span>
+      </Link>
+
+      {/* STRAVA CONNECTIONS */}
+      <Link
         to="/settings/connections"
         className="w-full flex items-center gap-3 bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4 active:scale-95"
       >
         <Link2 className="w-5 h-5 text-movenotes-primary" />
-        <span>Manage connections</span>
+        <span>Manage external data connections</span>
       </Link>
 
       {/* EXPORT */}

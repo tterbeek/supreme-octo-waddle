@@ -11,6 +11,12 @@ interface SignupProps {
 export default function Signup({ onSignup }: SignupProps) {
   const location = useLocation();
   const prefilledEmail = (location.state as { email?: string } | null)?.email || "";
+  const nextParam = new URLSearchParams(location.search).get("next");
+  const redirectTo = nextParam && nextParam.startsWith("/") ? nextParam : "/";
+  const loginHref =
+    redirectTo === "/"
+      ? "/login"
+      : `/login?next=${encodeURIComponent(redirectTo)}`;
   const [email, setEmail] = useState(prefilledEmail);
   const [otp, setOtp] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -99,7 +105,7 @@ export default function Signup({ onSignup }: SignupProps) {
     }
 
     // ✅ Redirect to main app
-    navigate("/");
+    navigate(redirectTo);
   };
 
   return (
@@ -220,7 +226,7 @@ export default function Signup({ onSignup }: SignupProps) {
         <p className="text-sm text-center text-movenotes-muted mt-6">
           Already have an account?{" "}
           <a
-            href="/login"
+            href={loginHref}
             className="text-movenotes-accent underline hover:opacity-80"
           >
             Log in

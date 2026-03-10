@@ -9,6 +9,8 @@ import {
   IconBoxMultiple7,
   IconBoxMultiple8,
   IconBoxMultiple9,
+  IconShare,
+  IconShareOff,
 } from "@tabler/icons-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
@@ -28,6 +30,10 @@ type RecentActivityCardProps = {
   onTooltipClose: () => void;
   onOpenGallery: (activity: any) => void;
   onAddReflection?: (activity: any) => void;
+  onShareWithCircle?: (activity: any) => void;
+  canShareWithCircle?: boolean;
+  sharedWithCircle?: boolean;
+  sharingWithCircle?: boolean;
   disableSwipe?: boolean;
 };
 
@@ -43,6 +49,10 @@ export default function RecentActivityCard({
   onTooltipClose,
   onOpenGallery,
   onAddReflection,
+  onShareWithCircle,
+  canShareWithCircle = false,
+  sharedWithCircle = false,
+  sharingWithCircle = false,
   disableSwipe = false,
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -99,6 +109,7 @@ export default function RecentActivityCard({
   const hasReflection = hasNotes || showFeeling || showEffort || hasPhoto;
   const showAddReflection =
     isImportedActivity && Boolean(onAddReflection) && !hasReflection;
+  const showShareWithCircle = canShareWithCircle && Boolean(onShareWithCircle);
   const countIcon = (() => {
     if (photoCount <= 1) return null;
     if (photoCount === 2) return IconBoxMultiple2;
@@ -141,6 +152,27 @@ export default function RecentActivityCard({
           <span className="font-semibold text-gray-900 text-base md:text-lg leading-tight">
             {activity.title || typeConfig.label}
           </span>
+          {showShareWithCircle && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onShareWithCircle?.(activity);
+              }}
+              disabled={sharingWithCircle}
+              aria-label={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
+              title={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
+              className={`text-movenotes-primary disabled:opacity-60 ${
+                sharingWithCircle ? "animate-pulse" : ""
+              }`}
+            >
+              {sharedWithCircle ? (
+                <IconShareOff size={16} strokeWidth={1.9} />
+              ) : (
+                <IconShare size={16} strokeWidth={1.9} />
+              )}
+            </button>
+          )}
         </div>
 
         {stravaSportLabel && (
@@ -280,7 +312,7 @@ export default function RecentActivityCard({
         )}
 
         {showAddReflection && (
-          <div className="mt-3">
+          <div className="mt-3 flex items-center justify-center gap-3">
             <button
               type="button"
               onClick={(event) => {

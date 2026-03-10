@@ -20,6 +20,8 @@ import SettingsPage from "./pages/SettingsPage";
 import AboutPage from "./pages/AboutPage";
 import ActivityPreferencesPage from "./pages/ActivityPreferencesPage";
 import ManageEquipmentPage from "./pages/ManageEquipmentPage";
+import ManageCirclePage from "./pages/ManageCirclePage";
+import CircleInvitePage from "./pages/CircleInvitePage";
 import StravaCallbackPage from "./pages/StravaCallbackPage";
 import ConnectionsPage from "./pages/ConnectionsPage";
 import { AdminRoute } from "./components/AdminRoute";
@@ -28,6 +30,7 @@ import IntroPage from "./pages/IntroPage";
 import { UnitProvider } from "./contexts/UnitContext";
 import CalendarPage from "./pages/CalendarPage";
 import PhotosPage from "./pages/PhotosPage";
+import CirclePage from "./pages/CirclePage";
 import {
   STRAVA_SYNC_COMPLETED_EVENT,
   syncStravaIfStale,
@@ -191,6 +194,7 @@ export default function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/settings/strava/callback" element={<StravaCallbackPage />} />
+              <Route path="/circle/invite/:token" element={<CircleInvitePage />} />
 
               {/* 🔐 Auth routes */}
               {!user ? (
@@ -242,6 +246,15 @@ export default function App() {
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
                         <PhotosPage />
+                      </Layout>
+                    }
+                  />
+
+                  <Route
+                    path="/circle"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <CirclePage />
                       </Layout>
                     }
                   />
@@ -305,6 +318,15 @@ export default function App() {
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
                         <ManageEquipmentPage />
+                      </Layout>
+                    }
+                  />
+
+                  <Route
+                    path="/settings/circle"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <ManageCirclePage />
                       </Layout>
                     }
                   />

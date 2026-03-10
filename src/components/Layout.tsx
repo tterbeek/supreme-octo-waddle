@@ -1,10 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import AppHeader from "./AppHeader";
 import { usePwaInstallBanner } from "../hooks/usePwaInstallBanner";
 import PwaInstallBanner from "./PwaInstallBanner";
 import { LayoutChromeContext } from "../contexts/LayoutChromeContext";
+import { getCurrentUser } from "../services/auth.service";
+import {
+  CIRCLE_ACCESS_UPDATED_EVENT,
+  hasCircleAccess,
+} from "../services/circle.service";
 
 const JOURNAL_STORAGE_KEY = "movenotes_last_journal_tab";
 const BOTTOM_STORAGE_KEY = "movenotes_last_bottom_tab";
@@ -50,6 +62,7 @@ export default function Layout({
   const navigate = useNavigate();
   const [chromeHidden, setChromeHidden] = useState(false);
   const [journalTarget, setJournalTarget] = useState(getStoredJournalTab);
+  const [showCircleTab, setShowCircleTab] = useState(false);
   const initNavigationRef = useRef(false);
 
   const topNavItems = [
@@ -57,12 +70,26 @@ export default function Layout({
     { to: "/calendar", label: "Calendar" },
     { to: "/photos", label: "Photos" },
   ];
-  const bottomNavItems = [
-    { to: "/", label: "Journal" },
-    { to: "/stats", label: "Insights" },
-  ];
+  const bottomNavItems = useMemo(
+    () =>
+      showCircleTab
+        ? [
+            { to: "/", label: "Journal" },
+            { to: "/circle", label: "Circle" },
+            { to: "/stats", label: "Insights" },
+          ]
+        : [
+            { to: "/", label: "Journal" },
+            { to: "/stats", label: "Insights" },
+          ],
+    [showCircleTab]
+  );
   const isJournalRoute = useMemo(
     () => isJournalRoutePath(location.pathname),
+    [location.pathname]
+  );
+  const isCircleRoute = useMemo(
+    () => location.pathname.startsWith("/circle"),
     [location.pathname]
   );
   const isInsightsRoute = useMemo(
@@ -87,8 +114,50 @@ export default function Layout({
     }
     if (isInsightsRoute) {
       localStorage.setItem(BOTTOM_STORAGE_KEY, "insights");
+      return;
     }
-  }, [isJournalRoute, isInsightsRoute, location.pathname]);
+    if (isCircleRoute) {
+      localStorage.setItem(BOTTOM_STORAGE_KEY, "circle");
+    }
+  }, [isCircleRoute, isJournalRoute, isInsightsRoute, location.pathname]);
+
+  const refreshCircleAccess = useCallback(async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        setShowCircleTab(false);
+        return;
+      }
+      const canAccess = await hasCircleAccess(user.id);
+      setShowCircleTab(canAccess);
+    } catch {
+      setShowCircleTab(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshCircleAccess();
+  }, [location.pathname, refreshCircleAccess]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleCircleAccessUpdate = () => {
+      if (!cancelled) {
+        void refreshCircleAccess();
+      }
+    };
+
+    window.addEventListener(CIRCLE_ACCESS_UPDATED_EVENT, handleCircleAccessUpdate);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        CIRCLE_ACCESS_UPDATED_EVENT,
+        handleCircleAccessUpdate
+      );
+    };
+  }, [refreshCircleAccess]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -103,13 +172,18 @@ export default function Layout({
       return;
     }
 
+    if (lastBottom === "circle" && showCircleTab) {
+      navigate("/circle", { replace: true });
+      return;
+    }
+
     if (lastBottom === "journal") {
       const storedJournal = getStoredJournalTab();
       if (storedJournal !== "/") {
         navigate(storedJournal, { replace: true });
       }
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, showCircleTab]);
 
   return (
     <LayoutChromeContext.Provider value={{ chromeHidden, setChromeHidden }}>
@@ -183,6 +257,8 @@ export default function Layout({
                 const isActive =
                   item.to === "/"
                     ? isJournalRoute
+                    : item.to === "/circle"
+                    ? isCircleRoute
                     : location.pathname.startsWith("/stats") ||
                       location.pathname.startsWith("/stats-");
 

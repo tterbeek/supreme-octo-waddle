@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import PublicTopNav from "../components/PublicTopNav";
 
@@ -9,6 +9,13 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
   const [codeSent, setCodeSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const nextParam = new URLSearchParams(location.search).get("next");
+  const redirectTo = nextParam && nextParam.startsWith("/") ? nextParam : "/";
+  const signupHref =
+    redirectTo === "/"
+      ? "/signup"
+      : `/signup?next=${encodeURIComponent(redirectTo)}`;
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -31,7 +38,7 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
 
       if (error.message.includes("Signups not allowed")) {
         alert("Email not found — redirecting to signup.");
-        navigate("/signup", { state: { email } });
+        navigate(signupHref, { state: { email } });
       } else {
         alert(error.message);
       }
@@ -62,7 +69,7 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
     const session = sessionData.session;
     console.log("[Login] Logged in successfully:", session?.user?.email);
     onLogin?.(session);
-    navigate("/");
+    navigate(redirectTo);
   };
 
   return (
@@ -104,7 +111,7 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
             <p className="mt-6 text-sm text-center text-movenotes-muted">
               Not a member?{" "}
               <a
-                href="/signup"
+                href={signupHref}
                 className="text-movenotes-accent underline hover:opacity-80"
               >
                 Sign up here
