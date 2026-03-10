@@ -434,8 +434,7 @@ export default function CirclePage() {
                       onClick={(event) => {
                         event.stopPropagation();
                         const photos = getSharePhotos(item);
-                        const galleryItems = photos
-                          .map((photo, idx) => {
+                        const galleryItems: GalleryItem[] = photos.flatMap((photo, idx) => {
                             const normalizedImage = photo.image_path
                               ? normalizeStoragePath(photo.image_path)
                               : null;
@@ -444,22 +443,23 @@ export default function CirclePage() {
                               : null;
                             const imagePath = normalizedImage || normalizedThumb || null;
                             const thumbPath = normalizedThumb || normalizedImage || null;
-                            if (!imagePath && !thumbPath) return null;
-                            return {
-                              key: `${item.activity_share_id}:${idx}`,
-                              activity: {
-                                id: item.activity_share_id,
-                                date: item.occurred_on,
-                                title: item.title || "Shared activity",
-                                type: item.activity_type,
-                                notes: null,
+                            if (!imagePath && !thumbPath) return [];
+                            return [
+                              {
+                                key: `${item.activity_share_id}:${idx}`,
+                                activity: {
+                                  id: item.activity_share_id,
+                                  date: item.occurred_on,
+                                  title: item.title || "Shared activity",
+                                  type: item.activity_type,
+                                  notes: null,
+                                },
+                                imagePath,
+                                thumbPath,
+                                photoId: `${idx}`,
                               },
-                              imagePath,
-                              thumbPath,
-                              photoId: `${idx}`,
-                            };
-                          })
-                          .filter((value): value is GalleryItem => Boolean(value));
+                            ];
+                          });
                         if (galleryItems.length > 0) {
                           gallery.openGallery(galleryItems, 0);
                         }
