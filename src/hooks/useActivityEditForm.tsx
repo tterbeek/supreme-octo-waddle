@@ -57,7 +57,9 @@ export function useActivityEditForm({
   );
   const [date, setDate] = useState(activity.date || "");
   const [rating, setRating] = useState(activity.feeling || 3);
-  const [effort, setEffort] = useState(activity.effort || 3);
+  const [effort, setEffort] = useState<number | null>(
+    activity.effort == null ? null : Number(activity.effort)
+  );
   const [note, setNote] = useState(activity.notes || "");
   const [noteImageUrl, setNoteImageUrl] = useState(activity.note_image_url || null);
   const [noteThumbImageUrl, setNoteThumbImageUrl] = useState(activity.note_thumb_image_url || null);

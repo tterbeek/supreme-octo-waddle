@@ -1,7 +1,7 @@
 import { Zap } from "lucide-react";
 
 type EffortSelectorProps = {
-  value: number;
+  value: number | null;
   onChange: (value: number) => void;
 };
 
@@ -13,7 +13,7 @@ export default function EffortSelector({ value, onChange }: EffortSelectorProps)
       </label>
       <div className="flex justify-between w-full max-w-sm mx-auto">
         {[1, 2, 3, 4, 5].map((val) => {
-          const active = val <= value;
+          const active = value != null && val <= value;
           return (
             <button
               key={val}

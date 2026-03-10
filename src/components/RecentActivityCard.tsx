@@ -30,6 +30,13 @@ type RecentActivityCardProps = {
   onTooltipClose: () => void;
   onOpenGallery: (activity: any) => void;
   onAddReflection?: (activity: any) => void;
+  onAddNoteOnly?: (activity: any) => void;
+  onQuickFeelingSelect?: (activity: any, feeling: number) => void;
+  showQuickFeelingPrompt?: boolean;
+  onQuickEffortSelect?: (activity: any, effort: number) => void;
+  showQuickEffortPrompt?: boolean;
+  quickFeelingSaving?: boolean;
+  quickEffortSaving?: boolean;
   onShareWithCircle?: (activity: any) => void;
   canShareWithCircle?: boolean;
   sharedWithCircle?: boolean;
@@ -49,6 +56,13 @@ export default function RecentActivityCard({
   onTooltipClose,
   onOpenGallery,
   onAddReflection,
+  onAddNoteOnly,
+  onQuickFeelingSelect,
+  showQuickFeelingPrompt = false,
+  onQuickEffortSelect,
+  showQuickEffortPrompt = false,
+  quickFeelingSaving = false,
+  quickEffortSaving = false,
   onShareWithCircle,
   canShareWithCircle = false,
   sharedWithCircle = false,
@@ -105,10 +119,25 @@ export default function RecentActivityCard({
   const showFeeling = (feelingValue ?? 0) > 0;
   const showEffort = effortValue > 0;
   const hasNotes = Boolean(activity.notes?.trim?.());
-  const hasPhoto = photoCount > 0 || Boolean(thumbUrl);
-  const hasReflection = hasNotes || showFeeling || showEffort || hasPhoto;
+  const hasNoteOrFeeling = hasNotes || showFeeling;
+  const activityDateMs = (() => {
+    const raw = activity.started_at || activity.created_at || activity.date;
+    if (!raw) return null;
+    const ms = new Date(raw).getTime();
+    return Number.isFinite(ms) ? ms : null;
+  })();
+  const ageHours =
+    activityDateMs != null ? (Date.now() - activityDateMs) / (1000 * 60 * 60) : null;
+  const isOlderThan7Days = ageHours != null && ageHours > 24 * 7;
   const showAddReflection =
-    isImportedActivity && Boolean(onAddReflection) && !hasReflection;
+    isImportedActivity &&
+    Boolean(onAddReflection) &&
+    !hasNoteOrFeeling &&
+    !showQuickFeelingPrompt &&
+    !showQuickEffortPrompt &&
+    !isOlderThan7Days;
+  const showOptionalNotePrompt =
+    isImportedActivity && Boolean(onAddReflection) && !hasNotes && showFeeling && !showQuickEffortPrompt;
   const showShareWithCircle = canShareWithCircle && Boolean(onShareWithCircle);
   const countIcon = (() => {
     if (photoCount <= 1) return null;
@@ -222,6 +251,73 @@ export default function RecentActivityCard({
           </div>
         )}
 
+        {showQuickFeelingPrompt && Boolean(onQuickFeelingSelect) && (
+          <div className="mt-3 mb-2">
+            <p className="text-sm text-gray-700 mb-2">How did this feel?</p>
+            <div className="flex justify-between w-full max-w-sm mx-auto">
+              {[
+                { value: 1, Icon: Frown, label: "Tough" },
+                { value: 2, Icon: Meh, label: "Okay" },
+                { value: 3, Icon: Smile, label: "Good" },
+                { value: 4, Icon: Laugh, label: "Great" },
+              ].map(({ value, Icon, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={quickFeelingSaving}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onQuickFeelingSelect?.(activity, value);
+                  }}
+                  aria-label={label}
+                  className="transition transform active:scale-95 opacity-90 disabled:opacity-60"
+                >
+                  <Icon className="w-7 h-7 text-gray-500" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showQuickEffortPrompt && Boolean(onQuickEffortSelect) && (
+          <div className="mt-3 mb-2">
+            <p className="text-sm text-gray-700 mb-2 text-center">effort?</p>
+            <div className="flex justify-between w-full max-w-sm mx-auto">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={quickEffortSaving}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onQuickEffortSelect?.(activity, value);
+                  }}
+                  aria-label={`Effort ${value}`}
+                  className="transition transform active:scale-95 disabled:opacity-60"
+                >
+                  <Zap className="w-5 h-5 text-gray-500" />
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex justify-center">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (onAddNoteOnly) {
+                    onAddNoteOnly(activity);
+                  } else {
+                    onAddReflection?.(activity);
+                  }
+                }}
+                className="text-xs text-movenotes-primary underline"
+              >
+                Add note
+              </button>
+            </div>
+          </div>
+        )}
+
         {(activity.notes?.trim() || thumbUrl) && (
           <div className="mt-3 space-y-2">
             {activity.notes?.trim() && (
@@ -322,6 +418,25 @@ export default function RecentActivityCard({
               className="text-xs text-movenotes-primary underline"
             >
               Add reflection
+            </button>
+          </div>
+        )}
+
+        {showOptionalNotePrompt && !showQuickEffortPrompt && (
+          <div className="mt-3 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (onAddNoteOnly) {
+                  onAddNoteOnly(activity);
+                } else {
+                  onAddReflection?.(activity);
+                }
+              }}
+              className="text-xs text-movenotes-primary underline"
+            >
+              Add note
             </button>
           </div>
         )}

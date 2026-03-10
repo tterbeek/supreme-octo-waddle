@@ -27,3 +27,25 @@ export async function restoreActivity(activity: any) {
   const { error } = await supabase.from("activities").insert(activity);
   return { error };
 }
+
+export async function updateActivityFeeling(activityId: string, feeling: number) {
+  const { error } = await supabase
+    .from("activities")
+    .update({
+      feeling,
+      note_updated_at: new Date().toISOString(),
+    })
+    .eq("id", activityId);
+  return { error };
+}
+
+export async function updateActivityEffort(activityId: string, effort: number) {
+  const { error } = await supabase
+    .from("activities")
+    .update({
+      effort,
+      note_updated_at: new Date().toISOString(),
+    })
+    .eq("id", activityId);
+  return { error };
+}
