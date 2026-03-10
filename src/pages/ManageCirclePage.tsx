@@ -242,6 +242,7 @@ export default function ManageCirclePage() {
   const handleAvatarSelected = async (file: File | null) => {
     if (!userId || !file) return;
     setUploadingAvatar(true);
+    setSavingProfile(true);
     setError(null);
     setNotice(null);
     try {
@@ -253,11 +254,18 @@ export default function ManageCirclePage() {
       });
       setProfileImagePath(uploaded.imagePath);
       setProfileThumbPath(uploaded.thumbPath || null);
-      setNotice("Profile picture updated.");
+      await saveOwnCircleProfile({
+        userId,
+        socialDisplayName: socialDisplayName.trim() || null,
+        socialProfileImagePath: uploaded.imagePath,
+        socialProfileThumbPath: uploaded.thumbPath || null,
+      });
+      setNotice("Profile picture saved.");
     } catch (err: any) {
       setError(err?.message || "Could not upload profile picture.");
     } finally {
       setUploadingAvatar(false);
+      setSavingProfile(false);
     }
   };
 
@@ -300,7 +308,7 @@ export default function ManageCirclePage() {
       )}
 
       <section className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
-        <h2 className="text-sm font-medium text-gray-800 mb-2">Mini profile</h2>
+        <h2 className="text-sm font-medium text-gray-800 mb-2">Profile</h2>
         <p className="text-xs text-gray-500 mb-3">
           Set your friendly name and profile picture for Circle.
         </p>
@@ -351,7 +359,7 @@ export default function ManageCirclePage() {
           disabled={savingProfile}
           className="mt-2 px-3 py-2 rounded-full bg-movenotes-primary text-primary-text text-sm font-medium disabled:opacity-60"
         >
-          {savingProfile ? "Saving..." : "Save mini profile"}
+          {savingProfile ? "Saving..." : "Save profile"}
         </button>
       </section>
 
