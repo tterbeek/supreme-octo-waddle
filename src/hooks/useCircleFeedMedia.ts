@@ -7,6 +7,7 @@ import {
   signStorageValues,
 } from "../services/storage.service";
 import { getPreferredCoverPath } from "../lib/circleFeed";
+import { parseCircleReactionGroups } from "../lib/circleReactions";
 
 export function useCircleFeedMedia(rows: CircleFeedItem[]) {
   const [signedCoverByRecipient, setSignedCoverByRecipient] = useState<Record<string, string>>(
@@ -65,13 +66,21 @@ export function useCircleFeedMedia(rows: CircleFeedItem[]) {
     }
 
     const photoRaw = Array.from(new Set(Object.values(coverPathByRecipient)));
-    const avatarRaw = Array.from(
-      new Set(
-        feedRows
-          .map((row) => row.author_profile_thumb_path || row.author_profile_image_path)
-          .filter((value): value is string => typeof value === "string" && value.length > 0)
-      )
-    );
+    const avatarPaths: string[] = [];
+    for (const row of feedRows) {
+      const authorAvatarPath = row.author_profile_thumb_path || row.author_profile_image_path;
+      if (authorAvatarPath) avatarPaths.push(authorAvatarPath);
+
+      const groups = parseCircleReactionGroups(row.reaction_groups);
+      for (const actors of Object.values(groups)) {
+        for (const actor of actors) {
+          if (actor.profile_thumb_path) {
+            avatarPaths.push(actor.profile_thumb_path);
+          }
+        }
+      }
+    }
+    const avatarRaw = Array.from(new Set(avatarPaths));
 
     const photoSignedByRaw = await signStorageValues(photoRaw, {
       primaryBucket: NOTE_STORAGE_BUCKET,

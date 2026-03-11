@@ -2,6 +2,18 @@ import { supabase } from "../supabaseClient";
 
 export const NOTE_STORAGE_BUCKET = "actvity-notes";
 export const LEGACY_NOTE_STORAGE_BUCKET = "activity-notes";
+const SIGNED_URL_SAFETY_WINDOW_SECONDS = 30;
+const SIGNED_URL_CACHE = new Map<string, { url: string; expiresAtMs: number }>();
+
+const nowMs = () => Date.now();
+const cacheKey = (bucket: string, path: string) => `${bucket}:${path}`;
+const chunk = <T,>(items: T[], size: number) => {
+  const result: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    result.push(items.slice(i, i + size));
+  }
+  return result;
+};
 
 const safeDecode = (value: string) => {
   try {
@@ -48,23 +60,74 @@ export async function createSignedUrls(
   paths: string[],
   expiresIn = 86400
 ) {
-  const results = await Promise.all(
-    paths.map(async (path) => {
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(path, expiresIn);
-      if (error) {
-        console.warn(`[storage] createSignedUrl failed (${bucket}/${path}): ${error.message}`);
-        return [path, null] as const;
-      }
-      return [path, data?.signedUrl || null] as const;
-    })
-  );
-
   const map: Record<string, string> = {};
-  results.forEach(([path, url]) => {
-    if (url) map[path] = url;
-  });
+  const uniquePaths = Array.from(new Set(paths.filter(Boolean)));
+  if (!uniquePaths.length) return map;
+
+  const unresolved: string[] = [];
+  for (const path of uniquePaths) {
+    const cached = SIGNED_URL_CACHE.get(cacheKey(bucket, path));
+    if (
+      cached &&
+      cached.expiresAtMs - SIGNED_URL_SAFETY_WINDOW_SECONDS * 1000 > nowMs()
+    ) {
+      map[path] = cached.url;
+    } else {
+      unresolved.push(path);
+    }
+  }
+
+  if (!unresolved.length) return map;
+
+  for (const batch of chunk(unresolved, 100)) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrls(batch, expiresIn);
+
+    if (error) {
+      // Fallback to per-path calls so one bad object doesn't fail the whole batch.
+      const fallbackResults = await Promise.all(
+        batch.map(async (path) => {
+          const single = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(path, expiresIn);
+          if (single.error) {
+            console.warn(
+              `[storage] createSignedUrl failed (${bucket}/${path}): ${single.error.message}`
+            );
+            return [path, null] as const;
+          }
+          return [path, single.data?.signedUrl || null] as const;
+        })
+      );
+      fallbackResults.forEach(([path, url]) => {
+        if (!url) return;
+        map[path] = url;
+        SIGNED_URL_CACHE.set(cacheKey(bucket, path), {
+          url,
+          expiresAtMs: nowMs() + expiresIn * 1000,
+        });
+      });
+      continue;
+    }
+
+    for (const row of data || []) {
+      if (!row.path) continue;
+      if ((row as any).error) {
+        console.warn(
+          `[storage] createSignedUrls failed (${bucket}/${row.path}): ${(row as any).error}`
+        );
+        continue;
+      }
+      if (!row.signedUrl) continue;
+      map[row.path] = row.signedUrl;
+      SIGNED_URL_CACHE.set(cacheKey(bucket, row.path), {
+        url: row.signedUrl,
+        expiresAtMs: nowMs() + expiresIn * 1000,
+      });
+    }
+  }
+
   return map;
 }
 

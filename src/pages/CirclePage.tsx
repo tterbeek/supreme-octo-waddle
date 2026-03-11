@@ -1,11 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CircleFeedCard from "../components/CircleFeedCard";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import { useCircleFeed } from "../hooks/useCircleFeed";
 import { useCircleFeedMedia } from "../hooks/useCircleFeedMedia";
+import type { CircleReactionType } from "../lib/circleReactions";
 import { buildCircleGalleryItems } from "../lib/circleFeed";
 import { getCurrentUser } from "../services/auth.service";
+import {
+  removeCircleActivityReaction,
+  upsertCircleActivityReaction,
+  type CircleFeedItem,
+} from "../services/circle.service";
 import { NOTE_STORAGE_BUCKET } from "../services/storage.service";
 
 export default function CirclePage() {
@@ -19,6 +25,7 @@ export default function CirclePage() {
     hasMore,
     circleAccess,
     emptyState,
+    refresh,
     loadMore,
   } = useCircleFeed(userId);
   const {
@@ -27,6 +34,10 @@ export default function CirclePage() {
     coverOrientationByRecipient,
     onCoverLoad,
   } = useCircleFeedMedia(feed);
+  const [reactionSavingForShareId, setReactionSavingForShareId] = useState<
+    string | null
+  >(null);
+  const [reactionError, setReactionError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -36,6 +47,38 @@ export default function CirclePage() {
     };
     void load();
   }, []);
+
+  const handleToggleReaction = useCallback(
+    async (item: CircleFeedItem, reactionType: CircleReactionType) => {
+      if (!userId) return;
+      if (item.author_user_id === userId) return;
+
+      setReactionError(null);
+      setReactionSavingForShareId(item.activity_share_id);
+
+      try {
+        if (item.current_user_reaction === reactionType) {
+          await removeCircleActivityReaction({
+            activityShareId: item.activity_share_id,
+            userId,
+          });
+        } else {
+          await upsertCircleActivityReaction({
+            activityShareId: item.activity_share_id,
+            userId,
+            reactionType,
+          });
+        }
+        void refresh();
+      } catch (err: any) {
+        setReactionError(err?.message || "Could not save reaction.");
+        throw err;
+      } finally {
+        setReactionSavingForShareId(null);
+      }
+    },
+    [refresh, userId]
+  );
 
   return (
     <div className="p-2">
@@ -47,6 +90,11 @@ export default function CirclePage() {
       {error && (
         <div className="mb-3 rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
           {error}
+        </div>
+      )}
+      {reactionError && (
+        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
+          {reactionError}
         </div>
       )}
 
@@ -73,6 +121,7 @@ export default function CirclePage() {
                 item={item}
                 thumbUrl={thumbUrl}
                 avatarUrl={avatarUrl}
+                signedAvatarByPath={signedAvatars}
                 coverOrientation={coverOrientationByRecipient[item.recipient_id]}
                 onCoverLoad={onCoverLoad}
                 onOpenGallery={(row) => {
@@ -81,6 +130,9 @@ export default function CirclePage() {
                     gallery.openGallery(galleryItems, 0);
                   }
                 }}
+                onToggleReaction={handleToggleReaction}
+                reactionBusy={reactionSavingForShareId === item.activity_share_id}
+                canReact={item.author_user_id !== userId}
               />
             );
           })}

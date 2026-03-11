@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  CIRCLE_REACTIONS_UPDATED_EVENT,
   fetchCircleConnectionState,
   getCircleFeed,
   hasCircleAccess,
+  markCircleFeedVisited,
   markCircleFeedItemSeen,
   type CircleFeedItem,
 } from "../services/circle.service";
@@ -62,6 +64,13 @@ export function useCircleFeed(userId: string | null, pageSize = DEFAULT_PAGE_SIZ
       setFeed(rows);
       setHasMore(rows.length === pageSize);
       void markUnseenAsSeen(userId, rows);
+      void markCircleFeedVisited(userId)
+        .then(() => {
+          window.dispatchEvent(new Event(CIRCLE_REACTIONS_UPDATED_EVENT));
+        })
+        .catch(() => {
+          /* best-effort: dot clear state is refreshed elsewhere */
+        });
     } catch (err: any) {
       setError(err?.message || "Could not load Circle feed.");
     } finally {

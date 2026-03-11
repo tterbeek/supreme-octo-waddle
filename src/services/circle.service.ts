@@ -1,4 +1,5 @@
 import { supabase } from "../supabaseClient";
+import type { CircleReactionType } from "../lib/circleReactions";
 import {
   compressImage,
   createThumbnail,
@@ -7,6 +8,8 @@ import {
 } from "./activityMedia.service";
 
 export const CIRCLE_ACCESS_UPDATED_EVENT = "movenotes:circle-access-updated";
+export const CIRCLE_REACTIONS_UPDATED_EVENT =
+  "movenotes:circle-reactions-updated";
 
 export type CircleFeedItem = {
   recipient_id: string;
@@ -31,6 +34,9 @@ export type CircleFeedItem = {
       }>
     | string
     | null;
+  reaction_groups: unknown;
+  current_user_reaction: CircleReactionType | null;
+  has_new_reactions: boolean;
   seen_at: string | null;
 };
 
@@ -152,6 +158,50 @@ export async function markCircleFeedItemSeen(recipientId: string, userId: string
 export async function hideCircleFeedItem(recipientId: string, userId: string) {
   const { data, error } = await supabase.rpc("hide_circle_feed_item", {
     p_recipient_id: recipientId,
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function upsertCircleActivityReaction(params: {
+  activityShareId: string;
+  userId: string;
+  reactionType: CircleReactionType;
+}) {
+  const { activityShareId, userId, reactionType } = params;
+  const { data, error } = await supabase.rpc("upsert_circle_activity_reaction", {
+    p_activity_share_id: activityShareId,
+    p_user_id: userId,
+    p_reaction_type: reactionType,
+  });
+  if (error) throw error;
+  return (data as string) || null;
+}
+
+export async function removeCircleActivityReaction(params: {
+  activityShareId: string;
+  userId: string;
+}) {
+  const { activityShareId, userId } = params;
+  const { data, error } = await supabase.rpc("remove_circle_activity_reaction", {
+    p_activity_share_id: activityShareId,
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function hasCircleNewReactions(userId: string) {
+  const { data, error } = await supabase.rpc("has_circle_new_reactions", {
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function markCircleFeedVisited(userId: string) {
+  const { data, error } = await supabase.rpc("mark_circle_feed_visited", {
     p_user_id: userId,
   });
   if (error) throw error;

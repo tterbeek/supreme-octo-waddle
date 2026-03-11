@@ -15,7 +15,9 @@ import { LayoutChromeContext } from "../contexts/LayoutChromeContext";
 import { getCurrentUser } from "../services/auth.service";
 import {
   CIRCLE_ACCESS_UPDATED_EVENT,
+  CIRCLE_REACTIONS_UPDATED_EVENT,
   hasCircleAccess,
+  hasCircleNewReactions,
 } from "../services/circle.service";
 
 const JOURNAL_STORAGE_KEY = "movenotes_last_journal_tab";
@@ -63,6 +65,7 @@ export default function Layout({
   const [chromeHidden, setChromeHidden] = useState(false);
   const [journalTarget, setJournalTarget] = useState(getStoredJournalTab);
   const [showCircleTab, setShowCircleTab] = useState(false);
+  const [showCircleDot, setShowCircleDot] = useState(false);
   const initNavigationRef = useRef(false);
 
   const topNavItems = [
@@ -121,34 +124,46 @@ export default function Layout({
     }
   }, [isCircleRoute, isJournalRoute, isInsightsRoute, location.pathname]);
 
-  const refreshCircleAccess = useCallback(async () => {
+  const refreshCircleState = useCallback(async () => {
     try {
       const user = await getCurrentUser();
       if (!user) {
         setShowCircleTab(false);
+        setShowCircleDot(false);
         return;
       }
       const canAccess = await hasCircleAccess(user.id);
       setShowCircleTab(canAccess);
+      if (!canAccess || isCircleRoute) {
+        setShowCircleDot(false);
+        return;
+      }
+      const hasNewReactions = await hasCircleNewReactions(user.id);
+      setShowCircleDot(hasNewReactions);
     } catch {
       setShowCircleTab(false);
+      setShowCircleDot(false);
     }
-  }, []);
+  }, [isCircleRoute]);
 
   useEffect(() => {
-    void refreshCircleAccess();
-  }, [location.pathname, refreshCircleAccess]);
+    void refreshCircleState();
+  }, [location.pathname, refreshCircleState]);
 
   useEffect(() => {
     let cancelled = false;
 
     const handleCircleAccessUpdate = () => {
       if (!cancelled) {
-        void refreshCircleAccess();
+        void refreshCircleState();
       }
     };
 
     window.addEventListener(CIRCLE_ACCESS_UPDATED_EVENT, handleCircleAccessUpdate);
+    window.addEventListener(
+      CIRCLE_REACTIONS_UPDATED_EVENT,
+      handleCircleAccessUpdate
+    );
 
     return () => {
       cancelled = true;
@@ -156,8 +171,12 @@ export default function Layout({
         CIRCLE_ACCESS_UPDATED_EVENT,
         handleCircleAccessUpdate
       );
+      window.removeEventListener(
+        CIRCLE_REACTIONS_UPDATED_EVENT,
+        handleCircleAccessUpdate
+      );
     };
-  }, [refreshCircleAccess]);
+  }, [refreshCircleState]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -282,7 +301,15 @@ export default function Layout({
                     }`}
                     aria-current={isActive ? "page" : undefined}
                   >
-                    {item.label}
+                    <span className="inline-flex items-center justify-center gap-1">
+                      {item.label}
+                      {item.to === "/circle" && showCircleDot && !isCircleRoute && (
+                        <span
+                          className="inline-block h-2 w-2 rounded-full bg-movenotes-primary"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </span>
                   </button>
                 );
               })}
