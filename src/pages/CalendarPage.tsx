@@ -14,17 +14,15 @@ import Toast from "../components/Toast";
 import { useNoteImages } from "../hooks/useNoteImages";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
-import { createSignedUrls } from "../services/storage.service";
+import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { buildGalleryItemsForActivity } from "../lib/photos";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
 import {
-  fetchOwnSharedActivityIds,
   hasCircleAccess,
-  shareActivityWithConnections,
-  unshareActivity,
 } from "../services/circle.service";
+import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
 
 type CalendarActivity = {
   id: string;
@@ -60,7 +58,6 @@ type CalendarActivity = {
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const NOTE_BUCKET = "actvity-notes";
 const EMPTY_DAY_ACTIVITIES: CalendarActivity[] = [];
 
 const toMonthIndex = (d: Date) => d.getFullYear() * 12 + d.getMonth();
@@ -107,10 +104,6 @@ export default function CalendarPage() {
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [circleEnabled, setCircleEnabled] = useState(false);
-  const [sharingActivityId, setSharingActivityId] = useState<string | null>(null);
-  const [sharedWithCircleByActivity, setSharedWithCircleByActivity] = useState<
-    Record<string, boolean>
-  >({});
   const [dayThumbs, setDayThumbs] = useState<Record<string, string>>({});
   const [quickLogDate, setQuickLogDate] = useState<string | null>(null);
   const [minMonthIndex, setMinMonthIndex] = useState<number | null>(null);
@@ -126,8 +119,8 @@ export default function CalendarPage() {
     noteImageOrientation,
     setNoteImageOrientation,
     resolveFor: resolveNoteImages,
-  } = useNoteImages(NOTE_BUCKET);
-  const gallery = useGalleryLightbox(NOTE_BUCKET);
+  } = useNoteImages(NOTE_STORAGE_BUCKET);
+  const gallery = useGalleryLightbox(NOTE_STORAGE_BUCKET);
 
   const {
     showTypeSelector,
@@ -293,6 +286,19 @@ export default function CalendarPage() {
     });
   }, [selectedDayActivities]);
 
+  const selectedActivityIds = useMemo(
+    () => sortedSelectedActivities.map((item) => String(item.id)),
+    [sortedSelectedActivities]
+  );
+
+  const { handleShareWithCircle, sharedWithCircleByActivity, sharingActivityId } =
+    useCircleActivitySharing({
+      userId,
+      circleEnabled,
+      activityIds: selectedActivityIds,
+      onToast: setToastMessage,
+    });
+
   const openQuickLog = () => {
     setQuickLogDate(selectedDate ?? todayKey);
     setSelectedType(null);
@@ -320,63 +326,6 @@ export default function CalendarPage() {
       // Ignore autoplay restrictions.
     });
   };
-
-  const handleShareWithCircle = async (activity: CalendarActivity) => {
-    if (!userId) return;
-    setSharingActivityId(activity.id);
-    try {
-      const isShared = Boolean(sharedWithCircleByActivity[activity.id]);
-      if (isShared) {
-        await unshareActivity(activity.id, userId);
-        setSharedWithCircleByActivity((prev) => {
-          const next = { ...prev };
-          delete next[activity.id];
-          return next;
-        });
-        setToastMessage("Removed from Circle");
-      } else {
-        await shareActivityWithConnections(activity.id, userId);
-        setSharedWithCircleByActivity((prev) => ({ ...prev, [activity.id]: true }));
-        setToastMessage("Shared with Circle");
-      }
-    } catch (err: any) {
-      setToastMessage(err?.message || "Could not share with Circle.");
-    } finally {
-      setSharingActivityId(null);
-    }
-  };
-
-  useEffect(() => {
-    if (!userId || !circleEnabled) {
-      setSharedWithCircleByActivity({});
-      return;
-    }
-
-    const activityIds = sortedSelectedActivities.map((item) => String(item.id));
-    if (!activityIds.length) {
-      setSharedWithCircleByActivity({});
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const sharedIds = await fetchOwnSharedActivityIds(userId, activityIds);
-        if (cancelled) return;
-        const next: Record<string, boolean> = {};
-        sharedIds.forEach((id) => {
-          next[id] = true;
-        });
-        setSharedWithCircleByActivity(next);
-      } catch {
-        if (!cancelled) setSharedWithCircleByActivity({});
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [circleEnabled, sortedSelectedActivities, userId]);
 
   useEffect(() => {
     if (!sortedSelectedActivities.length) return;
@@ -439,7 +388,9 @@ export default function CalendarPage() {
         setDayThumbs({});
         return;
       }
-      const urlMap = await createSignedUrls(NOTE_BUCKET, uniquePaths);
+      const urlMap = await signStorageValues(uniquePaths, {
+        primaryBucket: NOTE_STORAGE_BUCKET,
+      });
       if (cancelled) return;
       const next: Record<string, string> = {};
       Object.entries(dayToPath).forEach(([day, path]) => {

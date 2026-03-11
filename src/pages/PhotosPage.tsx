@@ -4,14 +4,12 @@ import { useLayoutChrome } from "../contexts/LayoutChromeContext";
 import { getCurrentUser } from "../services/auth.service";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
-import { createSignedUrls } from "../services/storage.service";
+import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
 import {
   buildGalleryItemsForActivities,
   getActivityDateValue,
   getActivityPhotos,
 } from "../lib/photos";
-
-const NOTE_BUCKET = "actvity-notes";
 
 export default function PhotosPage() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -23,7 +21,7 @@ export default function PhotosPage() {
 
   const { activities, initialFeedLoaded, loadMore, hasMoreFeed, isLoading } =
     useHomeFeed(userId);
-  const gallery = useGalleryLightbox(NOTE_BUCKET);
+  const gallery = useGalleryLightbox(NOTE_STORAGE_BUCKET);
 
   useEffect(() => {
     const load = async () => {
@@ -99,7 +97,10 @@ export default function PhotosPage() {
       const unsigned = paths.filter((path) => !signedPathsRef.current.has(path));
       if (unsigned.length === 0) return;
 
-      const urlMap = await createSignedUrls(NOTE_BUCKET, unsigned, 86400);
+      const urlMap = await signStorageValues(unsigned, {
+        primaryBucket: NOTE_STORAGE_BUCKET,
+        expiresIn: 86400,
+      });
       if (cancelled) return;
 
       unsigned.forEach((path) => signedPathsRef.current.add(path));

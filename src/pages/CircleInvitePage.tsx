@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
-import { createSignedUrls } from "../services/storage.service";
+import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
 import {
   CIRCLE_ACCESS_UPDATED_EVENT,
   acceptCircleInvite,
   getCircleInvitePreview,
   type CircleInvitePreview,
 } from "../services/circle.service";
-
-const NOTE_BUCKET = "actvity-notes";
 
 export default function CircleInvitePage() {
   const { token } = useParams<{ token: string }>();
@@ -42,7 +40,9 @@ export default function CircleInvitePage() {
 
         const avatarPath = invite?.profile_thumb_path || invite?.profile_image_path;
         if (avatarPath) {
-          const map = await createSignedUrls(NOTE_BUCKET, [avatarPath]);
+          const map = await signStorageValues([avatarPath], {
+            primaryBucket: NOTE_STORAGE_BUCKET,
+          });
           setAvatarUrl(map[avatarPath] || null);
         } else {
           setAvatarUrl(null);

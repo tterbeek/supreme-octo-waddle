@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconShare } from "@tabler/icons-react";
 import Toast from "../components/Toast";
-import { createSignedUrls } from "../services/storage.service";
+import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
 import { getCurrentUser } from "../services/auth.service";
 import {
   createCircleInviteLink,
@@ -16,8 +16,6 @@ import {
 } from "../services/circle.service";
 
 const shortUserId = (value: string) => value.slice(0, 8);
-const NOTE_BUCKET = "actvity-notes";
-
 export default function ManageCirclePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,7 +79,9 @@ export default function ManageCirclePage() {
         if (paths.length === 0) {
           setOtherUserAvatarUrls({});
         } else {
-          const signedMap = await createSignedUrls(NOTE_BUCKET, paths);
+          const signedMap = await signStorageValues(paths, {
+            primaryBucket: NOTE_STORAGE_BUCKET,
+          });
           const avatarMap: Record<string, string> = {};
           for (const [friendId, path] of Object.entries(pathByUser)) {
             const url = signedMap[path];
@@ -143,7 +143,9 @@ export default function ManageCirclePage() {
         setProfilePreviewUrl(null);
         return;
       }
-      const map = await createSignedUrls(NOTE_BUCKET, [path]);
+      const map = await signStorageValues([path], {
+        primaryBucket: NOTE_STORAGE_BUCKET,
+      });
       setProfilePreviewUrl(map[path] || null);
     };
     void loadProfilePreview();

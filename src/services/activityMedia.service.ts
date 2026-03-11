@@ -1,6 +1,7 @@
 import { supabase } from "../supabaseClient";
+import { NOTE_STORAGE_BUCKET } from "./storage.service";
 
-export const NOTE_BUCKET = "actvity-notes";
+export const NOTE_BUCKET = NOTE_STORAGE_BUCKET;
 
 export async function compressImage(file: File) {
   const maxDim = 1600;

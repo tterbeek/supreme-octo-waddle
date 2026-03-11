@@ -28,13 +28,10 @@ import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
 import {
-  fetchOwnSharedActivityIds,
   hasCircleAccess,
-  shareActivityWithConnections,
-  unshareActivity,
 } from "../services/circle.service";
-
-const NOTE_BUCKET = "actvity-notes"; // adjust if bucket name changes
+import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
+import { NOTE_STORAGE_BUCKET } from "../services/storage.service";
 
 export default function Home() {
   const { unitSystem } = useUnitSystem();
@@ -50,9 +47,9 @@ export default function Home() {
     noteImageOrientation,
     setNoteImageOrientation,
     resolveFor: resolveNoteImages,
-  } = useNoteImages(NOTE_BUCKET);
+  } = useNoteImages(NOTE_STORAGE_BUCKET);
   const { visible, hideTooltip, showTooltip } = useTooltipManager();
-  const gallery = useGalleryLightbox(NOTE_BUCKET);
+  const gallery = useGalleryLightbox(NOTE_STORAGE_BUCKET);
 
   // Quick log / edit modals
   const {
@@ -72,12 +69,8 @@ export default function Home() {
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
   const [noteOnlyActivityId, setNoteOnlyActivityId] = useState<string | null>(null);
   const [circleEnabled, setCircleEnabled] = useState(false);
-  const [sharingActivityId, setSharingActivityId] = useState<string | null>(null);
   const [quickFeelingSavingId, setQuickFeelingSavingId] = useState<string | null>(null);
   const [quickEffortSavingId, setQuickEffortSavingId] = useState<string | null>(null);
-  const [sharedWithCircleByActivity, setSharedWithCircleByActivity] = useState<
-    Record<string, boolean>
-  >({});
   const noteFlow = usePostLogNoteFlow();
 
   // Sidebar
@@ -121,6 +114,22 @@ export default function Home() {
 
     await refreshFeed();
   }
+
+  const shareableActivityIds = useMemo(
+    () =>
+      activities
+        .filter((item) => item?.entry_kind !== "journal_entry")
+        .map((item) => String(item.id)),
+    [activities]
+  );
+
+  const { handleShareWithCircle, sharedWithCircleByActivity, sharingActivityId } =
+    useCircleActivitySharing({
+      userId,
+      circleEnabled,
+      activityIds: shareableActivityIds,
+      onToast: setToastMessage,
+    });
 
 
   // --------------------------------------------------
@@ -206,31 +215,6 @@ export default function Home() {
     });
   };
 
-  const handleShareWithCircle = async (activity: any) => {
-    if (!userId || !activity?.id) return;
-    setSharingActivityId(activity.id);
-    try {
-      const isShared = Boolean(sharedWithCircleByActivity[activity.id]);
-      if (isShared) {
-        await unshareActivity(activity.id, userId);
-        setSharedWithCircleByActivity((prev) => {
-          const next = { ...prev };
-          delete next[activity.id];
-          return next;
-        });
-        setToastMessage("Removed from Circle");
-      } else {
-        await shareActivityWithConnections(activity.id, userId);
-        setSharedWithCircleByActivity((prev) => ({ ...prev, [activity.id]: true }));
-        setToastMessage("Shared with Circle");
-      }
-    } catch (err: any) {
-      setToastMessage(err?.message || "Could not share with Circle.");
-    } finally {
-      setSharingActivityId(null);
-    }
-  };
-
   const latestStravaQuickPrompt = useMemo(() => {
     const imported = activities.filter(
       (item) => item?.entry_kind !== "journal_entry" && item?.source === "strava"
@@ -304,40 +288,6 @@ export default function Home() {
     if (!activity?.id) return;
     setNoteOnlyActivityId(activity.id);
   };
-
-  useEffect(() => {
-    if (!userId || !circleEnabled) {
-      setSharedWithCircleByActivity({});
-      return;
-    }
-
-    const activityIds = activities
-      .filter((item) => item?.entry_kind !== "journal_entry")
-      .map((item) => String(item.id));
-    if (!activityIds.length) {
-      setSharedWithCircleByActivity({});
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const sharedIds = await fetchOwnSharedActivityIds(userId, activityIds);
-        if (cancelled) return;
-        const next: Record<string, boolean> = {};
-        sharedIds.forEach((id) => {
-          next[id] = true;
-        });
-        setSharedWithCircleByActivity(next);
-      } catch {
-        if (!cancelled) setSharedWithCircleByActivity({});
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activities, circleEnabled, userId]);
 
   // --------------------------------------------------
   // RENDER

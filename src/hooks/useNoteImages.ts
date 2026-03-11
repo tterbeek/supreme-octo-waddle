@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
-import { createSignedUrls } from "../services/storage.service";
+import { signStorageValues } from "../services/storage.service";
 
 const sortByDateAndCreated = (items: any[]) =>
   [...items].sort((a, b) => {
@@ -76,7 +76,10 @@ export function useNoteImages(bucket: string) {
           const [newest, ...rest] = items;
           const newestPath = selector(newest);
           if (newestPath) {
-            const newestUrl = await createSignedUrls(bucket, [newestPath], 86400);
+            const newestUrl = await signStorageValues([newestPath], {
+              primaryBucket: bucket,
+              expiresIn: 86400,
+            });
             if (!cancelled) {
               const url = newestUrl[newestPath];
               if (url) {
@@ -93,7 +96,10 @@ export function useNoteImages(bucket: string) {
             const restPaths = rest.map(selector).filter(Boolean);
             if (restPaths.length === 0) return collected;
 
-            const restUrlMap = await createSignedUrls(bucket, restPaths, 86400);
+            const restUrlMap = await signStorageValues(restPaths, {
+              primaryBucket: bucket,
+              expiresIn: 86400,
+            });
             if (cancelled) return collected;
 
             setter((prev) => {

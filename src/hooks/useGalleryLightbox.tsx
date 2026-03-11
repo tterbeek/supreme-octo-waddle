@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createSignedUrls } from "../services/storage.service";
+import { signStorageValues } from "../services/storage.service";
 import type { GalleryItem } from "../lib/photos";
 
 const clampIndex = (index: number, length: number) => {
@@ -68,7 +68,10 @@ export function useGalleryLightbox(bucket: string) {
       );
       if (thumbPaths.length === 0) return;
 
-      const urlMap = await createSignedUrls(bucket, thumbPaths, 86400);
+      const urlMap = await signStorageValues(thumbPaths, {
+        primaryBucket: bucket,
+        expiresIn: 86400,
+      });
       if (cancelled) return;
 
       updateSignedThumbs((prev) => {
@@ -103,7 +106,10 @@ export function useGalleryLightbox(bucket: string) {
 
       if (needed.length === 0) return;
       const uniquePaths = Array.from(new Set(needed.map((item) => item.path)));
-      const urlMap = await createSignedUrls(bucket, uniquePaths, 86400);
+      const urlMap = await signStorageValues(uniquePaths, {
+        primaryBucket: bucket,
+        expiresIn: 86400,
+      });
 
       updateSignedImages((prev) => {
         const next = { ...prev };
