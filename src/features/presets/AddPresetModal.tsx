@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import ModalSheet from "../../components/ModalSheet";
 import { ACTIVITY_TYPES } from "../../config/activityTypes";
 import { useUnitSystem } from "../../contexts/UnitContext";
-import { kmToMiles, milesToKm } from "../../lib/units";
+import { kmToMiles, milesToKm, roundDurationMinutes } from "../../lib/units";
 import PresetForm from "./PresetFormContent";
 import type { Preset } from "../../types";
 import { supabase } from "../../supabaseClient";
@@ -83,7 +83,7 @@ export default function AddPresetModal({
     const durationValue =
       (typeConfig.defaultFields.includes("duration_min") || showOptionalDuration) &&
       duration
-        ? Number(duration)
+        ? roundDurationMinutes(Number(duration))
         : null;
 
     const effortValue = ["run", "ride", "swim", "hike"].includes(activityType)

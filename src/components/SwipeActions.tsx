@@ -13,15 +13,37 @@ export default function SwipeActions({
 }: SwipeActionsProps) {
   let startY = 0;
   let isScrolling = false;
+  let startedOnInteractive = false;
+
+  const isInteractiveTarget = (target: EventTarget | null) => {
+    const el = target as HTMLElement | null;
+    if (!el) return false;
+    return Boolean(
+      el.closest(
+        [
+          "button",
+          "a",
+          "input",
+          "textarea",
+          "select",
+          "[role='button']",
+          "[data-photo-trigger]",
+          "[data-swipe-ignore]",
+        ].join(",")
+      )
+    );
+  };
 
   const onTouchStart = (e: TouchEvent) => {
     e.stopPropagation();
+    startedOnInteractive = isInteractiveTarget(e.target);
     startY = e.touches[0].clientY;
     isScrolling = false;
   };
 
   const onTouchMove = (e: TouchEvent) => {
     e.stopPropagation();
+    if (startedOnInteractive) return;
     const dy = Math.abs(e.touches[0].clientY - startY);
     if (dy > 6) {
       isScrolling = true; // user is scrolling
@@ -30,6 +52,7 @@ export default function SwipeActions({
 
   const onTouchEnd = (e: TouchEvent) => {
     e.stopPropagation();
+    if (startedOnInteractive) return;
     e.preventDefault(); // prevent follow-up synthetic click from bubbling to overlays
     if (!isScrolling) {
       onEdit(); // treated as a tap
@@ -38,6 +61,7 @@ export default function SwipeActions({
 
   const onClick = (e: MouseEvent) => {
     e.stopPropagation();
+    if (isInteractiveTarget(e.target)) return;
     onEdit(); // desktop click
   };
 

@@ -4,7 +4,7 @@ import {
   resolveActivityFields,
   type ActivityPreference,
 } from "../lib/resolveActivityFields";
-import { kmToMiles, milesToKm } from "../lib/units";
+import { kmToMiles, milesToKm, roundDurationMinutes } from "../lib/units";
 import type { TooltipKey } from "./useTooltipManager";
 import { getCurrentUser } from "../services/auth.service";
 import {
@@ -131,7 +131,11 @@ export function useQuickLogForm({
         const first = initialPresets[0];
         setActivePreset(first);
         setDistanceKm(first.distance_km ?? null);
-        setDuration(first.duration_min != null ? String(first.duration_min) : "");
+        setDuration(
+          first.duration_min != null
+            ? String(roundDurationMinutes(Number(first.duration_min)))
+            : ""
+        );
         setShowOptionalDistance(!!first.distance_km);
         setShowOptionalDuration(!!first.duration_min);
         setTitle(first.name ?? "");
@@ -158,7 +162,11 @@ export function useQuickLogForm({
   const usePreset = (preset: Preset) => {
     setActivePreset(preset);
     setDistanceKm(preset.distance_km ?? null);
-    setDuration(preset.duration_min != null ? String(preset.duration_min) : "");
+    setDuration(
+      preset.duration_min != null
+        ? String(roundDurationMinutes(Number(preset.duration_min)))
+        : ""
+    );
     setShowOptionalDistance(!!preset.distance_km);
     setShowOptionalDuration(!!preset.duration_min);
     setTitle(preset.name ?? "");
@@ -267,7 +275,7 @@ export function useQuickLogForm({
 
     const durationValue =
       (defaultFields.includes("duration_min") || showOptionalDuration) && duration
-        ? Number(duration)
+        ? roundDurationMinutes(Number(duration))
         : null;
 
     const effortValue = ["run", "ride", "swim", "hike"].includes(activityType)

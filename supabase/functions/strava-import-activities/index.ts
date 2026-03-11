@@ -113,7 +113,10 @@ const toLocalDateString = (
 
 const secondsToMinutes = (value?: number | null): number | null => {
   if (typeof value !== "number") return null;
-  return Math.round((value / 60) * 100) / 100;
+  const minutes = value / 60;
+  if (!Number.isFinite(minutes) || minutes < 0) return null;
+  if (minutes === 0) return 0;
+  return Math.max(1, Math.round(minutes));
 };
 
 const metersToKm = (value?: number | null): number | null => {

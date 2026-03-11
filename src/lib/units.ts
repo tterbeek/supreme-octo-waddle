@@ -14,3 +14,12 @@ export function formatDistance(km: number, unit: UnitSystem) {
   }
   return `${km.toFixed(0)} km`;
 }
+
+export function roundDurationMinutes(minutes: number): number {
+  if (!Number.isFinite(minutes) || minutes < 0) return 0;
+  return minutes > 0 ? Math.max(1, Math.round(minutes)) : 0;
+}
+
+export function formatDurationMinutes(minutes: number): string {
+  return `${roundDurationMinutes(minutes)} min`;
+}

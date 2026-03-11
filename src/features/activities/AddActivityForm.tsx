@@ -5,7 +5,7 @@ import PresetsBar from "../../components/quick-log/PresetsBar";
 import SavePresetFooter from "../../components/quick-log/SavePresetFooter";
 import { useTooltipManager } from "../../hooks/useTooltipManager";
 import { useUnitSystem } from "../../contexts/UnitContext";
-import { formatDistance } from "../../lib/units";
+import { formatDistance, formatDurationMinutes } from "../../lib/units";
 import { useQuickLogForm } from "../../hooks/useQuickLogForm";
 import EquipmentDialog from "../../components/EquipmentDialog";
 import ActivityFormFields from "../../components/ActivityFormFields";
@@ -207,7 +207,9 @@ export default function AddActivityForm({
                 <div className="text-sm text-gray-500">
                   {p.distance_km != null && formatDistance(p.distance_km, unitSystem)}
                   {p.duration_min != null &&
-                    `${p.distance_km != null ? " · " : ""}${p.duration_min} min`}
+                    `${p.distance_km != null ? " · " : ""}${formatDurationMinutes(
+                      Number(p.duration_min)
+                    )}`}
                   {p.effort != null && ` · Effort ${p.effort}`}
                 </div>
               </button>

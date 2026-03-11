@@ -6,7 +6,7 @@ import { ACTIVITY_TYPES } from "../config/activityTypes";
 import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
-import { kmToMiles } from "../lib/units";
+import { formatDurationMinutes, kmToMiles } from "../lib/units";
 import EditPresetModal from "../features/presets/EditPresetModal";
 import AddPresetModal from "../features/presets/AddPresetModal";
 import { fetchPresets, fetchPreset } from "../services/preset.service";
@@ -164,7 +164,8 @@ export default function PresetsPage() {
                   {distanceDisplay && <span>{distanceDisplay}</span>}
                   {p.duration_min != null && (
                     <span>
-                      {distanceDisplay ? "·" : null} {p.duration_min} min
+                      {distanceDisplay ? "·" : null}{" "}
+                      {formatDurationMinutes(Number(p.duration_min))}
                     </span>
                   )}
                 </div>

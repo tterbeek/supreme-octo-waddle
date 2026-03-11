@@ -4,7 +4,7 @@ import {
   type ActivityPreference,
 } from "../lib/resolveActivityFields";
 import { resolveEditFields } from "../lib/resolveEditActivityFields";
-import { kmToMiles, milesToKm } from "../lib/units";
+import { kmToMiles, milesToKm, roundDurationMinutes } from "../lib/units";
 import { getActivityPhotos, MAX_ACTIVITY_PHOTOS } from "../lib/photos";
 import { getCurrentUser } from "../services/auth.service";
 import { fetchActivityPreference } from "../services/quickLog.service";
@@ -51,7 +51,11 @@ export function useActivityEditForm({
   const [showOptionalDistance, setShowOptionalDistance] = useState(
     activity.distance_km != null
   );
-  const [duration, setDuration] = useState(activity.duration_min || "");
+  const [duration, setDuration] = useState(
+    activity.duration_min != null
+      ? String(roundDurationMinutes(Number(activity.duration_min)))
+      : ""
+  );
   const [showOptionalDuration, setShowOptionalDuration] = useState(
     activity.duration_min != null
   );
@@ -203,7 +207,7 @@ export function useActivityEditForm({
 
     const durationValue =
       (defaultFields.includes("duration_min") || showOptionalDuration) && duration
-        ? Number(duration)
+        ? roundDurationMinutes(Number(duration))
         : null;
 
     const effortValue =

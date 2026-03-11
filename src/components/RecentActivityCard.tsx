@@ -15,7 +15,7 @@ import {
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
-import { formatDistance, type UnitSystem } from "../lib/units";
+import { formatDistance, formatDurationMinutes, type UnitSystem } from "../lib/units";
 import { getActivityPhotos } from "../lib/photos";
 
 type RecentActivityCardProps = {
@@ -165,6 +165,7 @@ export default function RecentActivityCard({
           sm:p-6 md:p-7
         "
         onClick={(e) => {
+          e.stopPropagation();
           const target = e.target as HTMLElement | null;
           if (target?.closest?.("[data-photo-trigger]")) return;
           onEdit(activity);
@@ -217,7 +218,7 @@ export default function RecentActivityCard({
           )}
           {activity.duration_min != null && (
             <>
-              <span>{activity.duration_min} min</span>
+              <span>{formatDurationMinutes(Number(activity.duration_min))}</span>
               <span className="text-gray-400">·</span>
             </>
           )}

@@ -13,6 +13,7 @@ import { ACTIVITY_TYPES } from "../config/activityTypes";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import type { GalleryItem } from "../lib/photos";
+import { formatDurationMinutes } from "../lib/units";
 
 const NOTE_BUCKET = "actvity-notes";
 const LEGACY_NOTE_BUCKET = "activity-notes";
@@ -420,7 +421,7 @@ export default function CirclePage() {
                         : null}
                       {item.distance_km != null && item.duration_min != null ? " · " : ""}
                       {item.duration_min != null
-                        ? `${Number(item.duration_min).toFixed(0)} min`
+                        ? formatDurationMinutes(Number(item.duration_min))
                         : null}
                     </p>
                   )}

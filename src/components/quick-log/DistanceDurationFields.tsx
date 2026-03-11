@@ -74,6 +74,8 @@ export default function DistanceDurationFields({
           <input
             type="number"
             inputMode="numeric"
+            step={1}
+            min={0}
             value={duration}
             onChange={(e) => onDurationChange(e.target.value)}
             className={`w-full border rounded-md ${inputPadding}`}

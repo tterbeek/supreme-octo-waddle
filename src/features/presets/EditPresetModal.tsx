@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import ModalSheet from "../../components/ModalSheet";
 import { ACTIVITY_TYPES } from "../../config/activityTypes";
 import { useUnitSystem } from "../../contexts/UnitContext";
-import { kmToMiles, milesToKm } from "../../lib/units";
+import { kmToMiles, milesToKm, roundDurationMinutes } from "../../lib/units";
 import PresetForm from "./PresetFormContent";
 import type { Preset } from "../../types";
 import { supabase } from "../../supabaseClient";
@@ -32,7 +32,9 @@ export default function EditPresetModal({
   const [name, setName] = useState(preset.name ?? "");
   const [distanceKm, setDistanceKm] = useState<number | null>(preset.distance_km ?? null);
   const [duration, setDuration] = useState(
-    preset.duration_min != null ? String(preset.duration_min) : ""
+    preset.duration_min != null
+      ? String(roundDurationMinutes(Number(preset.duration_min)))
+      : ""
   );
   const [effort, setEffort] = useState(preset.effort ?? 3);
   const [showOptionalDistance, setShowOptionalDistance] = useState(
@@ -54,7 +56,11 @@ export default function EditPresetModal({
   useEffect(() => {
     setName(preset.name ?? "");
     setDistanceKm(preset.distance_km ?? null);
-    setDuration(preset.duration_min != null ? String(preset.duration_min) : "");
+    setDuration(
+      preset.duration_min != null
+        ? String(roundDurationMinutes(Number(preset.duration_min)))
+        : ""
+    );
     setEffort(preset.effort ?? 3);
   }, [preset]);
 
@@ -143,7 +149,7 @@ export default function EditPresetModal({
           : null,
       duration_min:
         (typeConfig.defaultFields.includes("duration_min") || showOptionalDuration) && duration
-          ? Number(duration)
+          ? roundDurationMinutes(Number(duration))
           : null,
       effort: ["run", "ride", "swim", "hike"].includes(activityType) ? effort : null,
     };
