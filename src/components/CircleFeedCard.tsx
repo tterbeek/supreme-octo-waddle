@@ -258,6 +258,7 @@ export default function CircleFeedCard({
           <div
             ref={reactionsInlineRef}
             className="w-full rounded-lg border border-warm-200 bg-warm-50 p-2 space-y-2"
+            onClick={() => setReactionsInlineOpen(false)}
           >
             {latestReactors.map((reactor) => {
               const option = reactionOptionByType[reactor.reactionType];
