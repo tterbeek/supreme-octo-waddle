@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { signStorageValues } from "../services/storage.service";
 
 const sortByDateAndCreated = (items: any[]) =>
@@ -26,128 +26,74 @@ export function useNoteImages(bucket: string) {
   const [noteImageOrientation, setNoteImageOrientation] = useState<
     Record<string, "portrait" | "landscape">
   >({});
+  const requestIdRef = useRef(0);
 
   const resolveFor = useCallback(
     (activities: any[]) => {
+      requestIdRef.current += 1;
+      const requestId = requestIdRef.current;
+
       const withAnyImages = activities.filter(
         (a) => a.note_image_url || a.note_thumb_image_url
       );
       if (withAnyImages.length === 0) {
         setSignedNoteImages({});
         setSignedNoteThumbs({});
-        return () => {};
+        return () => {
+          if (requestIdRef.current === requestId) {
+            requestIdRef.current += 1;
+          }
+        };
       }
 
       const ordered = sortByDateAndCreated(withAnyImages);
-      const idsWithImages = new Set(ordered.map((a) => a.id));
 
-      // Drop any stale entries from previous runs so state only contains
-      // images that are still visible in the current feed.
-      setSignedNoteImages((prev) => {
-        const next: Record<string, string> = {};
-        Object.entries(prev).forEach(([id, url]) => {
-          if (idsWithImages.has(id)) next[id] = url;
-        });
-        return next;
-      });
-      setSignedNoteThumbs((prev) => {
-        const next: Record<string, string> = {};
-        Object.entries(prev).forEach(([id, url]) => {
-          if (idsWithImages.has(id)) next[id] = url;
-        });
-        return next;
-      });
-
-      let cancelled = false;
       (async () => {
-        const thumbItems = ordered.filter(
-          (a) => a.note_thumb_image_url || a.note_image_url
-        );
-        const fullItems = ordered.filter((a) => a.note_image_url);
+        const thumbPaths = ordered
+          .map((item) => item.note_thumb_image_url || item.note_image_url)
+          .filter((path): path is string => Boolean(path));
+        const fullPaths = ordered
+          .map((item) => item.note_image_url)
+          .filter((path): path is string => Boolean(path));
 
-        const fetchUrls = async (
-          items: any[],
-          selector: (item: any) => string,
-          setter: Dispatch<SetStateAction<Record<string, string>>>
-        ): Promise<Record<string, string>> => {
-          const collected: Record<string, string> = {};
-          if (items.length === 0) return collected;
+        const [thumbUrlMap, fullUrlMap] = await Promise.all([
+          signStorageValues(thumbPaths, {
+            primaryBucket: bucket,
+            expiresIn: 86400,
+          }),
+          signStorageValues(fullPaths, {
+            primaryBucket: bucket,
+            expiresIn: 86400,
+          }),
+        ]);
 
-          const [newest, ...rest] = items;
-          const newestPath = selector(newest);
-          if (newestPath) {
-            const newestUrl = await signStorageValues([newestPath], {
-              primaryBucket: bucket,
-              expiresIn: 86400,
-            });
-            if (!cancelled) {
-              const url = newestUrl[newestPath];
-              if (url) {
-                collected[newest.id] = url;
-                setter((prev) => ({
-                  ...prev,
-                  [newest.id]: url,
-                }));
-              }
-            }
+        if (requestIdRef.current !== requestId) return;
+
+        const nextImages: Record<string, string> = {};
+        const nextThumbs: Record<string, string> = {};
+
+        ordered.forEach((item) => {
+          const thumbPath = item.note_thumb_image_url || item.note_image_url;
+          const fullPath = item.note_image_url;
+          const fullUrl = fullPath ? fullUrlMap[fullPath] : null;
+          const thumbUrl = thumbPath ? thumbUrlMap[thumbPath] : null;
+
+          if (fullUrl) {
+            nextImages[item.id] = fullUrl;
           }
-
-          if (rest.length > 0) {
-            const restPaths = rest.map(selector).filter(Boolean);
-            if (restPaths.length === 0) return collected;
-
-            const restUrlMap = await signStorageValues(restPaths, {
-              primaryBucket: bucket,
-              expiresIn: 86400,
-            });
-            if (cancelled) return collected;
-
-            setter((prev) => {
-              const next = { ...prev };
-              rest.forEach((item) => {
-                const path = selector(item);
-                if (!path) return;
-                const url = restUrlMap[path];
-                if (!url) return;
-                collected[item.id] = url;
-                next[item.id] = url;
-              });
-              return next;
-            });
+          if (thumbUrl || fullUrl) {
+            nextThumbs[item.id] = thumbUrl || fullUrl || "";
           }
-
-          return collected;
-        };
-
-        await fetchUrls(
-          thumbItems,
-          (item) => item.note_thumb_image_url || item.note_image_url,
-          setSignedNoteThumbs
-        );
-
-        const fullUrls = await fetchUrls(
-          fullItems,
-          (item) => item.note_image_url,
-          setSignedNoteImages
-        );
-
-        // Ensure we at least have a thumbnail URL even if no dedicated thumb exists.
-        setSignedNoteThumbs((prev) => {
-          const next = { ...prev };
-          fullItems.forEach((item) => {
-            if (!next[item.id]) {
-              const url = fullUrls[item.id];
-              if (url) {
-                next[item.id] = url;
-              }
-            }
-          });
-          return next;
         });
+
+        setSignedNoteImages(nextImages);
+        setSignedNoteThumbs(nextThumbs);
       })();
 
       return () => {
-        cancelled = true;
+        if (requestIdRef.current === requestId) {
+          requestIdRef.current += 1;
+        }
       };
     },
     [bucket]
@@ -155,6 +101,7 @@ export function useNoteImages(bucket: string) {
 
   useEffect(() => {
     return () => {
+      requestIdRef.current += 1;
       setSignedNoteImages({});
       setSignedNoteThumbs({});
       setNoteImageOrientation({});

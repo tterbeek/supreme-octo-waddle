@@ -149,7 +149,6 @@ export default function Home() {
           setCircleEnabled(false);
         }
 
-        await refreshFeed();
       } finally {
         // no-op
       }
@@ -477,6 +476,7 @@ export default function Home() {
                               sharedWithCircle={Boolean(sharedWithCircleByActivity[a.id])}
                               sharingWithCircle={sharingActivityId === a.id}
                               disableSwipe={gallery.open}
+                              imageLoading={renderIndex <= 4 ? "eager" : "lazy"}
                             />
                           );
                         })}

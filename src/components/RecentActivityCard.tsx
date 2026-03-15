@@ -19,6 +19,7 @@ import { formatDistance, formatDurationMinutes, type UnitSystem } from "../lib/u
 import { getActivityPhotos } from "../lib/photos";
 
 type RecentActivityCardProps = {
+  imageLoading?: "lazy" | "eager";
   activity: any;
   signedNoteImages: Record<string, string>;
   signedNoteThumbs: Record<string, string>;
@@ -68,8 +69,12 @@ export default function RecentActivityCard({
   sharedWithCircle = false,
   sharingWithCircle = false,
   disableSwipe = false,
+  imageLoading = "lazy",
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const cachedImageHandledRef = useRef<string | null>(null);
+  const onNoteImageLoadRef = useRef(onNoteImageLoad);
   const pointerTypeRef = useRef<string | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const touchMovedRef = useRef(false);
@@ -139,6 +144,10 @@ export default function RecentActivityCard({
   const showOptionalNotePrompt =
     isImportedActivity && Boolean(onAddReflection) && !hasNotes && showFeeling && !showQuickEffortPrompt;
   const showShareWithCircle = canShareWithCircle && Boolean(onShareWithCircle);
+  useEffect(() => {
+    onNoteImageLoadRef.current = onNoteImageLoad;
+  }, [onNoteImageLoad]);
+
   const countIcon = (() => {
     if (photoCount <= 1) return null;
     if (photoCount === 2) return IconBoxMultiple2;
@@ -153,7 +162,23 @@ export default function RecentActivityCard({
 
   useEffect(() => {
     setImageLoaded(false);
+    cachedImageHandledRef.current = null;
   }, [thumbUrl]);
+
+  useEffect(() => {
+    const imageEl = imageRef.current;
+    if (!thumbUrl || !imageEl) return;
+    if (!imageEl.complete || imageEl.naturalWidth === 0 || imageEl.naturalHeight === 0) {
+      return;
+    }
+    if (cachedImageHandledRef.current === thumbUrl) {
+      return;
+    }
+
+    cachedImageHandledRef.current = thumbUrl;
+    onNoteImageLoadRef.current(activity.id, imageEl.naturalWidth, imageEl.naturalHeight);
+    setImageLoaded(true);
+  }, [activity.id, thumbUrl]);
 
   return (
     <SwipeActions onEdit={() => onEdit(activity)} disabled={disableSwipe}>
@@ -369,9 +394,10 @@ export default function RecentActivityCard({
                 }}
               >
                 <img
+                  ref={imageRef}
                   src={thumbUrl}
                   alt="Activity note"
-                  loading="lazy"
+                  loading={imageLoading}
                   className={`
                     rounded-xl border border-warm-200 shadow-sm transition-opacity duration-200
                     ${
