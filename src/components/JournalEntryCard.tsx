@@ -1,10 +1,12 @@
 type JournalEntryCardProps = {
   entry: any;
+  onClick?: () => void;
 };
 
-export default function JournalEntryCard({ entry }: JournalEntryCardProps) {
+export default function JournalEntryCard({ entry, onClick }: JournalEntryCardProps) {
   const isTinyTweakReflection = entry.entry_type === "tiny_tweak_reflection";
-  const label = isTinyTweakReflection ? "Tiny tweak" : "Note";
+  const isJournalNote = entry.entry_type === "journal_note";
+  const label = isTinyTweakReflection ? "Tiny tweak" : "Journal entry";
   const metadata = (() => {
     if (!entry.metadata) return null;
     if (typeof entry.metadata === "object") return entry.metadata;
@@ -30,8 +32,8 @@ export default function JournalEntryCard({ entry }: JournalEntryCardProps) {
   const tweakContextClassName =
     "text-[14px] md:text-[16px] text-movenotes-text/70 leading-snug";
 
-  return (
-    <div className={cardClassName}>
+  const content = (
+    <>
       <div className="text-[12px] md:text-[13px] uppercase tracking-[0.16em] text-movenotes-text/90 mb-1">
         <span>{label}</span>
         {isTinyTweakReflection && (
@@ -52,6 +54,16 @@ export default function JournalEntryCard({ entry }: JournalEntryCardProps) {
           {isTinyTweakReflection ? `"${bodyText}"` : bodyText}
         </p>
       )}
-    </div>
+    </>
   );
+
+  if (isJournalNote && onClick) {
+    return (
+      <button type="button" onClick={onClick} className={`${cardClassName} block text-left`}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={cardClassName}>{content}</div>;
 }

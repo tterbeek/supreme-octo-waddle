@@ -18,6 +18,7 @@ import OnboardingWizard from "./components/OnboardingWizard";
 import OnboardingCarousel from "./components/OnboardingCarousel";
 import SettingsPage from "./pages/SettingsPage";
 import AboutPage from "./pages/AboutPage";
+import SupportPage from "./pages/Support";
 import ActivityPreferencesPage from "./pages/ActivityPreferencesPage";
 import ManageEquipmentPage from "./pages/ManageEquipmentPage";
 import ManageCirclePage from "./pages/ManageCirclePage";
@@ -193,6 +194,7 @@ export default function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/support" element={<SupportPage />} />
               <Route path="/settings/strava/callback" element={<StravaCallbackPage />} />
               <Route path="/circle/invite/:token" element={<CircleInvitePage />} />
 

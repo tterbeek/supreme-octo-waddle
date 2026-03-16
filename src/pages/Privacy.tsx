@@ -13,45 +13,56 @@ export default function Privacy() {
           Privacy Policy
         </h1>
         <p className="text-sm text-movenotes-muted mb-8 text-center">
-          Last updated: 9 November 2025
+          Last updated: 16 March 2026
         </p>
 
         <p className="mb-6 leading-relaxed">
-          <strong>MoveNotes</strong> (“we”, “our”, “us”) is a personal,
+          <strong>MoveNotes</strong> ("we", "our", "us") is a personal,
           privacy-first movement journal. We collect only the minimum amount of
-          data needed to make the app work — and nothing more.
+          data needed to make the app work.
         </p>
 
-        {/* 1. Data We Collect */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          1. Data We Collect
+          1. Information We Store
         </h2>
 
         <p className="mb-4 leading-relaxed">
-          When you create an account, we collect your <strong>email address</strong>.
-          This is used only for signing in through passwordless email codes and
-          essential service communication.
+          MoveNotes stores the following information to provide the service:
         </p>
 
-        <p className="mb-4 leading-relaxed">
-          When you use the app, we store the activity entries you create:
+        <p className="mb-2 leading-relaxed">
+          <strong>Account information</strong>
         </p>
         <ul className="list-disc list-inside space-y-1 ml-4 mb-4">
-          <li>Activity type (e.g., run, walk, yoga, cycling)</li>
-          <li>Distance or duration (if you choose to enter them)</li>
-          <li>Optional notes and feelings</li>
+          <li>Email address</li>
+          <li>Authentication identifiers</li>
+        </ul>
+
+        <p className="mb-2 leading-relaxed">
+          <strong>Activity information</strong>
+        </p>
+        <ul className="list-disc list-inside space-y-1 ml-4 mb-4">
+          <li>Activity name</li>
+          <li>Activity type</li>
+          <li>Start date and time</li>
+          <li>Distance</li>
+          <li>Duration</li>
+        </ul>
+
+        <p className="mb-2 leading-relaxed">
+          <strong>User-generated reflections</strong>
+        </p>
+        <ul className="list-disc list-inside space-y-1 ml-4 mb-4">
+          <li>Perceived effort</li>
+          <li>Feeling rating</li>
+          <li>Written notes</li>
           <li>Optional photos you upload</li>
-          <li>Your goal settings and presets</li>
         </ul>
 
         <p className="mb-4 leading-relaxed">
-          This information is private and visible only to you. We do not collect
-          your GPS location, health sensor data, contacts, or any biometric data.
-        </p>
-
-        <p className="mb-4 leading-relaxed">
-          If you choose to opt in to our newsletter during signup or in settings,
-          we also store your <strong>newsletter preference</strong>.
+          We also store app preferences and settings required to provide the service.
+          If you choose to opt in to our newsletter, we also store your newsletter
+          preference.
         </p>
 
         <p className="mb-4 leading-relaxed">
@@ -59,7 +70,6 @@ export default function Privacy() {
           processed temporarily to keep the service secure.
         </p>
 
-        {/* 2. Why We Collect Your Data */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
           2. Why We Collect Your Data
         </h2>
@@ -79,15 +89,68 @@ export default function Privacy() {
           not used for profiling, targeted advertising, or public social features.
         </p>
 
-        {/* 3. Data Storage & Security */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          3. Data Storage & Security
+          3. Use of Strava Data
         </h2>
 
         <p className="mb-4 leading-relaxed">
-          Your data is stored securely using <strong>Supabase</strong> — a trusted
-          open-source backend that provides encrypted storage, authentication, and
-          database services.
+          MoveNotes allows users to connect their Strava account in order to import
+          activity summaries.
+        </p>
+
+        <p className="mb-2 leading-relaxed">
+          When a user connects Strava, MoveNotes may access the following information
+          via the Strava API:
+        </p>
+        <ul className="list-disc list-inside space-y-1 ml-4 mb-4">
+          <li>Activity name</li>
+          <li>Activity type</li>
+          <li>Start date and time</li>
+          <li>Duration</li>
+          <li>Distance</li>
+        </ul>
+
+        <p className="mb-4 leading-relaxed">
+          This information is used solely to create activity entries within the
+          MoveNotes training journal.
+        </p>
+
+        <p className="mb-4 leading-relaxed">
+          MoveNotes does not store GPS tracks, segment data, or other detailed
+          performance analytics from Strava.
+        </p>
+
+        <p className="mb-4 leading-relaxed">
+          MoveNotes does not sell, rent, or redistribute Strava data.
+        </p>
+
+        <p className="mb-4 leading-relaxed">
+          Users may disconnect their Strava account at any time in the application
+          settings. When a Strava account is disconnected, MoveNotes will stop
+          importing new activities.
+        </p>
+
+        <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
+          4. Sensitive Data
+        </h2>
+
+        <p className="mb-4 leading-relaxed">
+          MoveNotes does not intentionally collect sensitive personal data such as
+          biometric identifiers, financial data, or medical records.
+        </p>
+
+        <p className="mb-4 leading-relaxed">
+          Reflections entered by users may contain personal information voluntarily
+          provided by the user.
+        </p>
+
+        <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
+          5. Data Storage and Security
+        </h2>
+
+        <p className="mb-4 leading-relaxed">
+          Your data is stored securely using <strong>Supabase</strong>, which provides
+          encrypted storage, authentication, and database services.
         </p>
 
         <ul className="list-disc list-inside space-y-1 ml-4">
@@ -96,14 +159,26 @@ export default function Privacy() {
           <li>Your entries and media are accessible only to your account</li>
         </ul>
 
-        <p className="mt-2 mb-4 leading-relaxed">
-          MoveNotes does not access your images for any purpose other than storing
-          them on your behalf.
+        <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
+          6. Data Retention and Deletion
+        </h2>
+
+        <p className="mb-4 leading-relaxed">
+          Users may delete their account at any time.
         </p>
 
-        {/* 4. Your Rights */}
+        <p className="mb-4 leading-relaxed">
+          Deleting an account permanently removes associated activity data and
+          reflections from MoveNotes servers within a reasonable period.
+        </p>
+
+        <p className="mb-4 leading-relaxed">
+          Users may also disconnect third-party integrations such as Strava from
+          the application settings.
+        </p>
+
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          4. Your Rights
+          7. Your Rights
         </h2>
 
         <p className="mb-2">You have the right to:</p>
@@ -126,20 +201,18 @@ export default function Privacy() {
           .
         </p>
 
-        {/* 5. Cookies & Analytics */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          5. Cookies & Analytics
+          8. Cookies and Analytics
         </h2>
 
         <p className="mb-4 leading-relaxed">
           MoveNotes does not use advertising or tracking cookies. We use only a
           minimal session cookie that keeps you logged in securely. We do not use
-          any third-party analytics tools that track personal behavior.
+          third-party analytics tools that track personal behavior.
         </p>
 
-        {/* 6. Third-Party Services */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          6. Third-Party Services
+          9. Third-Party Services
         </h2>
 
         <p className="mb-4 leading-relaxed">
@@ -149,9 +222,8 @@ export default function Privacy() {
           standards.
         </p>
 
-        {/* 7. Changes */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          7. Changes to This Policy
+          10. Changes to This Policy
         </h2>
 
         <p className="mb-4 leading-relaxed">
@@ -163,12 +235,11 @@ export default function Privacy() {
           >
             movenotes.app/privacy
           </a>
-          . We will notify users of significant changes inside the app.
+          .
         </p>
 
-        {/* 8. Contact */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          8. Contact
+          11. Contact
         </h2>
 
         <p className="leading-relaxed">
@@ -187,6 +258,11 @@ export default function Privacy() {
             info@movenotes.app
           </a>
           .
+        </p>
+
+        <p className="mt-8 text-sm text-movenotes-muted">
+          Strava is a registered trademark of Strava, Inc. MoveNotes is not
+          affiliated with or endorsed by Strava.
         </p>
       </div>
     </div>

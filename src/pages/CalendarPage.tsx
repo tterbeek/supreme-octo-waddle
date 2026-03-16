@@ -3,18 +3,21 @@ import { List } from "react-window";
 import type { ListImperativeAPI, RowComponentProps } from "react-window";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "../components/ModalSheet";
-import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
+import AddBottomSheet from "../components/AddBottomSheet";
 import AddActivityModal from "../features/activities/AddActivityModal";
 import EditActivityModal from "../features/activities/EditActivityModal";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { getCurrentUser } from "../services/auth.service";
 import { useUnitSystem } from "../contexts/UnitContext";
 import RecentActivityCard from "../components/RecentActivityCard";
+import JournalEntryCard from "../components/JournalEntryCard";
+import JournalEntryModal from "../components/JournalEntryModal";
 import Toast from "../components/Toast";
 import { useNoteImages } from "../hooks/useNoteImages";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
+import { fetchJournalEntriesInRange } from "../services/journalEntries.service";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { buildGalleryItemsForActivity } from "../lib/photos";
@@ -25,6 +28,7 @@ import {
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
 
 type CalendarActivity = {
+  entry_kind?: "activity";
   id: string;
   date: string;
   type: string;
@@ -58,7 +62,20 @@ type CalendarActivity = {
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const EMPTY_DAY_ACTIVITIES: CalendarActivity[] = [];
+type CalendarJournalEntry = {
+  id: string;
+  entry_kind: "journal_entry";
+  entry_type: string;
+  text: string;
+  entry_text: string;
+  created_at: string;
+  journal_created_at: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+type CalendarFeedEntry = CalendarActivity | CalendarJournalEntry;
+
+const EMPTY_DAY_ENTRIES: CalendarFeedEntry[] = [];
 
 const toMonthIndex = (d: Date) => d.getFullYear() * 12 + d.getMonth();
 
@@ -99,6 +116,9 @@ export default function CalendarPage() {
   const [monthActivities, setMonthActivities] = useState<
     Record<string, CalendarActivity[]>
   >({});
+  const [monthJournalEntries, setMonthJournalEntries] = useState<
+    Record<string, CalendarJournalEntry[]>
+  >({});
   const [loadingMonths, setLoadingMonths] = useState<Record<string, boolean>>({});
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
@@ -106,6 +126,8 @@ export default function CalendarPage() {
   const [circleEnabled, setCircleEnabled] = useState(false);
   const [dayThumbs, setDayThumbs] = useState<Record<string, string>>({});
   const [quickLogDate, setQuickLogDate] = useState<string | null>(null);
+  const [journalEntryDraftOpen, setJournalEntryDraftOpen] = useState(false);
+  const [editingJournalEntry, setEditingJournalEntry] = useState<CalendarJournalEntry | null>(null);
   const [minMonthIndex, setMinMonthIndex] = useState<number | null>(null);
   const [listHeight, setListHeight] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState<number | null>(null);
@@ -123,8 +145,8 @@ export default function CalendarPage() {
   const gallery = useGalleryLightbox(NOTE_STORAGE_BUCKET);
 
   const {
-    showTypeSelector,
-    setShowTypeSelector,
+    showAddSheet,
+    setShowAddSheet,
     selectedType,
     setSelectedType,
     showQuickLog,
@@ -134,7 +156,6 @@ export default function CalendarPage() {
   } = useHomeModals();
   const noteFlow = usePostLogNoteFlow();
 
-  const today = startOfMonth(new Date());
   const todayKey = formatDateKey(new Date());
   const todayMonthIndex = toMonthIndex(new Date());
 
@@ -171,9 +192,37 @@ export default function CalendarPage() {
     return grouped;
   }, [monthActivities]);
 
-  const selectedDayActivities = useMemo(
-    () => (selectedDate ? activitiesByDate[selectedDate] || EMPTY_DAY_ACTIVITIES : EMPTY_DAY_ACTIVITIES),
-    [activitiesByDate, selectedDate]
+  const entriesByDate = useMemo(() => {
+    const grouped: Record<string, CalendarFeedEntry[]> = {};
+
+    Object.values(monthActivities).forEach((list) => {
+      list.forEach((activity) => {
+        const key =
+          typeof activity.date === "string"
+            ? activity.date.slice(0, 10)
+            : activity.date
+            ? formatDateKey(new Date(activity.date))
+            : null;
+        if (!key) return;
+        const nextActivity = { ...activity, entry_kind: "activity" as const };
+        grouped[key] = grouped[key] ? [...grouped[key], nextActivity] : [nextActivity];
+      });
+    });
+
+    Object.values(monthJournalEntries).forEach((list) => {
+      list.forEach((entry) => {
+        const key = formatDateKey(new Date(entry.created_at));
+        if (!key) return;
+        grouped[key] = grouped[key] ? [...grouped[key], entry] : [entry];
+      });
+    });
+
+    return grouped;
+  }, [monthActivities, monthJournalEntries]);
+
+  const selectedDayEntries = useMemo(
+    () => (selectedDate ? entriesByDate[selectedDate] || EMPTY_DAY_ENTRIES : EMPTY_DAY_ENTRIES),
+    [entriesByDate, selectedDate]
   );
 
   const fetchMonthActivities = useCallback(
@@ -181,29 +230,37 @@ export default function CalendarPage() {
       if (!userId) return;
       const key = formatMonthKey(monthDate);
       if (loadingMonths[key]) return;
-      if (monthActivities[key]) return;
+      if (monthActivities[key] && monthJournalEntries[key]) return;
       setLoadingMonths((prev) => ({ ...prev, [key]: true }));
       try {
         const monthStart = startOfMonth(monthDate);
         const monthEnd = nextMonth(monthDate);
-        const { data, error: monthError } = await supabase
-          .from("activities")
-          .select(
-            "id, user_id, type, source, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
-          )
-          .eq("user_id", userId)
-          .gte("date", formatDateKey(monthStart))
-          .lt("date", formatDateKey(monthEnd))
-          .order("date", { ascending: true })
-          .order("created_at", { ascending: true });
+        const [activitiesResult, journalResult] = await Promise.all([
+          supabase
+            .from("activities")
+            .select(
+              "id, user_id, type, source, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
+            )
+            .eq("user_id", userId)
+            .gte("date", formatDateKey(monthStart))
+            .lt("date", formatDateKey(monthEnd))
+            .order("date", { ascending: true })
+            .order("created_at", { ascending: true }),
+          fetchJournalEntriesInRange(userId, monthStart.toISOString(), monthEnd.toISOString()),
+        ]);
 
-        if (monthError) {
-          setError(monthError.message);
+        if (activitiesResult.error) {
+          setError(activitiesResult.error.message);
           return;
         }
 
-        const mapped =
-          data?.map((activity: any) => {
+        if (journalResult.error) {
+          setError(journalResult.error.message);
+          return;
+        }
+
+        const mappedActivities =
+          activitiesResult.data?.map((activity: any) => {
             const equipment =
               activity.activity_equipment
                 ?.map((item: any) => item?.equipment)
@@ -211,9 +268,21 @@ export default function CalendarPage() {
             return { ...activity, equipment };
           }) || [];
 
+        const mappedJournalEntries =
+          journalResult.data?.map((entry) => ({
+            ...entry,
+            entry_kind: "journal_entry" as const,
+            entry_text: entry.text,
+            journal_created_at: entry.created_at,
+          })) || [];
+
         setMonthActivities((prev) => ({
           ...prev,
-          [key]: mapped,
+          [key]: mappedActivities,
+        }));
+        setMonthJournalEntries((prev) => ({
+          ...prev,
+          [key]: mappedJournalEntries,
         }));
       } finally {
         setLoadingMonths((prev) => {
@@ -223,24 +292,42 @@ export default function CalendarPage() {
         });
       }
     },
-    [loadingMonths, monthActivities, userId]
+    [loadingMonths, monthActivities, monthJournalEntries, userId]
   );
 
-  const fetchFirstActivityDate = useCallback(async () => {
+  const fetchFirstEntryDate = useCallback(async () => {
     if (!userId) return null;
 
-    const { data, error: firstError } = await supabase
-      .from("activities")
-      .select("date")
-      .eq("user_id", userId)
-      .order("date", { ascending: true })
-      .limit(1);
+    const [firstActivityResult, firstJournalResult] = await Promise.all([
+      supabase
+        .from("activities")
+        .select("date")
+        .eq("user_id", userId)
+        .order("date", { ascending: true })
+        .limit(1),
+      supabase
+        .from("journal_entries")
+        .select("created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1),
+    ]);
 
-    if (firstError) {
-      throw firstError;
+    if (firstActivityResult.error) {
+      throw firstActivityResult.error;
+    }
+    if (firstJournalResult.error) {
+      throw firstJournalResult.error;
     }
 
-    return data?.[0]?.date ? new Date(data[0].date) : null;
+    const candidates = [
+      firstActivityResult.data?.[0]?.date ? new Date(firstActivityResult.data[0].date) : null,
+      firstJournalResult.data?.[0]?.created_at ? new Date(firstJournalResult.data[0].created_at) : null,
+    ].filter((value): value is Date => Boolean(value && !Number.isNaN(value.getTime())));
+
+    if (candidates.length === 0) return null;
+
+    return candidates.sort((a, b) => a.getTime() - b.getTime())[0];
   }, [userId]);
 
   useEffect(() => {
@@ -263,32 +350,42 @@ export default function CalendarPage() {
     if (!userId) return;
     (async () => {
       try {
-        const first = await fetchFirstActivityDate();
+        const first = await fetchFirstEntryDate();
         const minIndex = first ? toMonthIndex(first) - 1 : todayMonthIndex - 12;
-        log("first activity month index", { first: first?.toISOString?.(), minIndex });
+        log("first entry month index", { first: first?.toISOString?.(), minIndex });
         setMinMonthIndex(minIndex);
       } catch (e: any) {
-        setError(e?.message ?? "Failed to load first activity");
+        setError(e?.message ?? "Failed to load first entry");
       }
     })();
-  }, [fetchFirstActivityDate, todayMonthIndex, userId]);
+  }, [fetchFirstEntryDate, todayMonthIndex, userId]);
 
   const openDay = (key: string) => {
     setSelectedDate(key);
   };
 
-  const sortedSelectedActivities = useMemo(() => {
-    if (selectedDayActivities.length <= 1) return selectedDayActivities;
-    return [...selectedDayActivities].sort((a, b) => {
-      const aTime = new Date(a.started_at || a.created_at || a.date).getTime();
-      const bTime = new Date(b.started_at || b.created_at || b.date).getTime();
+  const sortedSelectedEntries = useMemo(() => {
+    if (selectedDayEntries.length <= 1) return selectedDayEntries;
+    return [...selectedDayEntries].sort((a, b) => {
+      const aSource = a.entry_kind === "journal_entry" ? a.created_at : a.started_at || a.created_at || a.date;
+      const bSource = b.entry_kind === "journal_entry" ? b.created_at : b.started_at || b.created_at || b.date;
+      const aTime = new Date(aSource).getTime();
+      const bTime = new Date(bSource).getTime();
       return bTime - aTime;
     });
-  }, [selectedDayActivities]);
+  }, [selectedDayEntries]);
+
+  const selectedDayActivities = useMemo(
+    () =>
+      sortedSelectedEntries.filter(
+        (item): item is CalendarActivity => item.entry_kind !== "journal_entry"
+      ),
+    [sortedSelectedEntries]
+  );
 
   const selectedActivityIds = useMemo(
-    () => sortedSelectedActivities.map((item) => String(item.id)),
-    [sortedSelectedActivities]
+    () => selectedDayActivities.map((item) => String(item.id)),
+    [selectedDayActivities]
   );
 
   const { handleShareWithCircle, sharedWithCircleByActivity, sharingActivityId } =
@@ -302,23 +399,23 @@ export default function CalendarPage() {
   const openQuickLog = () => {
     setQuickLogDate(selectedDate ?? todayKey);
     setSelectedType(null);
-    setShowTypeSelector(true);
+    setShowAddSheet(true);
   };
 
   const refreshLoadedCalendarData = useCallback(async () => {
     if (!userId) return;
     setMonthActivities({});
+    setMonthJournalEntries({});
     setLoadingMonths({});
     setDayThumbs({});
-    setSelectedDate(null);
     try {
-      const first = await fetchFirstActivityDate();
+      const first = await fetchFirstEntryDate();
       const minIndex = first ? toMonthIndex(first) - 1 : todayMonthIndex - 12;
       setMinMonthIndex(minIndex);
     } catch (e: any) {
       setError(e?.message ?? "Failed to refresh calendar");
     }
-  }, [fetchFirstActivityDate, todayMonthIndex, userId]);
+  }, [fetchFirstEntryDate, todayMonthIndex, userId]);
 
   const playWritingSound = () => {
     const audio = new Audio("/sounds/writing.mp3");
@@ -328,10 +425,10 @@ export default function CalendarPage() {
   };
 
   useEffect(() => {
-    if (!sortedSelectedActivities.length) return;
-    const cleanup = resolveNoteImages(sortedSelectedActivities);
+    if (!selectedDayActivities.length) return;
+    const cleanup = resolveNoteImages(selectedDayActivities);
     return cleanup;
-  }, [sortedSelectedActivities, resolveNoteImages]);
+  }, [selectedDayActivities, resolveNoteImages]);
 
   useEffect(() => {
     if (!userId) return;
@@ -554,17 +651,17 @@ export default function CalendarPage() {
               }
 
               const { key, dayNumber } = cell;
-              const entries = activitiesByDate[key] || [];
+              const entries = entriesByDate[key] || [];
               const isToday = key === todayKey;
               const isSelected = key === selectedDate;
               const isFuture = key > todayKey;
               const thumbUrl = dayThumbs[key];
-              const hasActivity = entries.length > 0;
+              const hasEntry = entries.length > 0;
               const backgroundClass = thumbUrl
                 ? ""
                 : isToday
                 ? "bg-movenotes-accent text-primary-text"
-                : hasActivity
+                : hasEntry
                 ? "bg-movenotes-primary text-primary-text"
                 : isFuture
                 ? "bg-white"
@@ -573,7 +670,7 @@ export default function CalendarPage() {
                 ? "text-primary-text font-semibold"
                 : isToday
                 ? "text-primary-text font-semibold"
-                : hasActivity
+                : hasEntry
                 ? "text-primary-text font-semibold"
                 : "text-movenotes-text";
 
@@ -583,7 +680,7 @@ export default function CalendarPage() {
                   type="button"
                   onClick={() => openDay(key)}
                   className={`relative h-10 sm:h-11 md:h-12 w-full rounded-xl border text-center p-1 flex flex-col items-center justify-center gap-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-movenotes-primary overflow-hidden ${
-                    entries.length > 0
+                    hasEntry
                       ? `border-movenotes-border ${backgroundClass} hover:border-movenotes-primary/70`
                       : `border-movenotes-border/80 ${backgroundClass} hover:border-movenotes-primary/60`
                   } ${isSelected ? "ring-2 ring-movenotes-primary/40" : ""}`}
@@ -643,7 +740,7 @@ export default function CalendarPage() {
 
       <button
         type="button"
-        aria-label="Add activity"
+        aria-label="Add"
         onClick={openQuickLog}
         className="fixed z-40 rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
         style={{
@@ -652,7 +749,7 @@ export default function CalendarPage() {
         }}
       >
         <span className="text-2xl leading-none">+</span>
-        <span className="text-sm font-semibold">Add activity</span>
+        <span className="text-sm font-semibold">Add</span>
       </button>
 
       {selectedDate && (
@@ -668,40 +765,56 @@ export default function CalendarPage() {
             <h3 className="text-xl font-semibold text-movenotes-text">Day entries</h3>
           </div>
 
-          {sortedSelectedActivities.length === 0 ? (
+          {sortedSelectedEntries.length === 0 ? (
             <p className="text-center text-movenotes-muted">No entries for this day.</p>
           ) : (
             <div className="max-h-[70vh] overflow-y-auto pb-2 flex flex-col gap-3 -mx-2 px-1">
-              {sortedSelectedActivities.map((activity) => (
-                <RecentActivityCard
-                  key={activity.id}
-                  activity={activity}
-                  signedNoteImages={signedNoteImages}
-                  signedNoteThumbs={signedNoteThumbs}
-                  noteImageOrientation={noteImageOrientation}
-                  onEdit={(a) => setEditActivity(a)}
-                  onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {
-                    setNoteImageOrientation((prev) => ({
-                      ...prev,
-                      [activityId]:
-                        naturalHeight > naturalWidth ? "portrait" : "landscape",
-                    }));
-                  }}
-                  unitSystem={unitSystem}
-                  tooltipVisible={false}
-                  onTooltipClose={() => {}}
-                  onOpenGallery={(activity) => {
-                    const items = buildGalleryItemsForActivity(activity);
-                    gallery.openGallery(items, 0);
-                  }}
-                  onAddReflection={(activity) => setReflectionActivity(activity)}
-                  canShareWithCircle={circleEnabled}
-                  onShareWithCircle={handleShareWithCircle}
-                  sharedWithCircle={Boolean(sharedWithCircleByActivity[activity.id])}
-                  sharingWithCircle={sharingActivityId === activity.id}
-                  disableSwipe={gallery.open}
-                />
-              ))}
+              {sortedSelectedEntries.map((entry) => {
+                if (entry.entry_kind === "journal_entry") {
+                  return (
+                    <JournalEntryCard
+                      key={`journal-${entry.id}`}
+                      entry={entry}
+                      onClick={
+                        entry.entry_type === "journal_note"
+                          ? () => setEditingJournalEntry(entry)
+                          : undefined
+                      }
+                    />
+                  );
+                }
+
+                return (
+                  <RecentActivityCard
+                    key={entry.id}
+                    activity={entry}
+                    signedNoteImages={signedNoteImages}
+                    signedNoteThumbs={signedNoteThumbs}
+                    noteImageOrientation={noteImageOrientation}
+                    onEdit={(activity) => setEditActivity(activity)}
+                    onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {
+                      setNoteImageOrientation((prev) => ({
+                        ...prev,
+                        [activityId]:
+                          naturalHeight > naturalWidth ? "portrait" : "landscape",
+                      }));
+                    }}
+                    unitSystem={unitSystem}
+                    tooltipVisible={false}
+                    onTooltipClose={() => {}}
+                    onOpenGallery={(activity) => {
+                      const items = buildGalleryItemsForActivity(activity);
+                      gallery.openGallery(items, 0);
+                    }}
+                    onAddReflection={(activity) => setReflectionActivity(activity)}
+                    canShareWithCircle={circleEnabled}
+                    onShareWithCircle={handleShareWithCircle}
+                    sharedWithCircle={Boolean(sharedWithCircleByActivity[entry.id])}
+                    sharingWithCircle={sharingActivityId === entry.id}
+                    disableSwipe={gallery.open}
+                  />
+                );
+              })}
             </div>
           )}
         </ModalSheet>
@@ -710,11 +823,11 @@ export default function CalendarPage() {
       {selectedDate && (
         <button
           type="button"
-          aria-label="Add activity for this day"
+          aria-label="Add for this day"
           onClick={() => {
             setQuickLogDate(selectedDate ?? todayKey);
             setSelectedType(null);
-            setShowTypeSelector(true);
+            setShowAddSheet(true);
           }}
           className="fixed z-[70] rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
           style={{
@@ -723,7 +836,7 @@ export default function CalendarPage() {
           }}
         >
           <span className="text-2xl leading-none">+</span>
-          <span className="text-sm font-semibold">Add activity</span>
+          <span className="text-sm font-semibold">Add</span>
         </button>
       )}
 
@@ -737,13 +850,38 @@ export default function CalendarPage() {
         signedThumbs={gallery.signedThumbs}
       />
 
-      <SelectActivityTypeModal
-        open={showTypeSelector}
-        onClose={() => setShowTypeSelector(false)}
-        onSelect={(typeId) => {
+      <AddBottomSheet
+        open={showAddSheet}
+        onClose={() => setShowAddSheet(false)}
+        onSelectJournalEntry={() => {
+          setShowAddSheet(false);
+          setJournalEntryDraftOpen(true);
+        }}
+        onSelectActivity={(typeId) => {
           setSelectedType(typeId);
-          setShowTypeSelector(false);
+          setShowAddSheet(false);
           setShowQuickLog(true);
+        }}
+      />
+
+      <JournalEntryModal
+        open={journalEntryDraftOpen || Boolean(editingJournalEntry)}
+        entry={editingJournalEntry}
+        onClose={() => {
+          setJournalEntryDraftOpen(false);
+          setEditingJournalEntry(null);
+        }}
+        onSaved={() => {
+          setJournalEntryDraftOpen(false);
+          setEditingJournalEntry(null);
+          setToastMessage("Journal entry saved");
+          void refreshLoadedCalendarData();
+        }}
+        onDeleted={() => {
+          setJournalEntryDraftOpen(false);
+          setEditingJournalEntry(null);
+          setToastMessage("Journal entry deleted");
+          void refreshLoadedCalendarData();
         }}
       />
 
@@ -758,7 +896,7 @@ export default function CalendarPage() {
           }}
           onLogged={async (activityId) => {
             noteFlow.handleLogged(activityId);
-            await fetchMonthActivities(today);
+            await refreshLoadedCalendarData();
           }}
         />
       )}
@@ -769,11 +907,11 @@ export default function CalendarPage() {
           onClose={() => setEditActivity(null)}
           onUpdated={() => {
             setEditActivity(null);
-            fetchMonthActivities(today);
+            void refreshLoadedCalendarData();
           }}
           onDeleted={() => {
             setEditActivity(null);
-            fetchMonthActivities(today);
+            void refreshLoadedCalendarData();
           }}
           zIndexClass="z-[60]"
         />
@@ -788,7 +926,7 @@ export default function CalendarPage() {
             setReflectionActivity(null);
             setToastMessage("Reflection saved ✍️");
             playWritingSound();
-            fetchMonthActivities(today);
+            void refreshLoadedCalendarData();
           }}
           onDeleted={() => {
             setReflectionActivity(null);
@@ -803,7 +941,7 @@ export default function CalendarPage() {
 
       <PostLogNoteFlow
         flow={noteFlow}
-        onRefreshAfterNote={() => fetchMonthActivities(today)}
+        onRefreshAfterNote={() => void refreshLoadedCalendarData()}
       />
     </div>
   );

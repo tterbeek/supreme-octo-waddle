@@ -13,21 +13,20 @@ export default function Terms() {
           Terms of Service
         </h1>
         <p className="text-sm text-movenotes-muted mb-8 text-center">
-          Last updated: 9 November 2025
+          Last updated: 16 March 2026
         </p>
 
         <p className="mb-6 leading-relaxed">
-          Welcome to <strong>MoveNotes</strong> (“we”, “our”, “us”), a personal and
+          Welcome to <strong>MoveNotes</strong> ("we", "our", "us"), a personal and
           mindful movement journal. By creating an account or using MoveNotes,
           you agree to these Terms of Service. Please read them carefully.
         </p>
 
-        {/* 1. Using MoveNotes */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
           1. Using MoveNotes
         </h2>
         <p className="mb-4 leading-relaxed">
-          MoveNotes helps you log and reflect on your daily movement — including
+          MoveNotes helps you log and reflect on your daily movement, including
           runs, walks, rides, hikes, yoga, strength training, or any other
           activity you choose to record. You agree to use the app for
           <strong> personal, non-commercial purposes</strong>.
@@ -38,22 +37,20 @@ export default function Terms() {
           changing your exercise routine.
         </p>
 
-        {/* 2. Account Registration */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
           2. Account Registration
         </h2>
         <p className="mb-4 leading-relaxed">
-          To use MoveNotes, you must provide a valid email address. We use a{" "}
-          <strong>passwordless email login</strong> method, which sends a
+          To use MoveNotes, you must provide a valid email address. We use a
+          <strong> passwordless email login</strong> method, which sends a
           one-time code to your email for authentication.
         </p>
         <p className="mb-4 leading-relaxed">
           If you choose to opt in to our newsletter, we may send occasional
-          updates or movement inspiration. This is entirely optional and can be
-          changed at any time in your settings.
+          updates or movement inspiration. This is optional and can be changed
+          at any time in your settings.
         </p>
 
-        {/* 3. User Conduct */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
           3. User Conduct
         </h2>
@@ -67,15 +64,13 @@ export default function Terms() {
           <li>Reverse-engineer or disrupt the platform</li>
         </ul>
 
-        {/* 4. Privacy and Data */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
           4. Privacy and Data
         </h2>
         <p className="mb-4 leading-relaxed">
           MoveNotes is designed to collect as little personal information as
           possible. We store your email, activity entries (including optional
-          notes and photos), and your preferences. We do not collect GPS
-          location or health sensor data.
+          notes and photos), and your preferences.
         </p>
         <p className="mb-4 leading-relaxed">
           For full details on how your information is handled, please read our{" "}
@@ -88,9 +83,27 @@ export default function Terms() {
           .
         </p>
 
-        {/* 5. Intellectual Property */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          5. Intellectual Property
+          5. Third-Party Integrations
+        </h2>
+        <p className="mb-4 leading-relaxed">
+          MoveNotes may integrate with third-party services such as Strava.
+        </p>
+        <p className="mb-4 leading-relaxed">
+          By connecting a third-party account, users authorize MoveNotes to
+          access limited information from that service in accordance with the
+          permissions granted.
+        </p>
+        <p className="mb-4 leading-relaxed">
+          MoveNotes is not affiliated with, endorsed by, or sponsored by Strava.
+        </p>
+        <p className="mb-4 leading-relaxed">
+          Use of Strava services remains subject to Strava's own terms and
+          policies.
+        </p>
+
+        <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
+          6. Intellectual Property
         </h2>
         <p className="mb-4 leading-relaxed">
           MoveNotes is open-source software. You retain full ownership of the
@@ -98,20 +111,18 @@ export default function Terms() {
           MoveNotes name, logo, design, and branding remain our property.
         </p>
 
-        {/* 6. Disclaimer */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          6. Disclaimer of Warranties
+          7. Disclaimer of Warranties
         </h2>
         <p className="mb-4 leading-relaxed">
-          MoveNotes is provided “as is,” without warranties of any kind. While
+          MoveNotes is provided "as is," without warranties of any kind. While
           we strive to keep the service stable, secure, and available, we cannot
           guarantee uninterrupted access or that all data will be preserved
           without error.
         </p>
 
-        {/* 7. Limitation of Liability */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          7. Limitation of Liability
+          8. Limitation of Liability
         </h2>
         <p className="mb-4 leading-relaxed">
           To the extent permitted by law, MoveNotes and its contributors are not
@@ -120,18 +131,16 @@ export default function Terms() {
           from your use of the app.
         </p>
 
-        {/* 8. Account Deletion */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          8. Account Deletion
+          9. Account Deletion
         </h2>
         <p className="mb-4 leading-relaxed">
           You may delete your account and request the removal of all associated
           data at any time, either through the app or by contacting us directly.
         </p>
 
-        {/* 9. Changes to Terms */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          9. Changes to These Terms
+          10. Changes to These Terms
         </h2>
         <p className="mb-4 leading-relaxed">
           We may update these Terms as MoveNotes evolves. The most recent
@@ -142,13 +151,11 @@ export default function Terms() {
           >
             movenotes.app/terms
           </a>
-          . Major changes will be announced through the app or via email (if you
-          opted in).
+          .
         </p>
 
-        {/* 10. Contact */}
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          10. Contact
+          11. Contact
         </h2>
         <p className="leading-relaxed">
           Questions about these Terms? Contact us at{" "}
@@ -159,6 +166,11 @@ export default function Terms() {
             info@movenotes.app
           </a>
           .
+        </p>
+
+        <p className="mt-8 text-sm text-movenotes-muted">
+          Strava is a registered trademark of Strava, Inc. MoveNotes is not
+          affiliated with or endorsed by Strava.
         </p>
       </div>
     </div>

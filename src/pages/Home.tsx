@@ -1,7 +1,7 @@
 // src/pages/Home.tsx
 import { useEffect, useMemo, useState, useRef } from "react";
 import AddActivityModal from "../features/activities/AddActivityModal";
-import { SelectActivityTypeModal } from "../components/SelectActivityTypeModal";
+import AddBottomSheet from "../components/AddBottomSheet";
 import Toast from "../components/Toast";
 import AddNoteModal from "../components/AddNoteModal";
 import EditActivityModal from "../features/activities/EditActivityModal";
@@ -11,6 +11,7 @@ import LogCTA from "../components/LogCTA";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import TinyTweakStrip from "../components/TinyTweakStrip";
 import JournalEntryCard from "../components/JournalEntryCard";
+import JournalEntryModal from "../components/JournalEntryModal";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { getCurrentUser } from "../services/auth.service";
@@ -53,8 +54,8 @@ export default function Home() {
 
   // Quick log / edit modals
   const {
-    showTypeSelector,
-    setShowTypeSelector,
+    showAddSheet,
+    setShowAddSheet,
     selectedType,
     setSelectedType,
     showQuickLog,
@@ -68,6 +69,8 @@ export default function Home() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
   const [noteOnlyActivityId, setNoteOnlyActivityId] = useState<string | null>(null);
+  const [journalEntryDraftOpen, setJournalEntryDraftOpen] = useState(false);
+  const [editingJournalEntry, setEditingJournalEntry] = useState<any | null>(null);
   const [circleEnabled, setCircleEnabled] = useState(false);
   const [quickFeelingSavingId, setQuickFeelingSavingId] = useState<string | null>(null);
   const [quickEffortSavingId, setQuickEffortSavingId] = useState<string | null>(null);
@@ -106,7 +109,7 @@ export default function Home() {
   const openQuickLog = () => {
     hideTooltip();
     setSelectedType(null);
-    setShowTypeSelector(true);
+    setShowAddSheet(true);
   };
 
   async function refreshActivities() {
@@ -425,6 +428,11 @@ export default function Home() {
                               <JournalEntryCard
                                 key={`journal-${a.id}`}
                                 entry={a}
+                                onClick={
+                                  a.entry_type === "journal_note"
+                                    ? () => setEditingJournalEntry(a)
+                                    : undefined
+                                }
                               />
                             );
                           }
@@ -491,7 +499,7 @@ export default function Home() {
 
         <button
           type="button"
-          aria-label="Add activity"
+          aria-label="Add"
           onClick={openQuickLog}
           className="fixed z-40 rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
           style={{
@@ -500,19 +508,44 @@ export default function Home() {
           }}
         >
           <span className="text-2xl leading-none">+</span>
-          <span className="text-sm font-semibold">Add activity</span>
+          <span className="text-sm font-semibold">Add</span>
         </button>
 
         {/* -------------------------------------------------- */}
         {/* MODALS & TOASTS                                    */}
         {/* -------------------------------------------------- */}
-        <SelectActivityTypeModal
-          open={showTypeSelector}
-          onClose={() => setShowTypeSelector(false)}
-          onSelect={(typeId) => {
+        <AddBottomSheet
+          open={showAddSheet}
+          onClose={() => setShowAddSheet(false)}
+          onSelectJournalEntry={() => {
+            setShowAddSheet(false);
+            setJournalEntryDraftOpen(true);
+          }}
+          onSelectActivity={(typeId) => {
             setSelectedType(typeId);
-            setShowTypeSelector(false);
+            setShowAddSheet(false);
             setShowQuickLog(true);
+          }}
+        />
+
+        <JournalEntryModal
+          open={journalEntryDraftOpen || Boolean(editingJournalEntry)}
+          entry={editingJournalEntry}
+          onClose={() => {
+            setJournalEntryDraftOpen(false);
+            setEditingJournalEntry(null);
+          }}
+          onSaved={() => {
+            setJournalEntryDraftOpen(false);
+            setEditingJournalEntry(null);
+            setToastMessage("Journal entry saved");
+            void refreshActivities();
+          }}
+          onDeleted={() => {
+            setJournalEntryDraftOpen(false);
+            setEditingJournalEntry(null);
+            setToastMessage("Journal entry deleted");
+            void refreshActivities();
           }}
         />
 
