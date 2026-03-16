@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Trash2 } from "lucide-react";
+import ModalSheet from "./ModalSheet";
 import {
   createJournalEntry,
   deleteJournalEntry,
@@ -56,9 +57,10 @@ export default function JournalEntryModal({
     setSaving(true);
     setError(null);
 
-    const result = isEditMode && entry?.id
-      ? await updateJournalEntryText(entry.id, trimmedNote)
-      : await createJournalEntry(trimmedNote);
+    const result =
+      isEditMode && entry?.id
+        ? await updateJournalEntryText(entry.id, trimmedNote)
+        : await createJournalEntry(trimmedNote);
 
     if (result.error) {
       setError(result.error.message || "Could not save journal entry.");
@@ -90,70 +92,57 @@ export default function JournalEntryModal({
 
   if (!open) return null;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[80] bg-black/40 flex items-center justify-center px-4"
-      onClick={onClose}
+  return (
+    <ModalSheet
+      onClose={onClose}
+      sheetClassName="max-w-md sm:max-w-2xl max-h-[96vh] overflow-y-auto sm:rounded-2xl sm:mt-20"
     >
-      <div
-        className="w-full max-w-lg rounded-2xl border border-warm-200 bg-warm-100 shadow-xl p-5 sm:p-6"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-4 text-center">
-          <h2 className="text-lg font-semibold text-gray-900">Journal entry</h2>
+      <h2 className="text-lg font-semibold text-center mb-4">
+        {isEditMode ? "Edit journal entry" : "Journal entry"}
+      </h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm text-gray-700">Notes</label>
+          <textarea
+            ref={textareaRef}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={8}
+            placeholder="Write what is on your mind..."
+            className="w-full rounded-xl bg-white/70 border border-warm-200/70 p-4 mt-1 text-base text-gray-800 placeholder:text-gray-400 resize-none focus:ring-2 focus:ring-movenotes-primary/30 focus:border-movenotes-primary/30 transition"
+          />
         </div>
 
-        <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-        <textarea
-          ref={textareaRef}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          rows={8}
-          placeholder="Write what is on your mind..."
-          className="w-full rounded-xl border border-warm-200 bg-white/80 px-4 py-3 text-base text-gray-900 outline-none focus:border-movenotes-primary focus:ring-2 focus:ring-movenotes-primary/20 resize-y"
-        />
-
         {error && (
-          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </div>
         )}
-
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <div>
-            {isEditMode && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={saving || deleting}
-                className="text-sm font-medium text-red-600 disabled:opacity-60"
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 ml-auto">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving || deleting}
-              className="text-sm font-medium text-gray-600 disabled:opacity-60"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!canSave}
-              className="rounded-full bg-movenotes-primary px-4 py-2 text-sm font-semibold text-primary-text disabled:opacity-60"
-            >
-              {saving ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </div>
       </div>
-    </div>,
-    document.body
+
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={!canSave}
+        className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50 mt-5"
+      >
+        {saving ? "Saving..." : "Save"}
+      </button>
+
+      {isEditMode && (
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={saving || deleting}
+          className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition disabled:opacity-50"
+        >
+          {deleting ? "Deleting..." : (<>
+            <Trash2 className="inline w-4 h-4 mr-1 -mt-0.5" />
+            Delete Entry
+          </>)}
+        </button>
+      )}
+    </ModalSheet>
   );
 }
