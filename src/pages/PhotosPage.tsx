@@ -21,7 +21,17 @@ export default function PhotosPage() {
 
   const { activities, initialFeedLoaded, loadMore, hasMoreFeed, isLoading } =
     useHomeFeed(userId);
-  const gallery = useGalleryLightbox(NOTE_STORAGE_BUCKET);
+  const {
+    open: galleryOpen,
+    items: galleryOpenItems,
+    activeIndex: galleryActiveIndex,
+    signedImages,
+    signedThumbs,
+    openGallery,
+    replaceItems,
+    closeGallery,
+    setActiveIndex,
+  } = useGalleryLightbox(NOTE_STORAGE_BUCKET);
 
   useEffect(() => {
     const load = async () => {
@@ -34,14 +44,14 @@ export default function PhotosPage() {
   }, []);
 
   useEffect(() => {
-    setChromeHidden(gallery.open);
+    setChromeHidden(galleryOpen);
     return () => setChromeHidden(false);
-  }, [gallery.open, setChromeHidden]);
+  }, [galleryOpen, setChromeHidden]);
 
   const handleCloseGallery = useCallback(() => {
-    gallery.closeGallery();
+    closeGallery();
     suppressGridTapUntilRef.current = Date.now() + 400;
-  }, [gallery]);
+  }, [closeGallery]);
 
   const photoActivities = useMemo(
     () => activities.filter((activity) => getActivityPhotos(activity).length > 0),
@@ -58,6 +68,18 @@ export default function PhotosPage() {
     () => buildGalleryItemsForActivities(orderedPhotos),
     [orderedPhotos]
   );
+
+  useEffect(() => {
+    if (!galleryOpen) return;
+    const activeKey = galleryOpenItems[galleryActiveIndex]?.key ?? null;
+    replaceItems(galleryItems, activeKey);
+  }, [
+    galleryActiveIndex,
+    galleryOpen,
+    galleryOpenItems,
+    galleryItems,
+    replaceItems,
+  ]);
 
   useEffect(() => {
     if (!initialFeedLoaded) return;
@@ -83,6 +105,20 @@ export default function PhotosPage() {
     observer.observe(target);
     return () => observer.disconnect();
   }, [hasMoreFeed, isLoading, loadMore]);
+
+  useEffect(() => {
+    if (!galleryOpen) return;
+    if (!hasMoreFeed || isLoading) return;
+    if (galleryActiveIndex < galleryOpenItems.length - 3) return;
+    loadMore();
+  }, [
+    galleryActiveIndex,
+    galleryOpen,
+    galleryOpenItems.length,
+    hasMoreFeed,
+    isLoading,
+    loadMore,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,7 +160,7 @@ export default function PhotosPage() {
 
   const openViewer = (startIndex: number) => {
     if (galleryItems.length === 0) return;
-    gallery.openGallery(galleryItems, startIndex);
+    openGallery(galleryItems, startIndex);
   };
 
   const hasPhotos = galleryItems.length > 0;
@@ -174,13 +210,13 @@ export default function PhotosPage() {
       </div>
 
       <GalleryLightbox
-        open={gallery.open}
-        items={gallery.items}
-        activeIndex={gallery.activeIndex}
-        onActiveIndexChange={gallery.setActiveIndex}
+        open={galleryOpen}
+        items={galleryOpenItems}
+        activeIndex={galleryActiveIndex}
+        onActiveIndexChange={setActiveIndex}
         onClose={handleCloseGallery}
-        signedImages={gallery.signedImages}
-        signedThumbs={gallery.signedThumbs}
+        signedImages={signedImages}
+        signedThumbs={signedThumbs}
         showDots={false}
       />
     </div>

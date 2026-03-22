@@ -38,6 +38,25 @@ export function useGalleryLightbox(bucket: string) {
     signedThumbsRef.current = {};
   }, []);
 
+  const replaceItems = useCallback(
+    (nextItems: GalleryItem[], activeKey?: string | null) => {
+      if (!nextItems || nextItems.length === 0) {
+        closeGallery();
+        return;
+      }
+
+      setItems(nextItems);
+      setActiveIndex((prevIndex) => {
+        if (activeKey) {
+          const nextIndex = nextItems.findIndex((item) => item.key === activeKey);
+          if (nextIndex >= 0) return nextIndex;
+        }
+        return clampIndex(prevIndex, nextItems.length);
+      });
+    },
+    [closeGallery]
+  );
+
   const updateSignedImages = useCallback((updater: (prev: Record<string, string>) => Record<string, string>) => {
     setSignedImages((prev) => {
       const next = updater(prev);
@@ -135,6 +154,7 @@ export function useGalleryLightbox(bucket: string) {
     signedImages,
     signedThumbs,
     openGallery,
+    replaceItems,
     closeGallery,
     setActiveIndex: (index: number) => setActiveIndex(clampIndex(index, items.length)),
   };
