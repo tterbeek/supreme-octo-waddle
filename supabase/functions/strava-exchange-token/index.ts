@@ -16,6 +16,30 @@ const jsonResponse = (status: number, payload: Record<string, unknown>) =>
     },
   });
 
+const revokeStravaAuthorization = async (accessToken: string) => {
+  const deauthPayload = new URLSearchParams({ access_token: accessToken });
+  const deauthRes = await fetch("https://www.strava.com/oauth/deauthorize", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: deauthPayload.toString(),
+  });
+
+  if (!deauthRes.ok) {
+    let body: any = null;
+    try {
+      body = await deauthRes.json();
+    } catch {
+      body = null;
+    }
+    const message = typeof body?.message === "string" ? body.message : "";
+    console.warn(
+      "[strava-exchange-token] Deauthorize failed:",
+      deauthRes.status,
+      message || "(no message)"
+    );
+  }
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -106,6 +130,9 @@ Deno.serve(async (req) => {
   const expiresAt = stravaJson?.expires_at;
 
   if (!athleteId || !accessToken || !refreshToken || !expiresAt) {
+    if (typeof accessToken === "string" && accessToken) {
+      await revokeStravaAuthorization(accessToken);
+    }
     return jsonResponse(400, { error: "Unexpected response from Strava." });
   }
 
@@ -127,6 +154,9 @@ Deno.serve(async (req) => {
     );
 
   if (upsertError) {
+    // Ensure we do not leave a lingering Strava authorization if persistence failed.
+    await revokeStravaAuthorization(accessToken);
+
     if (
       upsertError.code === "23505" &&
       upsertError.message?.includes?.(
