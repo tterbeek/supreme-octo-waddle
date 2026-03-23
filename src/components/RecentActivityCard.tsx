@@ -10,7 +10,6 @@ import {
   IconBoxMultiple8,
   IconBoxMultiple9,
   IconShare,
-  IconShareOff,
 } from "@tabler/icons-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
@@ -224,15 +223,11 @@ export default function RecentActivityCard({
               disabled={sharingWithCircle}
               aria-label={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
               title={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
-              className={`text-movenotes-primary disabled:opacity-60 ${
-                sharingWithCircle ? "animate-pulse" : ""
-              }`}
+              className={`disabled:opacity-60 ${
+                sharedWithCircle ? "text-movenotes-primary" : "text-gray-400"
+              } ${sharingWithCircle ? "animate-pulse" : ""}`}
             >
-              {sharedWithCircle ? (
-                <IconShareOff size={16} strokeWidth={1.9} />
-              ) : (
-                <IconShare size={16} strokeWidth={1.9} />
-              )}
+              <IconShare size={16} strokeWidth={1.9} />
             </button>
           )}
         </div>
