@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchFeedPage } from "../services/activities.service";
+import {
+  ACTIVITY_LOCATION_UPDATED_EVENT,
+  type ActivityLocationUpdatedDetail,
+} from "../services/activityLocation.service";
 
 const FEED_PAGE_SIZE = 20;
 
@@ -52,6 +56,34 @@ export function useHomeFeed(userId: string | null) {
   }, [refresh]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleLocationUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<ActivityLocationUpdatedDetail>).detail;
+      if (!detail?.activityId) return;
+
+      setActivities((prev) =>
+        prev.map((item) =>
+          item?.id === detail.activityId
+            ? { ...item, locationTag: detail.locationTag }
+            : item
+        )
+      );
+    };
+
+    window.addEventListener(
+      ACTIVITY_LOCATION_UPDATED_EVENT,
+      handleLocationUpdate as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        ACTIVITY_LOCATION_UPDATED_EVENT,
+        handleLocationUpdate as EventListener
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     const handleScroll = () => {
       if (
         window.innerHeight + window.scrollY >=
@@ -77,6 +109,7 @@ export function useHomeFeed(userId: string | null) {
         a.title,
         a.notes,
         a.type,
+        a.locationTag?.value,
         a.entry_text,
         a.text,
         metaText,

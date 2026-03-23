@@ -5,6 +5,7 @@ import {
 } from "../lib/resolveActivityFields";
 import { resolveEditFields } from "../lib/resolveEditActivityFields";
 import { kmToMiles, milesToKm, roundDurationMinutes } from "../lib/units";
+import { extractPhotoGps } from "../lib/exifGps";
 import { getActivityPhotos, MAX_ACTIVITY_PHOTOS } from "../lib/photos";
 import { getCurrentUser } from "../services/auth.service";
 import { fetchActivityPreference } from "../services/quickLog.service";
@@ -18,6 +19,7 @@ import {
   deleteActivityPhotosByActivity,
   insertActivityPhotos,
 } from "../services/activityPhotos.service";
+import { resolveActivityLocationTag } from "../services/activityLocation.service";
 import { updateActivity, deleteActivity } from "../services/activity.service";
 import {
   createEquipment,
@@ -247,9 +249,15 @@ export function useActivityEditForm({
         const currentUserId = await ensureUserId();
         if (!currentUserId) throw new Error("No user");
 
-        const uploads: Array<{ imagePath: string; thumbPath: string | null }> = [];
+        const uploads: Array<{
+          imagePath: string;
+          thumbPath: string | null;
+          lat: number | null;
+          lng: number | null;
+        }> = [];
 
         for (const file of selectedFiles) {
+          const coords = await extractPhotoGps(file);
           const compressed = await compressImage(file);
           bump();
           const thumbnail = await createThumbnail(file);
@@ -262,13 +270,20 @@ export function useActivityEditForm({
             thumbnail
           );
           bump();
-          uploads.push({ imagePath, thumbPath: thumbPath ?? null });
+          uploads.push({
+            imagePath,
+            thumbPath: thumbPath ?? null,
+            lat: coords?.lat ?? null,
+            lng: coords?.lng ?? null,
+          });
         }
 
         const insertRows = uploads.map((upload, index) => ({
           imagePath: upload.imagePath,
           thumbPath: upload.thumbPath ?? null,
           sortOrder: existingPhotoCount + index,
+          lat: upload.lat,
+          lng: upload.lng,
         }));
         const { error: insertError } = await insertActivityPhotos(
           currentUserId,
@@ -321,6 +336,10 @@ export function useActivityEditForm({
 
       if (equipmentError) {
         throw equipmentError;
+      }
+
+      if (removeExistingPhotos || selectedFiles.length > 0) {
+        void resolveActivityLocationTag(activity.id);
       }
     } catch (err: any) {
       console.error("[EditActivity] Save error:", err);

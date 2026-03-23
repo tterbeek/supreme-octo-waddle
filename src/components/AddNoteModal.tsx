@@ -5,7 +5,9 @@ import { Camera } from "lucide-react";
 import { supabase } from "../supabaseClient";
 import { getCurrentUser } from "../services/auth.service";
 import { compressImage, createThumbnail, uploadActivityImage } from "../services/activityMedia.service";
+import { extractPhotoGps } from "../lib/exifGps";
 import { fetchActivityPhotoCount, insertActivityPhotos } from "../services/activityPhotos.service";
+import { resolveActivityLocationTag } from "../services/activityLocation.service";
 import { MAX_ACTIVITY_PHOTOS } from "../lib/photos";
 
 interface AddNoteModalProps {
@@ -149,9 +151,15 @@ export default function AddNoteModal({
         const user = await getCurrentUser();
         if (!user) throw new Error("No user");
 
-        const uploads: Array<{ imagePath: string; thumbPath: string | null }> = [];
+        const uploads: Array<{
+          imagePath: string;
+          thumbPath: string | null;
+          lat: number | null;
+          lng: number | null;
+        }> = [];
 
         for (const file of selectedFiles) {
+          const coords = await extractPhotoGps(file);
           const compressed = await compressImage(file);
           bump();
           const thumbnail = await createThumbnail(file);
@@ -164,7 +172,12 @@ export default function AddNoteModal({
             thumbnail
           );
           bump();
-          uploads.push({ imagePath, thumbPath: thumbPath ?? null });
+          uploads.push({
+            imagePath,
+            thumbPath: thumbPath ?? null,
+            lat: coords?.lat ?? null,
+            lng: coords?.lng ?? null,
+          });
         }
 
         if (uploads.length > 0) {
@@ -172,12 +185,14 @@ export default function AddNoteModal({
             imagePath: upload.imagePath,
             thumbPath: upload.thumbPath ?? null,
             sortOrder: existingCount + index,
+            lat: upload.lat,
+            lng: upload.lng,
           }));
-        const { error: insertError } = await insertActivityPhotos(
-          user.id,
-          activityId,
-          rows
-        );
+          const { error: insertError } = await insertActivityPhotos(
+            user.id,
+            activityId,
+            rows
+          );
           if (insertError) throw insertError;
         }
 
@@ -195,6 +210,9 @@ export default function AddNoteModal({
       }
 
       await supabase.from("activities").update(updatePayload).eq("id", activityId);
+      if (selectedFiles.length > 0) {
+        void resolveActivityLocationTag(activityId);
+      }
 
       setUploadProgress(100);
       setSaving(false);

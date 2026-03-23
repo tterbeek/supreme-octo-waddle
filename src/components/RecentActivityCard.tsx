@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Frown, Laugh, Meh, Smile, Zap } from "lucide-react";
+import { Frown, Laugh, MapPin, Meh, Smile, Zap } from "lucide-react";
 import {
   IconBoxMultiple2,
   IconBoxMultiple3,
@@ -91,12 +91,19 @@ export default function RecentActivityCard({
   const equipmentName = (() => {
     if (!equipmentItems.length) return "";
     const first = equipmentItems[0];
-    if (!first?.name) return "";
-    const maxLen = 26;
-    return first.name.length > maxLen
-      ? `${first.name.slice(0, maxLen - 3)}...`
-      : first.name;
+    return typeof first?.name === "string" ? first.name.trim() : "";
   })();
+  const locationName =
+    typeof activity.locationTag?.value === "string"
+      ? activity.locationTag.value.trim()
+      : "";
+  const durationLabel =
+    activity.duration_min != null
+      ? formatDurationMinutes(Number(activity.duration_min))
+      : null;
+  const metricParts = [formattedDistance, durationLabel].filter(
+    (value): value is string => Boolean(value)
+  );
   const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
   const photoCount = getActivityPhotos(activity).length;
   const stravaSource = activity.source === "strava";
@@ -234,21 +241,43 @@ export default function RecentActivityCard({
           <div className="text-xs text-gray-500 mb-1">{stravaSportLabel}</div>
         )}
 
-        <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1 flex-wrap">
-          {formattedDistance && (
-            <>
-              <span>{formattedDistance}</span>
-              <span className="text-gray-400">·</span>
-            </>
-          )}
-          {activity.duration_min != null && (
-            <>
-              <span>{formatDurationMinutes(Number(activity.duration_min))}</span>
-              <span className="text-gray-400">·</span>
-            </>
-          )}
-          {equipmentName && <span className="text-gray-600">{equipmentName}</span>}
-        </div>
+        {metricParts.length > 0 && (
+          <div className="text-sm md:text-base text-gray-700 flex items-center justify-center gap-2 mb-1 flex-wrap">
+            {metricParts.map((part, index) => (
+              <span key={`${part}-${index}`} className="inline-flex items-center gap-2">
+                {index > 0 && <span className="text-gray-400">·</span>}
+                <span>{part}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {(locationName || equipmentName) && (
+          <div className="mb-1 flex items-center justify-center gap-2 text-sm text-gray-600 min-w-0 overflow-hidden whitespace-nowrap">
+            {locationName && (
+              <span
+                className={`inline-flex min-w-0 items-center gap-1 ${
+                  equipmentName ? "max-w-[55%]" : "max-w-full"
+                }`}
+              >
+                <MapPin size={14} strokeWidth={1.8} className="shrink-0" />
+                <span className="truncate">{locationName}</span>
+              </span>
+            )}
+            {locationName && equipmentName && (
+              <span className="shrink-0 text-gray-400">·</span>
+            )}
+            {equipmentName && (
+              <span
+                className={`min-w-0 truncate ${
+                  locationName ? "max-w-[45%]" : "max-w-full"
+                }`}
+              >
+                {equipmentName}
+              </span>
+            )}
+          </div>
+        )}
 
         {(showFeeling || showEffort) && (
           <div className="flex items-center justify-center gap-3 my-3">

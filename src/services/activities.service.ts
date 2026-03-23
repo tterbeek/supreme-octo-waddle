@@ -1,4 +1,5 @@
 import { supabase } from "../supabaseClient";
+import { attachLocationTagsToActivities } from "./activityLocation.service";
 
 export async function fetchActivitiesForGoals(userId: string, cutoffStr: string) {
   const { data, error } = await supabase
@@ -20,7 +21,13 @@ export async function fetchFeedPage(
     p_offset: offset,
   });
 
-  return { data: data || [], error };
+  const rows = data || [];
+  if (error) {
+    return { data: rows, error };
+  }
+
+  const taggedRows = await attachLocationTagsToActivities(rows);
+  return { data: taggedRows, error };
 }
 
 export async function restoreActivity(activity: any) {

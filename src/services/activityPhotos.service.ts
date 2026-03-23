@@ -4,6 +4,8 @@ type InsertPhotoInput = {
   imagePath: string;
   thumbPath: string | null;
   sortOrder: number;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export async function fetchActivityPhotoCount(activityId: string) {
@@ -28,6 +30,8 @@ export async function insertActivityPhotos(
     image_path: photo.imagePath,
     thumb_path: photo.thumbPath,
     sort_order: photo.sortOrder,
+    lat: photo.lat ?? null,
+    lng: photo.lng ?? null,
   }));
 
   const { error } = await supabase.from("activity_photos").insert(rows);

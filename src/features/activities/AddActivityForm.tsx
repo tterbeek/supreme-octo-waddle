@@ -72,8 +72,8 @@ export default function AddActivityForm({
     setShowOptionalDuration,
     setShowMetricTooltip,
     setMetricTooltipAcknowledged,
-    usePreset,
-    useCustom,
+    usePreset: applyPreset,
+    useCustom: resetToCustom,
     save,
   } = useQuickLogForm({
     initialType,
@@ -110,8 +110,8 @@ export default function AddActivityForm({
         <PresetsBar
           presets={filteredPresets}
           activePreset={activePreset}
-          onSelectPreset={usePreset}
-          onSelectCustom={useCustom}
+          onSelectPreset={applyPreset}
+          onSelectCustom={resetToCustom}
           onOpenMore={() => setShowMorePresets(true)}
         />
 
@@ -183,7 +183,7 @@ export default function AddActivityForm({
             {/* Custom goes FIRST */}
             <button
               onClick={() => {
-                useCustom();
+                resetToCustom();
                 setShowMorePresets(false);
               }}
               className="p-3 border rounded-md text-left bg-amber-50"
@@ -198,7 +198,7 @@ export default function AddActivityForm({
               <button
                 key={p.id}
                 onClick={() => {
-                  usePreset(p);
+                  applyPreset(p);
                   setShowMorePresets(false);
                 }}
                 className="p-3 border rounded-md text-left"

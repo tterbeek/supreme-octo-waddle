@@ -26,6 +26,12 @@ import {
   hasCircleAccess,
 } from "../services/circle.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
+import {
+  ACTIVITY_LOCATION_UPDATED_EVENT,
+  attachLocationTagsToActivities,
+  type ActivityLocationTag,
+  type ActivityLocationUpdatedDetail,
+} from "../services/activityLocation.service";
 
 type CalendarActivity = {
   entry_kind?: "activity";
@@ -58,6 +64,7 @@ type CalendarActivity = {
     notes?: string | null;
     is_active?: boolean | null;
   }>;
+  locationTag?: ActivityLocationTag | null;
 };
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -76,6 +83,18 @@ type CalendarJournalEntry = {
 type CalendarFeedEntry = CalendarActivity | CalendarJournalEntry;
 
 const EMPTY_DAY_ENTRIES: CalendarFeedEntry[] = [];
+
+type CalendarMonthRowProps = {
+  minMonthIndex: number | null;
+  loadingMonths: Record<string, boolean>;
+  buildCalendarCells: (monthDate: Date) => Array<{ key: string; dayNumber: number } | null>;
+  fetchMonthActivities: (monthDate: Date) => Promise<void>;
+  entriesByDate: Record<string, CalendarFeedEntry[]>;
+  todayKey: string;
+  selectedDate: string | null;
+  dayThumbs: Record<string, string>;
+  openDay: (dayKey: string) => void;
+};
 
 const toMonthIndex = (d: Date) => d.getFullYear() * 12 + d.getMonth();
 
@@ -267,6 +286,7 @@ export default function CalendarPage() {
                 .filter(Boolean) || [];
             return { ...activity, equipment };
           }) || [];
+        const taggedActivities = await attachLocationTagsToActivities(mappedActivities);
 
         const mappedJournalEntries =
           journalResult.data?.map((entry) => ({
@@ -278,7 +298,7 @@ export default function CalendarPage() {
 
         setMonthActivities((prev) => ({
           ...prev,
-          [key]: mappedActivities,
+          [key]: taggedActivities,
         }));
         setMonthJournalEntries((prev) => ({
           ...prev,
@@ -359,6 +379,45 @@ export default function CalendarPage() {
       }
     })();
   }, [fetchFirstEntryDate, todayMonthIndex, userId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleLocationUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<ActivityLocationUpdatedDetail>).detail;
+      if (!detail?.activityId) return;
+
+      setMonthActivities((prev) => {
+        let changed = false;
+        const next = Object.fromEntries(
+          Object.entries(prev).map(([monthKey, items]) => {
+            const nextItems = items.map((activity) => {
+              if (activity.id !== detail.activityId) return activity;
+              changed = true;
+              return {
+                ...activity,
+                locationTag: detail.locationTag,
+              };
+            });
+            return [monthKey, nextItems];
+          })
+        );
+
+        return changed ? next : prev;
+      });
+    };
+
+    window.addEventListener(
+      ACTIVITY_LOCATION_UPDATED_EVENT,
+      handleLocationUpdate as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        ACTIVITY_LOCATION_UPDATED_EVENT,
+        handleLocationUpdate as EventListener
+      );
+    };
+  }, []);
 
   const openDay = (key: string) => {
     setSelectedDate(key);
@@ -604,12 +663,33 @@ export default function CalendarPage() {
     [itemCount, minMonthIndex, scrollToDefaultMonth]
   );
 
-  const MonthRow = ({ index, style, ariaAttributes }: RowComponentProps) => {
-    if (minMonthIndex == null) {
+  const MonthRow = ({
+    index,
+    style,
+    ariaAttributes,
+    minMonthIndex: rowMinMonthIndex,
+    loadingMonths: rowLoadingMonths,
+    buildCalendarCells: rowBuildCalendarCells,
+    fetchMonthActivities: rowFetchMonthActivities,
+    entriesByDate: rowEntriesByDate,
+    todayKey: rowTodayKey,
+    selectedDate: rowSelectedDate,
+    dayThumbs: rowDayThumbs,
+    openDay: rowOpenDay,
+  }: RowComponentProps<CalendarMonthRowProps>) => {
+    useEffect(() => {
+      if (rowMinMonthIndex == null) return;
+      const monthIndex = rowMinMonthIndex + index;
+      const { year, month } = fromMonthIndex(monthIndex);
+      const monthDate = new Date(year, month, 1);
+      void rowFetchMonthActivities(monthDate);
+    }, [index, rowFetchMonthActivities, rowMinMonthIndex]);
+
+    if (rowMinMonthIndex == null) {
       return <div style={style} {...ariaAttributes} />;
     }
 
-    const monthIndex = minMonthIndex + index;
+    const monthIndex = rowMinMonthIndex + index;
     const { year, month } = fromMonthIndex(monthIndex);
     const monthDate = new Date(year, month, 1);
     const monthKey = formatMonthKey(monthDate);
@@ -617,21 +697,17 @@ export default function CalendarPage() {
       month: "long",
       year: "numeric",
     });
-    const calendarCells = buildCalendarCells(monthDate);
-
-    useEffect(() => {
-      fetchMonthActivities(monthDate);
-    }, [fetchMonthActivities, monthIndex]);
+    const calendarCells = rowBuildCalendarCells(monthDate);
 
     return (
       <div style={style} className="px-4 mb-2" {...ariaAttributes}>
         <section
-          id={`month-${monthKey}`}
-          className="max-w-3xl mx-auto rounded-2xl border border-movenotes-border bg-movenotes-surface p-3 shadow-sm h-full"
-        >
+            id={`month-${monthKey}`}
+            className="max-w-3xl mx-auto rounded-2xl border border-movenotes-border bg-movenotes-surface p-3 shadow-sm h-full"
+          >
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-movenotes-text">{label}</h2>
-            {loadingMonths[monthKey] && (
+            {rowLoadingMonths[monthKey] && (
               <span className="text-xs text-movenotes-muted">Loading…</span>
             )}
           </div>
@@ -651,11 +727,11 @@ export default function CalendarPage() {
               }
 
               const { key, dayNumber } = cell;
-              const entries = entriesByDate[key] || [];
-              const isToday = key === todayKey;
-              const isSelected = key === selectedDate;
-              const isFuture = key > todayKey;
-              const thumbUrl = dayThumbs[key];
+              const entries = rowEntriesByDate[key] || [];
+              const isToday = key === rowTodayKey;
+              const isSelected = key === rowSelectedDate;
+              const isFuture = key > rowTodayKey;
+              const thumbUrl = rowDayThumbs[key];
               const hasEntry = entries.length > 0;
               const backgroundClass = thumbUrl
                 ? ""
@@ -678,7 +754,7 @@ export default function CalendarPage() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => openDay(key)}
+                  onClick={() => rowOpenDay(key)}
                   className={`relative h-10 sm:h-11 md:h-12 w-full rounded-xl border text-center p-1 flex flex-col items-center justify-center gap-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-movenotes-primary overflow-hidden ${
                     hasEntry
                       ? `border-movenotes-border ${backgroundClass} hover:border-movenotes-primary/70`
@@ -729,7 +805,17 @@ export default function CalendarPage() {
             className="hide-scrollbar"
             style={listStyle}
             rowComponent={MonthRow}
-            rowProps={{}}
+            rowProps={{
+              minMonthIndex,
+              loadingMonths,
+              buildCalendarCells,
+              fetchMonthActivities,
+              entriesByDate,
+              todayKey,
+              selectedDate,
+              dayThumbs,
+              openDay,
+            }}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-movenotes-muted">
