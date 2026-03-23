@@ -5,6 +5,7 @@ import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { fetchActivityPreferences } from "../lib/fetchActivityPreferences";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { kmToMiles } from "../lib/units";
+import { formatDurationMinutes } from "../lib/units";
 import EquipmentFormSheet from "../components/EquipmentFormSheet";
 import ModalSheet from "../components/ModalSheet";
 import {
@@ -112,14 +113,8 @@ const formatApproxDistance = (km: number, unitSystem: "metric" | "imperial") => 
 
 const formatApproxDuration = (minutes: number) => {
   if (minutes <= 0) return "";
-  if (minutes < 60) {
-    const rounded = Math.round(minutes);
-    if (rounded < 1) return "";
-    return `about ${rounded} min`;
-  }
-  const hours = Math.round(minutes / 60);
-  if (hours < 1) return "";
-  return `about ${hours} ${hours === 1 ? "hour" : "hours"}`;
+  const formatted = formatDurationMinutes(minutes);
+  return formatted ? `about ${formatted}` : "";
 };
 
 const pluralize = (noun: string, count: number) => {

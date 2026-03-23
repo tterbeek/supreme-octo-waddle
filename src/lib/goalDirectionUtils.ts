@@ -1,7 +1,7 @@
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import type { GoalStat } from "../hooks/useGoalTrackingStats";
 import type { UnitSystem } from "./units";
-import { formatDistance } from "./units";
+import { formatDistance, formatDurationMinutes } from "./units";
 
 export type GoalDirectionGroup = {
   activity_type: GoalStat["activity_type"];
@@ -80,7 +80,7 @@ export const formatTargetValue = (
 ) => {
   const { target } = normalizeGoalValues(goal);
   if (goal.metric === "distance") return formatDistance(target, unitSystem);
-  if (goal.metric === "duration") return `${target} min`;
+  if (goal.metric === "duration") return formatDurationMinutes(target);
   const noun = getCountNoun(goal.activity_type, activityNoun);
   return `${target} ${pluralize(noun, target)}`;
 };
@@ -92,7 +92,7 @@ export const formatProgressValue = (
 ) => {
   const { progress } = normalizeGoalValues(goal);
   if (goal.metric === "distance") return formatDistance(progress, unitSystem);
-  if (goal.metric === "duration") return `${progress} min`;
+  if (goal.metric === "duration") return formatDurationMinutes(progress);
   const noun = getCountNoun(goal.activity_type, activityNoun);
   return `${progress} ${pluralize(noun, progress)}`;
 };

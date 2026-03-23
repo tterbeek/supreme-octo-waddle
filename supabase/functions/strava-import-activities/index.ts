@@ -1,4 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import polyline from "npm:@mapbox/polyline";
+import {
+  getLocationPriority,
+  resolveLocation,
+  type ResolvedLocation,
+} from "../_shared/locationResolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +59,10 @@ type StravaActivity = {
   moving_time?: number | null;
   elapsed_time?: number | null;
   distance?: number | null;
+  start_latlng?: [number, number] | null;
+  map?: {
+    summary_polyline?: string | null;
+  } | null;
 };
 
 type StravaConnectionRow = {
@@ -60,6 +70,11 @@ type StravaConnectionRow = {
   access_token: string;
   refresh_token: string;
   token_expires_at: string;
+};
+
+type RepresentativeCoord = {
+  lat: number;
+  lng: number;
 };
 
 type NormalizedImportedActivity = {
@@ -124,23 +139,153 @@ const metersToKm = (value?: number | null): number | null => {
   return Math.round((value / 1000) * 100) / 100;
 };
 
+const dedupeCoords = (coords: RepresentativeCoord[]) => {
+  const seen = new Set<string>();
+  return coords.filter((coord) => {
+    const key = `${coord.lat.toFixed(5)},${coord.lng.toFixed(5)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const getRepresentativeCoords = (activity: StravaActivity): RepresentativeCoord[] => {
+  const summaryPolyline = activity?.map?.summary_polyline;
+
+  const fallbackStart = (() => {
+    if (
+      Array.isArray(activity.start_latlng) &&
+      activity.start_latlng.length === 2 &&
+      typeof activity.start_latlng[0] === "number" &&
+      typeof activity.start_latlng[1] === "number"
+    ) {
+      return [{ lat: activity.start_latlng[0], lng: activity.start_latlng[1] }];
+    }
+    return [];
+  })();
+
+  if (!summaryPolyline) {
+    return fallbackStart;
+  }
+
+  let decoded: number[][] = [];
+  try {
+    decoded = polyline.decode(summaryPolyline) as number[][];
+  } catch {
+    decoded = [];
+  }
+
+  if (decoded.length === 0) {
+    return fallbackStart;
+  }
+
+  const sampleIndexes = [0.25, 0.5, 0.75].map((fraction) =>
+    Math.min(decoded.length - 1, Math.floor(decoded.length * fraction))
+  );
+
+  const sampledCoords = sampleIndexes
+    .map((index) => decoded[index])
+    .filter(
+      (point): point is [number, number] =>
+        Array.isArray(point) &&
+        point.length === 2 &&
+        typeof point[0] === "number" &&
+        typeof point[1] === "number"
+    )
+    .map(([lat, lng]) => ({ lat, lng }));
+
+  return dedupeCoords(sampledCoords);
+};
+
+const resolveBestLocation = async (
+  coords: RepresentativeCoord[],
+  params: {
+    serviceClient: ReturnType<typeof createClient> | null;
+    googleMapsApiKey?: string | null;
+  }
+): Promise<ResolvedLocation | null> => {
+  if (!params.serviceClient || !params.googleMapsApiKey || coords.length === 0) {
+    return null;
+  }
+
+  const results: ResolvedLocation[] = [];
+
+  for (const coord of coords) {
+    const resolved = await resolveLocation({
+      serviceClient: params.serviceClient,
+      googleMapsApiKey: params.googleMapsApiKey,
+      lat: coord.lat,
+      lng: coord.lng,
+      logPrefix: "[strava-import-activities]",
+    });
+    if (resolved) {
+      results.push(resolved);
+    }
+  }
+
+  if (results.length === 0) return null;
+
+  results.sort((a, b) => getLocationPriority(a.type) - getLocationPriority(b.type));
+  return results[0];
+};
+
+const generateTitle = (
+  activityType: MoveNotesActivityType,
+  placeName: string | null
+) => {
+  if (!placeName) return null;
+
+  const labels: Record<MoveNotesActivityType, string> = {
+    run: "Run",
+    ride: "Ride",
+    walk: "Walk",
+    strength: "Workout",
+    yoga: "Yoga",
+    hike: "Hike",
+    swim: "Swim",
+    restore: "Recovery",
+    other: "Activity",
+  };
+
+  return `${labels[activityType] || "Activity"} in ${placeName}`;
+};
+
+const getSmartActivityTitle = async (
+  activity: StravaActivity,
+  activityType: MoveNotesActivityType,
+  params: {
+    serviceClient: ReturnType<typeof createClient> | null;
+    googleMapsApiKey?: string | null;
+  }
+) => {
+  const coords = getRepresentativeCoords(activity);
+  if (coords.length === 0) return null;
+
+  const place = await resolveBestLocation(coords, params);
+  if (!place) return null;
+
+  return generateTitle(activityType, place.name);
+};
+
 const normalizeStravaActivity = (
   userId: string,
-  activity: StravaActivity
+  activity: StravaActivity,
+  titleOverride?: string | null
 ): NormalizedImportedActivity => {
   const rawSportType = activity.sport_type ?? null;
   const rawType = activity.type ?? null;
+  const normalizedType = mapStravaSportTypeToMoveNotesType(rawSportType, rawType);
 
   return {
     user_id: userId,
-    type: mapStravaSportTypeToMoveNotesType(rawSportType, rawType),
+    type: normalizedType,
     date: toLocalDateString(activity.start_date_local, activity.start_date),
     started_at: activity.start_date ?? null,
     distance_km: metersToKm(activity.distance),
     duration_min: secondsToMinutes(
       activity.moving_time ?? activity.elapsed_time ?? null
     ),
-    title: activity.name ?? null,
+    title: titleOverride ?? activity.name ?? null,
     source: "strava",
     external_source: "strava",
     external_id: String(activity.id),
@@ -239,8 +384,10 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const stravaClientId = Deno.env.get("STRAVA_CLIENT_ID");
   const stravaClientSecret = Deno.env.get("STRAVA_CLIENT_SECRET");
+  const googleMapsApiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
   if (!supabaseUrl || !supabaseAnonKey || !stravaClientId || !stravaClientSecret) {
     return jsonResponse(500, { error: "Function env vars are not configured." });
   }
@@ -253,6 +400,9 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } },
   });
+  const serviceClient = supabaseServiceRoleKey
+    ? createClient(supabaseUrl, supabaseServiceRoleKey)
+    : null;
 
   const {
     data: { user },
@@ -335,7 +485,14 @@ Deno.serve(async (req) => {
   let updated = 0;
 
   for (const item of stravaActivities) {
-    const normalized = normalizeStravaActivity(user.id, item);
+    const rawSportType = item.sport_type ?? null;
+    const rawType = item.type ?? null;
+    const activityType = mapStravaSportTypeToMoveNotesType(rawSportType, rawType);
+    const smartTitle = await getSmartActivityTitle(item, activityType, {
+      serviceClient,
+      googleMapsApiKey,
+    });
+    const normalized = normalizeStravaActivity(user.id, item, smartTitle);
 
     const { data: existing, error: existingError } = await supabase
       .from("activities")

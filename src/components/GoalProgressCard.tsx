@@ -2,7 +2,7 @@ import { ACTIVITY_TYPES } from "../config/activityTypes";
 import type { Goal } from "../types";
 import { computeGoalProgress } from "../lib/goalEngine";
 import { useUnitSystem } from "../contexts/UnitContext";
-import { formatDistance } from "../lib/units";
+import { formatDistance, formatDurationMinutes } from "../lib/units";
 import { getPacingMessage } from "../lib/pacingMessages";
 
 type ActivityForProgress = {
@@ -96,14 +96,14 @@ export default function GoalProgressCard({
     metric === "distance"
       ? formatDistance(target, unitSystem)
       : metric === "duration"
-      ? `${target} min`
+      ? formatDurationMinutes(target)
       : `${target} ${pluralize(activityLabel, target)}`;
 
   const formattedProgress =
     metric === "distance"
       ? formatDistance(progress, unitSystem)
       : metric === "duration"
-      ? `${progress} min`
+      ? formatDurationMinutes(progress)
       : `${progress} ${pluralize(activityLabel, progress)}`;
 
   const targetLine = goal.period

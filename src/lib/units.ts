@@ -21,5 +21,17 @@ export function roundDurationMinutes(minutes: number): number {
 }
 
 export function formatDurationMinutes(minutes: number): string {
-  return `${roundDurationMinutes(minutes)} min`;
+  const rounded = roundDurationMinutes(minutes);
+  if (rounded < 60) {
+    return `${rounded}min`;
+  }
+
+  const hours = Math.floor(rounded / 60);
+  const remainingMinutes = rounded % 60;
+
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h${remainingMinutes}min`;
 }
