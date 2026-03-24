@@ -28,13 +28,10 @@ import { buildGalleryItemsForActivity } from "../lib/photos";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
-import {
-  CIRCLE_ACCESS_UPDATED_EVENT,
-  fetchCircleConnectionState,
-  hasCircleAccess,
-} from "../services/circle.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
 import { NOTE_STORAGE_BUCKET } from "../services/storage.service";
+import { useCircleAccessState } from "../hooks/useCircleAccessState";
+import { useCircleSharePromptSequence } from "../hooks/useCircleSharePromptSequence";
 
 export default function Home() {
   const { unitSystem } = useUnitSystem();
@@ -73,20 +70,8 @@ export default function Home() {
   const [noteOnlyActivityId, setNoteOnlyActivityId] = useState<string | null>(null);
   const [journalEntryDraftOpen, setJournalEntryDraftOpen] = useState(false);
   const [editingJournalEntry, setEditingJournalEntry] = useState<any | null>(null);
-  const [circleEnabled, setCircleEnabled] = useState(false);
-  const [hasAcceptedCircleConnections, setHasAcceptedCircleConnections] = useState(false);
   const [quickFeelingSavingId, setQuickFeelingSavingId] = useState<string | null>(null);
   const [quickEffortSavingId, setQuickEffortSavingId] = useState<string | null>(null);
-  const [noteOnlyStatusToast, setNoteOnlyStatusToast] = useState<{
-    activityId: string;
-    type: "saved" | "skipped";
-  } | null>(null);
-  const [noteOnlySharePromptActivityId, setNoteOnlySharePromptActivityId] = useState<string | null>(
-    null
-  );
-  const [noteOnlySharedToastActivityId, setNoteOnlySharedToastActivityId] = useState<string | null>(
-    null
-  );
   const noteFlow = usePostLogNoteFlow();
 
   // Sidebar
@@ -138,6 +123,7 @@ export default function Home() {
         .map((item) => String(item.id)),
     [activities]
   );
+  const { circleEnabled, hasAcceptedCircleConnections } = useCircleAccessState(userId);
 
   const {
     handleShareWithCircle,
@@ -152,6 +138,24 @@ export default function Home() {
       activityIds: shareableActivityIds,
       onToast: setToastMessage,
     });
+  const {
+    statusToast: noteOnlyStatusToast,
+    sharePromptActivityId: noteOnlySharePromptActivityId,
+    sharedToastActivityId: noteOnlySharedToastActivityId,
+    showSavedStatus: showNoteOnlySavedStatus,
+    showSkippedStatus: showNoteOnlySkippedStatus,
+    closeStatusToast: closeNoteOnlyStatusToast,
+    handleSharePrompt: handleNoteOnlySharePrompt,
+    handleUndoShare: handleUndoNoteOnlyShare,
+    dismissSharePrompt: dismissNoteOnlySharePrompt,
+    dismissSharedToast: dismissNoteOnlySharedToast,
+  } = useCircleSharePromptSequence({
+    canPromptCircleShare: hasAcceptedCircleConnections,
+    onShareWithCircle: (activityId) =>
+      shareActivityToCircle(activityId, { silent: true }),
+    onUndoShareWithCircle: (activityId) =>
+      unshareActivityFromCircle(activityId, { silent: true }),
+  });
 
 
   // --------------------------------------------------
@@ -164,20 +168,6 @@ export default function Home() {
         if (!user) return;
 
         setUserId(user.id);
-        try {
-          const canUseCircle = await hasCircleAccess(user.id);
-          setCircleEnabled(canUseCircle);
-        } catch {
-          setCircleEnabled(false);
-        }
-
-        try {
-          const connectionState = await fetchCircleConnectionState(user.id);
-          setHasAcceptedCircleConnections(connectionState.acceptedCount > 0);
-        } catch {
-          setHasAcceptedCircleConnections(false);
-        }
-
       } finally {
         // no-op
       }
@@ -185,35 +175,6 @@ export default function Home() {
 
     load();
   }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const refreshCircleState = async () => {
-      try {
-        const canUseCircle = await hasCircleAccess(userId);
-        setCircleEnabled(canUseCircle);
-      } catch {
-        setCircleEnabled(false);
-      }
-
-      try {
-        const connectionState = await fetchCircleConnectionState(userId);
-        setHasAcceptedCircleConnections(connectionState.acceptedCount > 0);
-      } catch {
-        setHasAcceptedCircleConnections(false);
-      }
-    };
-
-    const handleCircleAccessUpdate = () => {
-      void refreshCircleState();
-    };
-
-    window.addEventListener(CIRCLE_ACCESS_UPDATED_EVENT, handleCircleAccessUpdate);
-    return () => {
-      window.removeEventListener(CIRCLE_ACCESS_UPDATED_EVENT, handleCircleAccessUpdate);
-    };
-  }, [userId]);
 
   // --------------------------------------------------
   // SIGNED URLS FOR NOTE IMAGES (feeds)
@@ -373,19 +334,6 @@ export default function Home() {
   const handleQuickAddNote = (activity: any) => {
     if (!activity?.id) return;
     setNoteOnlyActivityId(activity.id);
-  };
-
-  const handleNoteOnlySharePrompt = async (activityId: string) => {
-    const didShare = await shareActivityToCircle(activityId, { silent: true });
-    if (!didShare) return;
-    setNoteOnlySharePromptActivityId(null);
-    setNoteOnlySharedToastActivityId(activityId);
-  };
-
-  const handleUndoNoteOnlyShare = async (activityId: string) => {
-    const didUndo = await unshareActivityFromCircle(activityId, { silent: true });
-    if (!didUndo) return;
-    setNoteOnlySharedToastActivityId(null);
   };
 
   // --------------------------------------------------
@@ -750,14 +698,14 @@ export default function Home() {
               playWritingSound();
               refreshActivities();
               if (activityId) {
-                setNoteOnlyStatusToast({ activityId, type: "saved" });
+                showNoteOnlySavedStatus(activityId);
               }
             }}
             onSkip={() => {
               const activityId = noteOnlyActivityId;
               setNoteOnlyActivityId(null);
               if (activityId) {
-                setNoteOnlyStatusToast({ activityId, type: "skipped" });
+                showNoteOnlySkippedStatus(activityId);
               }
             }}
           />
@@ -788,12 +736,7 @@ export default function Home() {
                 ? "Notes saved to journal"
                 : "Notes skipped"
             }
-            onClose={() => {
-              if (hasAcceptedCircleConnections) {
-                setNoteOnlySharePromptActivityId(noteOnlyStatusToast.activityId);
-              }
-              setNoteOnlyStatusToast(null);
-            }}
+            onClose={closeNoteOnlyStatusToast}
           />
         )}
 
@@ -810,7 +753,7 @@ export default function Home() {
                 Share with circle
               </button>
             }
-            onClose={() => setNoteOnlySharePromptActivityId(null)}
+            onClose={dismissNoteOnlySharePrompt}
           />
         )}
 
@@ -830,7 +773,7 @@ export default function Home() {
                 </button>
               </>
             }
-            onClose={() => setNoteOnlySharedToastActivityId(null)}
+            onClose={dismissNoteOnlySharedToast}
           />
         )}
 

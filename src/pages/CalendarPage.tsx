@@ -22,10 +22,6 @@ import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { buildGalleryItemsForActivity } from "../lib/photos";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
-import {
-  fetchCircleConnectionState,
-  hasCircleAccess,
-} from "../services/circle.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
 import {
   ACTIVITY_LOCATION_UPDATED_EVENT,
@@ -33,6 +29,7 @@ import {
   type ActivityLocationTag,
   type ActivityLocationUpdatedDetail,
 } from "../services/activityLocation.service";
+import { useCircleAccessState } from "../hooks/useCircleAccessState";
 
 type CalendarActivity = {
   entry_kind?: "activity";
@@ -143,8 +140,6 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [circleEnabled, setCircleEnabled] = useState(false);
-  const [hasAcceptedCircleConnections, setHasAcceptedCircleConnections] = useState(false);
   const [dayThumbs, setDayThumbs] = useState<Record<string, string>>({});
   const [quickLogDate, setQuickLogDate] = useState<string | null>(null);
   const [journalEntryDraftOpen, setJournalEntryDraftOpen] = useState(false);
@@ -176,6 +171,7 @@ export default function CalendarPage() {
     setEditActivity,
   } = useHomeModals();
   const noteFlow = usePostLogNoteFlow();
+  const { circleEnabled, hasAcceptedCircleConnections } = useCircleAccessState(userId);
 
   const todayKey = formatDateKey(new Date());
   const todayMonthIndex = toMonthIndex(new Date());
@@ -357,18 +353,6 @@ export default function CalendarPage() {
       const user = await getCurrentUser();
       if (user) {
         setUserId(user.id);
-        try {
-          const canUseCircle = await hasCircleAccess(user.id);
-          setCircleEnabled(canUseCircle);
-        } catch {
-          setCircleEnabled(false);
-        }
-        try {
-          const connectionState = await fetchCircleConnectionState(user.id);
-          setHasAcceptedCircleConnections(connectionState.acceptedCount > 0);
-        } catch {
-          setHasAcceptedCircleConnections(false);
-        }
       }
     };
     loadUser();
