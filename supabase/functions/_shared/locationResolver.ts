@@ -442,7 +442,7 @@ export const getLocationPriority = (type: PriorityType) =>
   PRIORITY_TYPES.indexOf(type);
 
 export async function resolveLocation(params: {
-  serviceClient: SupabaseClient;
+  serviceClient?: SupabaseClient | null;
   googleMapsApiKey?: string | null;
   lat: number;
   lng: number;
@@ -453,28 +453,30 @@ export async function resolveLocation(params: {
   const lng = normalizeCoord(params.lng);
   const cacheKey = normalizeKey(lat, lng);
 
-  const { data: cached, error: cacheError } = await serviceClient
-    .from("location_cache")
-    .select("name, type")
-    .eq("key", cacheKey)
-    .maybeSingle();
+  if (serviceClient) {
+    const { data: cached, error: cacheError } = await serviceClient
+      .from("location_cache")
+      .select("name, type")
+      .eq("key", cacheKey)
+      .maybeSingle();
 
-  if (cacheError) {
-    throw cacheError;
-  }
+    if (cacheError) {
+      throw cacheError;
+    }
 
-  if (cached) {
-    const cachedRow = cached as CachedLocationRow;
-    const cachedName = normalizeName(cachedRow.name);
-    const cachedType =
-      typeof cachedRow.type === "string" && isPriorityType(cachedRow.type)
-        ? cachedRow.type
-        : null;
-    if (cachedName && cachedType) {
-      return {
-        name: cachedName,
-        type: cachedType,
-      };
+    if (cached) {
+      const cachedRow = cached as CachedLocationRow;
+      const cachedName = normalizeName(cachedRow.name);
+      const cachedType =
+        typeof cachedRow.type === "string" && isPriorityType(cachedRow.type)
+          ? cachedRow.type
+          : null;
+      if (cachedName && cachedType) {
+        return {
+          name: cachedName,
+          type: cachedType,
+        };
+      }
     }
   }
 
@@ -493,18 +495,20 @@ export async function resolveLocation(params: {
     return null;
   }
 
-  const { error: cacheInsertError } = await serviceClient
-    .from("location_cache")
-    .upsert({
-      key: cacheKey,
-      lat,
-      lng,
-      name: resolved.name,
-      type: resolved.type,
-    });
+  if (serviceClient) {
+    const { error: cacheInsertError } = await serviceClient
+      .from("location_cache")
+      .upsert({
+        key: cacheKey,
+        lat,
+        lng,
+        name: resolved.name,
+        type: resolved.type,
+      });
 
-  if (cacheInsertError) {
-    throw cacheInsertError;
+    if (cacheInsertError) {
+      throw cacheInsertError;
+    }
   }
 
   return resolved;

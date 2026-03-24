@@ -204,7 +204,7 @@ const resolveBestLocation = async (
     googleMapsApiKey?: string | null;
   }
 ): Promise<ResolvedLocation | null> => {
-  if (!params.serviceClient || !params.googleMapsApiKey || coords.length === 0) {
+  if (!params.googleMapsApiKey || coords.length === 0) {
     return null;
   }
 
