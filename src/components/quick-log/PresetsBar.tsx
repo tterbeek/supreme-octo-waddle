@@ -15,16 +15,9 @@ export default function PresetsBar({
   onSelectCustom,
   onOpenMore,
 }: PresetsBarProps) {
-  const orderedPresets = (() => {
-    if (!presets.length) return [];
-    if (!activePreset) return presets;
-    const rest = presets.filter((p) => p.id !== activePreset.id);
-    return [activePreset, ...rest];
-  })();
-
   const maxVisible = 15;
-  const visiblePresets = orderedPresets.slice(0, maxVisible);
-  const hasMore = orderedPresets.length > maxVisible;
+  const visiblePresets = presets.slice(0, maxVisible);
+  const hasMore = presets.length > maxVisible;
 
   return (
     <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
