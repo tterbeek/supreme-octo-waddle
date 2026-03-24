@@ -48,6 +48,7 @@ export default function EditPresetModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
@@ -181,8 +182,8 @@ export default function EditPresetModal({
 
   const remove = async () => {
     if (deleting) return;
-    if (!confirm("Delete this preset?")) return;
     setDeleting(true);
+    setError(null);
     const { error: delErr } = await supabase.from("presets").delete().eq("id", preset.id);
     setDeleting(false);
     if (delErr) {
@@ -228,19 +229,43 @@ export default function EditPresetModal({
 
       <button
         onClick={save}
-        disabled={saving}
+        disabled={saving || deleting}
         className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
       >
         {saving ? "Saving..." : "Save changes"}
       </button>
 
+      {confirmDelete && !deleting && (
+        <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Delete this preset permanently?
+        </div>
+      )}
+
       <button
         type="button"
-        onClick={remove}
-        className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition"
+        onClick={() => {
+          if (deleting) return;
+          if (!confirmDelete) {
+            setConfirmDelete(true);
+            return;
+          }
+          void remove();
+        }}
+        disabled={saving || deleting}
+        className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition disabled:opacity-50"
       >
-        {deleting ? "Deleting..." : "Delete preset"}
+        {deleting ? "Deleting..." : confirmDelete ? "Confirm Delete" : "Delete preset"}
       </button>
+
+      {confirmDelete && !deleting && (
+        <button
+          type="button"
+          onClick={() => setConfirmDelete(false)}
+          className="w-full mt-2 py-3 border border-warm-200 text-gray-700 rounded-full text-sm font-medium hover:bg-white/60 transition"
+        >
+          Cancel
+        </button>
+      )}
 
       {showEquipmentDialog && (
         <EquipmentDialog

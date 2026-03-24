@@ -75,6 +75,7 @@ export function useActivityEditForm({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [animateIn, setAnimateIn] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -358,7 +359,9 @@ export function useActivityEditForm({
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this activity?")) return;
+    if (deleting) return;
+    setDeleting(true);
+    setUploadError(null);
 
     const pathsToDelete = new Set<string>();
     if (activity.note_image_url) pathsToDelete.add(activity.note_image_url);
@@ -387,10 +390,12 @@ export function useActivityEditForm({
 
     if (error) {
       console.error("[EditActivity] Delete error:", error.message);
-      alert("Could not delete activity");
+      setUploadError(error.message || "Could not delete activity");
+      setDeleting(false);
       return;
     }
 
+    setDeleting(false);
     onDeleted();
     setAnimateIn(false);
     setTimeout(onClose, 300);
@@ -495,6 +500,7 @@ export function useActivityEditForm({
     setUploadError,
     setUploadProgress,
     saving,
+    deleting,
     animateIn,
     dragY,
     fileInputRef,

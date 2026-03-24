@@ -58,6 +58,7 @@ export default function EditActivityModal({
     uploadError,
     uploadProgress,
     saving,
+    deleting,
     animateIn,
     dragY,
     fileInputRef,
@@ -81,6 +82,7 @@ export default function EditActivityModal({
   });
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const equipmentSummary = (() => {
     if (selectedEquipmentIds.length === 0) return "";
     const first = equipment.find((item) => item.id === selectedEquipmentIds[0]);
@@ -347,20 +349,52 @@ export default function EditActivityModal({
 
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || deleting}
           className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50 mt-4"
         >
           {saving ? "Saving..." : reflectionOnly ? "Save reflection" : "Save Changes"}
         </button>
 
         {!reflectionOnly && (
-          <button
-            onClick={handleDelete}
-            className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition"
-          >
-            <Trash2 className="inline w-4 h-4 mr-1 -mt-0.5" />
-            Delete Activity
-          </button>
+          <>
+            {confirmDelete && !deleting && (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                Delete this activity permanently?
+              </div>
+            )}
+            <button
+              onClick={() => {
+                if (deleting) return;
+                if (!confirmDelete) {
+                  setConfirmDelete(true);
+                  return;
+                }
+                void handleDelete();
+              }}
+              disabled={saving || deleting}
+              className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition disabled:opacity-50"
+            >
+              {deleting ? (
+                "Deleting..."
+              ) : confirmDelete ? (
+                "Confirm Delete"
+              ) : (
+                <>
+                  <Trash2 className="inline w-4 h-4 mr-1 -mt-0.5" />
+                  Delete Activity
+                </>
+              )}
+            </button>
+            {confirmDelete && !deleting && (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="w-full mt-2 py-3 border border-warm-200 text-gray-700 rounded-full text-sm font-medium hover:bg-white/60 transition"
+              >
+                Cancel
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
