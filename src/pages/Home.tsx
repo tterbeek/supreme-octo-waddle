@@ -29,6 +29,8 @@ import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
 import {
+  CIRCLE_ACCESS_UPDATED_EVENT,
+  fetchCircleConnectionState,
   hasCircleAccess,
 } from "../services/circle.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
@@ -49,7 +51,7 @@ export default function Home() {
     setNoteImageOrientation,
     resolveFor: resolveNoteImages,
   } = useNoteImages(NOTE_STORAGE_BUCKET);
-  const { visible, hideTooltip, showTooltip } = useTooltipManager();
+  const { visible, hideTooltip, showTooltip, hasSeen } = useTooltipManager();
   const gallery = useGalleryLightbox(NOTE_STORAGE_BUCKET);
 
   // Quick log / edit modals
@@ -72,8 +74,19 @@ export default function Home() {
   const [journalEntryDraftOpen, setJournalEntryDraftOpen] = useState(false);
   const [editingJournalEntry, setEditingJournalEntry] = useState<any | null>(null);
   const [circleEnabled, setCircleEnabled] = useState(false);
+  const [hasAcceptedCircleConnections, setHasAcceptedCircleConnections] = useState(false);
   const [quickFeelingSavingId, setQuickFeelingSavingId] = useState<string | null>(null);
   const [quickEffortSavingId, setQuickEffortSavingId] = useState<string | null>(null);
+  const [noteOnlyStatusToast, setNoteOnlyStatusToast] = useState<{
+    activityId: string;
+    type: "saved" | "skipped";
+  } | null>(null);
+  const [noteOnlySharePromptActivityId, setNoteOnlySharePromptActivityId] = useState<string | null>(
+    null
+  );
+  const [noteOnlySharedToastActivityId, setNoteOnlySharedToastActivityId] = useState<string | null>(
+    null
+  );
   const noteFlow = usePostLogNoteFlow();
 
   // Sidebar
@@ -126,7 +139,13 @@ export default function Home() {
     [activities]
   );
 
-  const { handleShareWithCircle, sharedWithCircleByActivity, sharingActivityId } =
+  const {
+    handleShareWithCircle,
+    sharedWithCircleByActivity,
+    sharingActivityId,
+    shareActivityToCircle,
+    unshareActivityFromCircle,
+  } =
     useCircleActivitySharing({
       userId,
       circleEnabled,
@@ -152,6 +171,13 @@ export default function Home() {
           setCircleEnabled(false);
         }
 
+        try {
+          const connectionState = await fetchCircleConnectionState(user.id);
+          setHasAcceptedCircleConnections(connectionState.acceptedCount > 0);
+        } catch {
+          setHasAcceptedCircleConnections(false);
+        }
+
       } finally {
         // no-op
       }
@@ -159,6 +185,35 @@ export default function Home() {
 
     load();
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const refreshCircleState = async () => {
+      try {
+        const canUseCircle = await hasCircleAccess(userId);
+        setCircleEnabled(canUseCircle);
+      } catch {
+        setCircleEnabled(false);
+      }
+
+      try {
+        const connectionState = await fetchCircleConnectionState(userId);
+        setHasAcceptedCircleConnections(connectionState.acceptedCount > 0);
+      } catch {
+        setHasAcceptedCircleConnections(false);
+      }
+    };
+
+    const handleCircleAccessUpdate = () => {
+      void refreshCircleState();
+    };
+
+    window.addEventListener(CIRCLE_ACCESS_UPDATED_EVENT, handleCircleAccessUpdate);
+    return () => {
+      window.removeEventListener(CIRCLE_ACCESS_UPDATED_EVENT, handleCircleAccessUpdate);
+    };
+  }, [userId]);
 
   // --------------------------------------------------
   // SIGNED URLS FOR NOTE IMAGES (feeds)
@@ -189,10 +244,39 @@ export default function Home() {
 
   useEffect(() => {
     if (!hasDoneOnboarding || !initialFeedLoaded) return;
+    if (
+      hasAcceptedCircleConnections &&
+      shareableActivityIds.length > 0 &&
+      !hasSeen("circle_share_onboarding")
+    ) {
+      return;
+    }
     if (activities.length >= 3) {
       showTooltip("tiny_tweak_prompt");
     }
-  }, [activities.length, hasDoneOnboarding, initialFeedLoaded, showTooltip]);
+  }, [
+    activities.length,
+    hasAcceptedCircleConnections,
+    hasDoneOnboarding,
+    hasSeen,
+    initialFeedLoaded,
+    shareableActivityIds.length,
+    showTooltip,
+  ]);
+
+  useEffect(() => {
+    if (!hasAcceptedCircleConnections) return;
+    if (shareableActivityIds.length === 0) return;
+    if (hasSeen("circle_share_onboarding")) return;
+    if (visible !== null) return;
+    showTooltip("circle_share_onboarding");
+  }, [
+    hasAcceptedCircleConnections,
+    hasSeen,
+    shareableActivityIds.length,
+    showTooltip,
+    visible,
+  ]);
 
   // --------------------------------------------------
   // DELETE / UNDO
@@ -291,6 +375,19 @@ export default function Home() {
     setNoteOnlyActivityId(activity.id);
   };
 
+  const handleNoteOnlySharePrompt = async (activityId: string) => {
+    const didShare = await shareActivityToCircle(activityId, { silent: true });
+    if (!didShare) return;
+    setNoteOnlySharePromptActivityId(null);
+    setNoteOnlySharedToastActivityId(activityId);
+  };
+
+  const handleUndoNoteOnlyShare = async (activityId: string) => {
+    const didUndo = await unshareActivityFromCircle(activityId, { silent: true });
+    if (!didUndo) return;
+    setNoteOnlySharedToastActivityId(null);
+  };
+
   // --------------------------------------------------
   // RENDER
   // --------------------------------------------------
@@ -360,6 +457,7 @@ export default function Home() {
 
     return months;
   }, [filteredActivities]);
+  let activityRenderIndex = 0;
 
   return (
     <div className="min-h-screen bg-movenotes-bg p-1">
@@ -388,7 +486,6 @@ export default function Home() {
           )}
 
           {monthGroups.map((month, idx) => {
-            let renderIndex = 0;
             const isFirstMonth = idx === 0;
             return (
               <div key={month.key} className="flex flex-col gap-3 -ml-2">
@@ -437,9 +534,13 @@ export default function Home() {
                             );
                           }
 
+                          const currentActivityIndex = activityRenderIndex;
+                          activityRenderIndex += 1;
                           const showAfterLogTooltip =
-                            visible === "after_first_log" && renderIndex === 0;
-                          renderIndex += 1;
+                            visible === "after_first_log" && currentActivityIndex === 0;
+                          const showCircleShareOnboardingTooltip =
+                            visible === "circle_share_onboarding" &&
+                            currentActivityIndex === 0;
                           return (
                             <RecentActivityCard
                               key={`activity-${a.id}`}
@@ -459,7 +560,36 @@ export default function Home() {
                                 }));
                               }}
                               unitSystem={unitSystem}
-                              tooltipVisible={showAfterLogTooltip}
+                              tooltipVisible={
+                                showAfterLogTooltip ||
+                                showCircleShareOnboardingTooltip
+                              }
+                              tooltipAnchor={
+                                showCircleShareOnboardingTooltip ? "share" : "card"
+                              }
+                              tooltipContent={
+                                showCircleShareOnboardingTooltip ? (
+                                  <div>
+                                    <div className="font-semibold text-gray-900">
+                                      Share with your Circle
+                                    </div>
+                                    <p className="mt-2 text-sm leading-5 text-gray-700">
+                                      When you choose to share an activity, your Circle can
+                                      see the activity title, distance and duration if
+                                      available, and photos if you added them. Your notes
+                                      always stay private. You can unshare any activity
+                                      anytime.
+                                    </p>
+                                    <button
+                                      type="button"
+                                      className="mt-3 inline-flex rounded-full bg-movenotes-primary px-3 py-1.5 text-sm font-medium text-primary-text"
+                                      onClick={hideTooltip}
+                                    >
+                                      Got it
+                                    </button>
+                                  </div>
+                                ) : undefined
+                              }
                               onTooltipClose={hideTooltip}
                               onOpenGallery={(activity) => {
                                 const items = buildGalleryItemsForActivity(activity);
@@ -484,7 +614,9 @@ export default function Home() {
                               sharedWithCircle={Boolean(sharedWithCircleByActivity[a.id])}
                               sharingWithCircle={sharingActivityId === a.id}
                               disableSwipe={gallery.open}
-                              imageLoading={renderIndex <= 4 ? "eager" : "lazy"}
+                              imageLoading={
+                                currentActivityIndex < 4 ? "eager" : "lazy"
+                              }
                             />
                           );
                         })}
@@ -613,13 +745,20 @@ export default function Home() {
           <AddNoteModal
             activityId={noteOnlyActivityId}
             onSave={() => {
+              const activityId = noteOnlyActivityId;
               setNoteOnlyActivityId(null);
-              setToastMessage("Note saved ✍️");
               playWritingSound();
               refreshActivities();
+              if (activityId) {
+                setNoteOnlyStatusToast({ activityId, type: "saved" });
+              }
             }}
             onSkip={() => {
+              const activityId = noteOnlyActivityId;
               setNoteOnlyActivityId(null);
+              if (activityId) {
+                setNoteOnlyStatusToast({ activityId, type: "skipped" });
+              }
             }}
           />
         )}
@@ -628,7 +767,72 @@ export default function Home() {
           <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
         )}
 
-        <PostLogNoteFlow flow={noteFlow} onRefreshAfterNote={refreshActivities} />
+        <PostLogNoteFlow
+          flow={noteFlow}
+          onRefreshAfterNote={refreshActivities}
+          canPromptCircleShare={hasAcceptedCircleConnections}
+          onShareWithCircle={(activityId) =>
+            shareActivityToCircle(activityId, { silent: true })
+          }
+          onUndoShareWithCircle={(activityId) =>
+            unshareActivityFromCircle(activityId, { silent: true })
+          }
+        />
+
+        {noteOnlyStatusToast && (
+          <Toast
+            icon={null}
+            durationMs={1500}
+            message={
+              noteOnlyStatusToast.type === "saved"
+                ? "Notes saved to journal"
+                : "Notes skipped"
+            }
+            onClose={() => {
+              if (hasAcceptedCircleConnections) {
+                setNoteOnlySharePromptActivityId(noteOnlyStatusToast.activityId);
+              }
+              setNoteOnlyStatusToast(null);
+            }}
+          />
+        )}
+
+        {noteOnlySharePromptActivityId && (
+          <Toast
+            icon={null}
+            durationMs={8000}
+            message={
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void handleNoteOnlySharePrompt(noteOnlySharePromptActivityId)}
+              >
+                Share with circle
+              </button>
+            }
+            onClose={() => setNoteOnlySharePromptActivityId(null)}
+          />
+        )}
+
+        {noteOnlySharedToastActivityId && (
+          <Toast
+            icon={null}
+            durationMs={4000}
+            message={
+              <>
+                Shared with your circle ·{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => void handleUndoNoteOnlyShare(noteOnlySharedToastActivityId)}
+                >
+                  Undo
+                </button>
+              </>
+            }
+            onClose={() => setNoteOnlySharedToastActivityId(null)}
+          />
+        )}
 
         {showUndoToast && (
           <Toast

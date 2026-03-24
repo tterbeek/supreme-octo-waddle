@@ -23,6 +23,7 @@ import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { buildGalleryItemsForActivity } from "../lib/photos";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
 import {
+  fetchCircleConnectionState,
   hasCircleAccess,
 } from "../services/circle.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
@@ -143,6 +144,7 @@ export default function CalendarPage() {
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [circleEnabled, setCircleEnabled] = useState(false);
+  const [hasAcceptedCircleConnections, setHasAcceptedCircleConnections] = useState(false);
   const [dayThumbs, setDayThumbs] = useState<Record<string, string>>({});
   const [quickLogDate, setQuickLogDate] = useState<string | null>(null);
   const [journalEntryDraftOpen, setJournalEntryDraftOpen] = useState(false);
@@ -361,6 +363,12 @@ export default function CalendarPage() {
         } catch {
           setCircleEnabled(false);
         }
+        try {
+          const connectionState = await fetchCircleConnectionState(user.id);
+          setHasAcceptedCircleConnections(connectionState.acceptedCount > 0);
+        } catch {
+          setHasAcceptedCircleConnections(false);
+        }
       }
     };
     loadUser();
@@ -447,7 +455,13 @@ export default function CalendarPage() {
     [selectedDayActivities]
   );
 
-  const { handleShareWithCircle, sharedWithCircleByActivity, sharingActivityId } =
+  const {
+    handleShareWithCircle,
+    sharedWithCircleByActivity,
+    sharingActivityId,
+    shareActivityToCircle,
+    unshareActivityFromCircle,
+  } =
     useCircleActivitySharing({
       userId,
       circleEnabled,
@@ -1028,6 +1042,13 @@ export default function CalendarPage() {
       <PostLogNoteFlow
         flow={noteFlow}
         onRefreshAfterNote={() => void refreshLoadedCalendarData()}
+        canPromptCircleShare={hasAcceptedCircleConnections}
+        onShareWithCircle={(activityId) =>
+          shareActivityToCircle(activityId, { silent: true })
+        }
+        onUndoShareWithCircle={(activityId) =>
+          unshareActivityFromCircle(activityId, { silent: true })
+        }
       />
     </div>
   );

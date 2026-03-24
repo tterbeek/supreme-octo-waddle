@@ -9,6 +9,10 @@ type ShareableActivity = {
   id: string;
 };
 
+type CircleShareMutationOptions = {
+  silent?: boolean;
+};
+
 type UseCircleActivitySharingArgs = {
   userId: string | null;
   circleEnabled: boolean;
@@ -27,32 +31,67 @@ export function useCircleActivitySharing({
     Record<string, boolean>
   >({});
 
-  const handleShareWithCircle = useCallback(
-    async (activity: ShareableActivity) => {
-      if (!userId || !activity?.id) return;
-      setSharingActivityId(activity.id);
+  const shareActivityToCircle = useCallback(
+    async (activityId: string, options?: CircleShareMutationOptions) => {
+      if (!userId || !activityId) return false;
+      if (sharedWithCircleByActivity[activityId]) return true;
+
+      setSharingActivityId(activityId);
       try {
-        const isShared = Boolean(sharedWithCircleByActivity[activity.id]);
-        if (isShared) {
-          await unshareActivity(activity.id, userId);
-          setSharedWithCircleByActivity((prev) => {
-            const next = { ...prev };
-            delete next[activity.id];
-            return next;
-          });
-          onToast?.("Removed from Circle");
-        } else {
-          await shareActivityWithConnections(activity.id, userId);
-          setSharedWithCircleByActivity((prev) => ({ ...prev, [activity.id]: true }));
+        await shareActivityWithConnections(activityId, userId);
+        setSharedWithCircleByActivity((prev) => ({ ...prev, [activityId]: true }));
+        if (!options?.silent) {
           onToast?.("Shared with Circle");
         }
+        return true;
       } catch (err: any) {
         onToast?.(err?.message || "Could not share with Circle.");
+        return false;
       } finally {
         setSharingActivityId(null);
       }
     },
     [onToast, sharedWithCircleByActivity, userId]
+  );
+
+  const unshareActivityFromCircle = useCallback(
+    async (activityId: string, options?: CircleShareMutationOptions) => {
+      if (!userId || !activityId) return false;
+      if (!sharedWithCircleByActivity[activityId]) return true;
+
+      setSharingActivityId(activityId);
+      try {
+        await unshareActivity(activityId, userId);
+        setSharedWithCircleByActivity((prev) => {
+          const next = { ...prev };
+          delete next[activityId];
+          return next;
+        });
+        if (!options?.silent) {
+          onToast?.("Removed from Circle");
+        }
+        return true;
+      } catch (err: any) {
+        onToast?.(err?.message || "Could not share with Circle.");
+        return false;
+      } finally {
+        setSharingActivityId(null);
+      }
+    },
+    [onToast, sharedWithCircleByActivity, userId]
+  );
+
+  const handleShareWithCircle = useCallback(
+    async (activity: ShareableActivity) => {
+      if (!userId || !activity?.id) return;
+      const isShared = Boolean(sharedWithCircleByActivity[activity.id]);
+      if (isShared) {
+        await unshareActivityFromCircle(activity.id);
+      } else {
+        await shareActivityToCircle(activity.id);
+      }
+    },
+    [shareActivityToCircle, sharedWithCircleByActivity, unshareActivityFromCircle, userId]
   );
 
   useEffect(() => {
@@ -93,5 +132,7 @@ export function useCircleActivitySharing({
     sharingActivityId,
     sharedWithCircleByActivity,
     handleShareWithCircle,
+    shareActivityToCircle,
+    unshareActivityFromCircle,
   };
 }

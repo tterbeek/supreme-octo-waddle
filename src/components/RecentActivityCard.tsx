@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Frown, Laugh, MapPin, Meh, Smile, Zap } from "lucide-react";
 import {
   IconBoxMultiple2,
@@ -27,6 +27,8 @@ type RecentActivityCardProps = {
   onNoteImageLoad: (activityId: string, naturalWidth: number, naturalHeight: number) => void;
   unitSystem: UnitSystem;
   tooltipVisible: boolean;
+  tooltipContent?: ReactNode;
+  tooltipAnchor?: "card" | "share";
   onTooltipClose: () => void;
   onOpenGallery: (activity: any) => void;
   onAddReflection?: (activity: any) => void;
@@ -53,6 +55,8 @@ export default function RecentActivityCard({
   onNoteImageLoad,
   unitSystem,
   tooltipVisible,
+  tooltipContent,
+  tooltipAnchor = "card",
   onTooltipClose,
   onOpenGallery,
   onAddReflection,
@@ -71,6 +75,9 @@ export default function RecentActivityCard({
   imageLoading = "lazy",
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [shareTooltipWidth, setShareTooltipWidth] = useState<number | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const shareTooltipAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const cachedImageHandledRef = useRef<string | null>(null);
   const onNoteImageLoadRef = useRef(onNoteImageLoad);
@@ -150,9 +157,32 @@ export default function RecentActivityCard({
   const showOptionalNotePrompt =
     isImportedActivity && Boolean(onAddReflection) && !hasNotes && showFeeling && !showQuickEffortPrompt;
   const showShareWithCircle = canShareWithCircle && Boolean(onShareWithCircle);
+  const shareTooltipClassName = "max-w-none p-4 text-left";
+  const shareTooltipWrapperClassName = "right-0 left-auto translate-x-0";
   useEffect(() => {
     onNoteImageLoadRef.current = onNoteImageLoad;
   }, [onNoteImageLoad]);
+
+  useEffect(() => {
+    if (!tooltipVisible || tooltipAnchor !== "share") return;
+
+    const updateShareTooltipWidth = () => {
+      const cardEl = cardRef.current;
+      const shareAnchorEl = shareTooltipAnchorRef.current;
+      if (!cardEl || !shareAnchorEl) return;
+
+      const cardRect = cardEl.getBoundingClientRect();
+      const shareRect = shareAnchorEl.getBoundingClientRect();
+      const nextWidth = Math.max(0, Math.round(shareRect.right - cardRect.left));
+      setShareTooltipWidth(nextWidth);
+    };
+
+    updateShareTooltipWidth();
+    window.addEventListener("resize", updateShareTooltipWidth);
+    return () => {
+      window.removeEventListener("resize", updateShareTooltipWidth);
+    };
+  }, [tooltipAnchor, tooltipVisible]);
 
   const countIcon = (() => {
     if (photoCount <= 1) return null;
@@ -189,6 +219,7 @@ export default function RecentActivityCard({
   return (
     <SwipeActions onEdit={() => onEdit(activity)} disabled={disableSwipe}>
       <div
+        ref={cardRef}
         className="
           relative rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
           w-full mx-auto
@@ -202,9 +233,9 @@ export default function RecentActivityCard({
           onEdit(activity);
         }}
       >
-        {tooltipVisible && (
+        {tooltipVisible && tooltipAnchor === "card" && (
           <TooltipBubble position="top" onClose={onTooltipClose}>
-            Create a preset to make logging this activity faster next time.
+            {tooltipContent ?? "Create a preset to make logging this activity faster next time."}
           </TooltipBubble>
         )}
 
@@ -214,21 +245,38 @@ export default function RecentActivityCard({
             {activity.title || typeConfig.label}
           </span>
           {showShareWithCircle && (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onShareWithCircle?.(activity);
-              }}
-              disabled={sharingWithCircle}
-              aria-label={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
-              title={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
-              className={`disabled:opacity-60 ${
-                sharedWithCircle ? "text-movenotes-primary" : "text-gray-400"
-              } ${sharingWithCircle ? "animate-pulse" : ""}`}
-            >
-              <IconShare size={16} strokeWidth={1.9} />
-            </button>
+            <div ref={shareTooltipAnchorRef} className="relative inline-flex items-center">
+              {tooltipVisible && tooltipAnchor === "share" && (
+                <TooltipBubble
+                  position="bottom"
+                  className={shareTooltipClassName}
+                  wrapperClassName={shareTooltipWrapperClassName}
+                  style={
+                    shareTooltipWidth != null
+                      ? { width: `${shareTooltipWidth}px` }
+                      : undefined
+                  }
+                  onClose={onTooltipClose}
+                >
+                  {tooltipContent ?? "Create a preset to make logging this activity faster next time."}
+                </TooltipBubble>
+              )}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onShareWithCircle?.(activity);
+                }}
+                disabled={sharingWithCircle}
+                aria-label={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
+                title={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
+                className={`disabled:opacity-60 ${
+                  sharedWithCircle ? "text-movenotes-primary" : "text-gray-300"
+                } ${sharingWithCircle ? "animate-pulse" : ""}`}
+              >
+                <IconShare size={16} strokeWidth={1.9} />
+              </button>
+            </div>
           )}
         </div>
 

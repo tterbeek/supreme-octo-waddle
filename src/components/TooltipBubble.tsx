@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { IconX } from "@tabler/icons-react";
 
 type TooltipBubbleProps = {
@@ -7,6 +7,8 @@ type TooltipBubbleProps = {
   position?: "top" | "bottom" | "left" | "right";
   className?: string;
   wrapperClassName?: string;
+  style?: CSSProperties;
+  wrapperStyle?: CSSProperties;
 };
 
 export default function TooltipBubble({
@@ -15,6 +17,8 @@ export default function TooltipBubble({
   position = "top",
   className,
   wrapperClassName,
+  style,
+  wrapperStyle,
 }: TooltipBubbleProps) {
   const positionClasses =
     position === "top"
@@ -30,12 +34,14 @@ export default function TooltipBubble({
   return (
     <div
       className={`absolute ${positionClasses} z-50 pointer-events-auto ${wrapperClassName ?? ""}`}
+      style={wrapperStyle}
       onClick={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
     >
       <div
         className={`relative bg-white text-gray-900 text-sm p-3 rounded-xl shadow-lg border border-warm-200 animate-fadeIn ${bubbleClassName}`}
+        style={style}
       >
         {children}
         <button

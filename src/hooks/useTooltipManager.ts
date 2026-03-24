@@ -5,7 +5,8 @@ export type TooltipKey =
   | "after_first_log"
   | "tiny_tweak_prompt"
   | "stats_trends_info"
-  | "presets_info";
+  | "presets_info"
+  | "circle_share_onboarding";
 
 export function useTooltipManager() {
   const [visible, setVisible] = useState<TooltipKey | null>(null);
