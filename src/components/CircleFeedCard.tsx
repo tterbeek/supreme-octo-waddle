@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
+import {
+  IconBoxMultiple2,
+  IconBoxMultiple3,
+  IconBoxMultiple4,
+  IconBoxMultiple5,
+} from "@tabler/icons-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import {
   CIRCLE_REACTION_OPTIONS,
   type CircleReactionType,
   parseCircleReactionGroups,
 } from "../lib/circleReactions";
-import { parseShareTags } from "../lib/circleFeed";
+import { parseSharePhotos, parseShareTags } from "../lib/circleFeed";
 import type { CircleFeedItem } from "../services/circle.service";
 import { formatDurationMinutes } from "../lib/units";
 
@@ -48,6 +54,14 @@ export default function CircleFeedCard({
   const activityConfig = ACTIVITY_TYPES[item.activity_type] || ACTIVITY_TYPES.other;
   const ActivityIcon = activityConfig.Icon;
   const title = item.title || "Shared activity";
+  const photoCount = useMemo(() => parseSharePhotos(item).length, [item]);
+  const countIcon = (() => {
+    if (photoCount <= 1) return null;
+    if (photoCount === 2) return IconBoxMultiple2;
+    if (photoCount === 3) return IconBoxMultiple3;
+    if (photoCount === 4) return IconBoxMultiple4;
+    return IconBoxMultiple5;
+  })();
   const tags = useMemo(() => parseShareTags(item), [item]);
   const locationName =
     tags.find((tag) => tag.type === "location")?.value?.trim() || "";
@@ -209,6 +223,14 @@ export default function CircleFeedCard({
                 onCoverLoad(item.recipient_id, naturalWidth, naturalHeight);
               }}
             />
+            {countIcon && (
+              <span className="absolute bottom-2 right-2 rounded-full bg-black/70 text-white text-[11px] font-semibold px-2 py-0.5">
+                {(() => {
+                  const CountIcon = countIcon;
+                  return <CountIcon size={14} strokeWidth={2} />;
+                })()}
+              </span>
+            )}
           </button>
         </div>
       )}
