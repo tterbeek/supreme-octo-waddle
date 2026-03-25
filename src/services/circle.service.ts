@@ -146,6 +146,15 @@ export async function unshareActivity(activityId: string, userId: string) {
   return Boolean(data);
 }
 
+export async function refreshSharedActivity(activityId: string, userId: string) {
+  const { data, error } = await supabase.rpc("refresh_shared_activity", {
+    p_activity_id: activityId,
+    p_user_id: userId,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
 export async function markCircleFeedItemSeen(recipientId: string, userId: string) {
   const { data, error } = await supabase.rpc("mark_circle_feed_item_seen", {
     p_recipient_id: recipientId,

@@ -21,6 +21,7 @@ import {
 } from "../services/activityPhotos.service";
 import { resolveActivityLocationTag } from "../services/activityLocation.service";
 import { updateActivity, deleteActivity } from "../services/activity.service";
+import { refreshSharedActivity } from "../services/circle.service";
 import {
   createEquipment,
   fetchActiveEquipment,
@@ -337,6 +338,18 @@ export function useActivityEditForm({
 
       if (equipmentError) {
         throw equipmentError;
+      }
+
+      const currentUserId = await ensureUserId();
+      if (currentUserId) {
+        try {
+          await refreshSharedActivity(activity.id, currentUserId);
+        } catch (refreshErr: any) {
+          console.warn(
+            "[EditActivity] Could not refresh shared Circle activity",
+            refreshErr?.message || refreshErr
+          );
+        }
       }
 
       if (removeExistingPhotos || selectedFiles.length > 0) {

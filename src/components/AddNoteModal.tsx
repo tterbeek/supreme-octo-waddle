@@ -8,6 +8,7 @@ import { compressImage, createThumbnail, uploadActivityImage } from "../services
 import { extractPhotoGps } from "../lib/exifGps";
 import { fetchActivityPhotoCount, insertActivityPhotos } from "../services/activityPhotos.service";
 import { resolveActivityLocationTag } from "../services/activityLocation.service";
+import { refreshSharedActivity } from "../services/circle.service";
 import { MAX_ACTIVITY_PHOTOS } from "../lib/photos";
 
 interface AddNoteModalProps {
@@ -129,6 +130,7 @@ export default function AddNoteModal({
     let coverThumbUrl: string | null = null;
 
     try {
+      let currentUserId: string | null = null;
       const { count: existingCount, error: countError } =
         await fetchActivityPhotoCount(activityId);
       if (countError) throw countError;
@@ -150,6 +152,7 @@ export default function AddNoteModal({
 
         const user = await getCurrentUser();
         if (!user) throw new Error("No user");
+        currentUserId = user.id;
 
         const uploads: Array<{
           imagePath: string;
@@ -211,6 +214,16 @@ export default function AddNoteModal({
 
       await supabase.from("activities").update(updatePayload).eq("id", activityId);
       if (selectedFiles.length > 0) {
+        if (currentUserId) {
+          try {
+            await refreshSharedActivity(activityId, currentUserId);
+          } catch (refreshErr: any) {
+            console.warn(
+              "[AddNoteModal] Could not refresh shared Circle activity",
+              refreshErr?.message || refreshErr
+            );
+          }
+        }
         void resolveActivityLocationTag(activityId);
       }
 

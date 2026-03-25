@@ -285,6 +285,7 @@ const fetchNearbyPark = async (
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
+      "X-Goog-Maps-Language": "en",
       "X-Goog-FieldMask": "places.displayName,places.primaryType,places.types",
     },
     body: JSON.stringify({
@@ -353,6 +354,7 @@ const fetchTextSearchNaturePlace = async (
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
+        "X-Goog-Maps-Language": "en",
         "X-Goog-FieldMask": "places.displayName,places.primaryType,places.types",
       },
       body: JSON.stringify({

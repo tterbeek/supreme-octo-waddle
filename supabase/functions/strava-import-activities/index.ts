@@ -149,16 +149,73 @@ const dedupeCoords = (coords: RepresentativeCoord[]) => {
   });
 };
 
+const hasStartLatLng = (activity: StravaActivity) =>
+  Array.isArray(activity.start_latlng) &&
+  activity.start_latlng.length === 2 &&
+  typeof activity.start_latlng[0] === "number" &&
+  typeof activity.start_latlng[1] === "number";
+
+const hasRouteData = (activity: StravaActivity) =>
+  Boolean(activity?.map?.summary_polyline) || hasStartLatLng(activity);
+
+const formatCoordsForLog = (coords: RepresentativeCoord[]) =>
+  coords.map((coord) => ({
+    lat: Number(coord.lat.toFixed(5)),
+    lng: Number(coord.lng.toFixed(5)),
+  }));
+
+const normalizePlaceNameForGrouping = (name: string) =>
+  name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
+const getLevenshteinDistance = (a: string, b: string) => {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+
+  const previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const current = new Array<number>(b.length + 1);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    current[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + substitutionCost
+      );
+    }
+    for (let j = 0; j <= b.length; j += 1) {
+      previous[j] = current[j];
+    }
+  }
+
+  return previous[b.length];
+};
+
+const areLikelySamePlaceName = (a: string, b: string) => {
+  const normalizedA = normalizePlaceNameForGrouping(a);
+  const normalizedB = normalizePlaceNameForGrouping(b);
+
+  if (!normalizedA || !normalizedB) return false;
+  if (normalizedA === normalizedB) return true;
+  if (Math.abs(normalizedA.length - normalizedB.length) > 2) return false;
+  if (normalizedA.length < 12 || normalizedB.length < 12) return false;
+
+  return getLevenshteinDistance(normalizedA, normalizedB) <= 2;
+};
+
 const getRepresentativeCoords = (activity: StravaActivity): RepresentativeCoord[] => {
   const summaryPolyline = activity?.map?.summary_polyline;
 
   const fallbackStart = (() => {
-    if (
-      Array.isArray(activity.start_latlng) &&
-      activity.start_latlng.length === 2 &&
-      typeof activity.start_latlng[0] === "number" &&
-      typeof activity.start_latlng[1] === "number"
-    ) {
+    if (hasStartLatLng(activity)) {
       return [{ lat: activity.start_latlng[0], lng: activity.start_latlng[1] }];
     }
     return [];
@@ -202,6 +259,7 @@ const resolveBestLocation = async (
   params: {
     serviceClient: ReturnType<typeof createClient> | null;
     googleMapsApiKey?: string | null;
+    activityId?: number;
   }
 ): Promise<ResolvedLocation | null> => {
   if (!params.googleMapsApiKey || coords.length === 0) {
@@ -223,10 +281,77 @@ const resolveBestLocation = async (
     }
   }
 
+  console.log("[strava-import-activities] resolved places", {
+    stravaActivityId: params.activityId ?? null,
+    coords: formatCoordsForLog(coords),
+    results: results.map((result) => ({
+      name: result.name,
+      type: result.type,
+      priority: getLocationPriority(result.type),
+    })),
+  });
+
   if (results.length === 0) return null;
 
-  results.sort((a, b) => getLocationPriority(a.type) - getLocationPriority(b.type));
-  return results[0];
+  const bestPriority = Math.min(...results.map((result) => getLocationPriority(result.type)));
+  const bestPriorityResults = results.filter(
+    (result) => getLocationPriority(result.type) === bestPriority
+  );
+
+  const groupedByName: Array<{
+    key: string;
+    count: number;
+    firstIndex: number;
+    representative: ResolvedLocation;
+  }> = [];
+
+  bestPriorityResults.forEach((result, index) => {
+    const key = normalizePlaceNameForGrouping(result.name);
+    const existing = groupedByName.find((entry) =>
+      areLikelySamePlaceName(entry.representative.name, result.name)
+    );
+    if (existing) {
+      existing.count += 1;
+      return;
+    }
+    groupedByName.push({
+      count: 1,
+      firstIndex: index,
+      key,
+      representative: result,
+    });
+  });
+
+  const rankedResults = groupedByName.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.firstIndex - b.firstIndex;
+  });
+
+  console.log("[strava-import-activities] ranked place candidates", {
+    stravaActivityId: params.activityId ?? null,
+    bestPriority,
+    bestPriorityResults: bestPriorityResults.map((result, index) => ({
+      index,
+      name: result.name,
+      type: result.type,
+    })),
+    grouped: rankedResults.map((item) => ({
+      name: item.representative.name,
+      type: item.representative.type,
+      count: item.count,
+      firstIndex: item.firstIndex,
+    })),
+    selected: rankedResults[0]
+      ? {
+          name: rankedResults[0].representative.name,
+          type: rankedResults[0].representative.type,
+          count: rankedResults[0].count,
+          firstIndex: rankedResults[0].firstIndex,
+        }
+      : null,
+  });
+
+  return rankedResults[0]?.representative ?? null;
 };
 
 const generateTitle = (
@@ -259,12 +384,30 @@ const getSmartActivityTitle = async (
   }
 ) => {
   const coords = getRepresentativeCoords(activity);
+  console.log("[strava-import-activities] smart title coords", {
+    stravaActivityId: activity.id,
+    stravaName: activity.name ?? null,
+    activityType,
+    coords: formatCoordsForLog(coords),
+  });
   if (coords.length === 0) return null;
 
-  const place = await resolveBestLocation(coords, params);
+  const place = await resolveBestLocation(coords, {
+    ...params,
+    activityId: activity.id,
+  });
+  console.log("[strava-import-activities] smart title place choice", {
+    stravaActivityId: activity.id,
+    place: place ? { name: place.name, type: place.type } : null,
+  });
   if (!place) return null;
 
-  return generateTitle(activityType, place.name);
+  const title = generateTitle(activityType, place.name);
+  console.log("[strava-import-activities] smart title generated", {
+    stravaActivityId: activity.id,
+    title,
+  });
+  return title;
 };
 
 const normalizeStravaActivity = (
@@ -371,6 +514,45 @@ const fetchStravaActivities = async (
 
   const data = await res.json();
   return Array.isArray(data) ? (data as StravaActivity[]) : [];
+};
+
+const fetchStravaActivityDetail = async (
+  accessToken: string,
+  activityId: number
+): Promise<StravaActivity> => {
+  const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(
+      `Failed to fetch Strava activity detail ${activityId}: ${res.status} ${text}`
+    );
+  }
+
+  return (await res.json()) as StravaActivity;
+};
+
+const ensureRouteData = async (
+  activity: StravaActivity,
+  accessToken: string
+): Promise<StravaActivity> => {
+  if (hasRouteData(activity)) {
+    return activity;
+  }
+
+  try {
+    return await fetchStravaActivityDetail(accessToken, activity.id);
+  } catch (error) {
+    console.warn(
+      "[strava-import-activities] activity detail fallback failed",
+      error
+    );
+    return activity;
+  }
 };
 
 Deno.serve(async (req) => {
@@ -482,9 +664,10 @@ Deno.serve(async (req) => {
 
   const nowIso = new Date().toISOString();
   let inserted = 0;
-  let updated = 0;
+  let skippedExisting = 0;
 
-  for (const item of stravaActivities) {
+  for (const listItem of stravaActivities) {
+    const item = await ensureRouteData(listItem, validConnection.access_token);
     const rawSportType = item.sport_type ?? null;
     const rawType = item.type ?? null;
     const activityType = mapStravaSportTypeToMoveNotesType(rawSportType, rawType);
@@ -519,15 +702,7 @@ Deno.serve(async (req) => {
     };
 
     if (existing?.id) {
-      const { error: updateError } = await supabase
-        .from("activities")
-        .update(factualPayload)
-        .eq("id", existing.id)
-        .eq("user_id", user.id);
-      if (updateError) {
-        return jsonResponse(400, { error: updateError.message });
-      }
-      updated += 1;
+      skippedExisting += 1;
       continue;
     }
 
@@ -543,16 +718,7 @@ Deno.serve(async (req) => {
 
     if (insertError) {
       if (insertError.code === "23505") {
-        const { error: conflictUpdateError } = await supabase
-          .from("activities")
-          .update(factualPayload)
-          .eq("external_source", "strava")
-          .eq("external_id", normalized.external_id)
-          .eq("user_id", user.id);
-        if (conflictUpdateError) {
-          return jsonResponse(400, { error: conflictUpdateError.message });
-        }
-        updated += 1;
+        skippedExisting += 1;
         continue;
       }
       return jsonResponse(400, { error: insertError.message });
@@ -590,7 +756,7 @@ Deno.serve(async (req) => {
     ok: true,
     fetched: stravaActivities.length,
     inserted,
-    updated,
+    skipped_existing: skippedExisting,
     synced_at: nowIso,
   });
 });
