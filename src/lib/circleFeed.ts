@@ -8,6 +8,13 @@ type CirclePhoto = {
   sort_order?: number | null;
 };
 
+type CircleTag = {
+  type?: string | null;
+  value?: string | null;
+  metadata?: unknown;
+  source?: string | null;
+};
+
 export const parseSharePhotos = (row: CircleFeedItem): CirclePhoto[] => {
   const parsed = (() => {
     if (Array.isArray(row.photos)) return row.photos;
@@ -56,6 +63,30 @@ export const getPreferredCoverPath = (row: CircleFeedItem): string | null => {
     row.shared_photo_url ||
     null
   );
+};
+
+export const parseShareTags = (row: CircleFeedItem) => {
+  const parsed = (() => {
+    if (Array.isArray(row.tags)) return row.tags;
+    if (typeof row.tags === "string") {
+      try {
+        const data = JSON.parse(row.tags);
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  })();
+
+  return parsed
+    .map((tag: CircleTag) => ({
+      type: typeof tag?.type === "string" ? tag.type : "",
+      value: typeof tag?.value === "string" ? tag.value.trim() : "",
+      metadata: tag?.metadata ?? null,
+      source: typeof tag?.source === "string" ? tag.source : null,
+    }))
+    .filter((tag) => tag.type && tag.value);
 };
 
 export const buildCircleGalleryItems = (row: CircleFeedItem): GalleryItem[] => {

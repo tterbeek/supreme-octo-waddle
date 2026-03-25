@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { MapPin } from "lucide-react";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import {
   CIRCLE_REACTION_OPTIONS,
   type CircleReactionType,
   parseCircleReactionGroups,
 } from "../lib/circleReactions";
+import { parseShareTags } from "../lib/circleFeed";
 import type { CircleFeedItem } from "../services/circle.service";
 import { formatDurationMinutes } from "../lib/units";
 
@@ -46,6 +48,14 @@ export default function CircleFeedCard({
   const activityConfig = ACTIVITY_TYPES[item.activity_type] || ACTIVITY_TYPES.other;
   const ActivityIcon = activityConfig.Icon;
   const title = item.title || "Shared activity";
+  const tags = useMemo(() => parseShareTags(item), [item]);
+  const locationName =
+    tags.find((tag) => tag.type === "location")?.value?.trim() || "";
+  const otherTagLabel = tags
+    .filter((tag) => tag.type !== "location")
+    .map((tag) => tag.value.trim())
+    .filter(Boolean)
+    .join(" · ");
   const reactionGroups = useMemo(
     () => parseCircleReactionGroups(item.reaction_groups),
     [item.reaction_groups]
@@ -155,6 +165,20 @@ export default function CircleFeedCard({
               ? formatDurationMinutes(Number(item.duration_min))
               : null}
           </p>
+        )}
+        {(locationName || otherTagLabel) && (
+          <div className="mt-1 flex items-center justify-center gap-2 text-sm text-gray-600 flex-wrap">
+            {locationName && (
+              <span className="inline-flex items-center gap-1 max-w-full">
+                <MapPin size={14} strokeWidth={1.8} className="shrink-0" />
+                <span>{locationName}</span>
+              </span>
+            )}
+            {locationName && otherTagLabel && (
+              <span className="text-gray-400">·</span>
+            )}
+            {otherTagLabel && <span>{otherTagLabel}</span>}
+          </div>
         )}
       </div>
 

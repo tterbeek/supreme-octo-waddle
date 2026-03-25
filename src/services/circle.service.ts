@@ -34,6 +34,15 @@ export type CircleFeedItem = {
       }>
     | string
     | null;
+  tags:
+    | Array<{
+        type: string;
+        value: string;
+        metadata: unknown;
+        source: string | null;
+      }>
+    | string
+    | null;
   reaction_groups: unknown;
   current_user_reaction: CircleReactionType | null;
   has_new_reactions: boolean;

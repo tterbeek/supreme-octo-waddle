@@ -1,4 +1,6 @@
 import { supabase } from "../supabaseClient";
+import { getCurrentUser } from "./auth.service";
+import { refreshSharedActivity } from "./circle.service";
 
 export type ActivityLocationTag = {
   activity_id: string;
@@ -127,6 +129,17 @@ export async function resolveActivityLocationTag(activityId: string) {
   }
 
   const locationTag = normalizeLocationTag(data?.tag) ?? null;
+  const user = await getCurrentUser();
+  if (user) {
+    try {
+      await refreshSharedActivity(activityId, user.id);
+    } catch (refreshErr: any) {
+      console.warn(
+        "[ActivityLocation] Could not refresh shared Circle activity:",
+        refreshErr?.message || refreshErr
+      );
+    }
+  }
   emitLocationUpdate({ activityId, locationTag });
   return { locationTag, error: null };
 }
