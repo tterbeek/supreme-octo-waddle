@@ -304,17 +304,17 @@ export default function SettingsPage() {
 
   return (
     <>
-      <div className="px-0 pb-8 pt-6">
+      <div className="mx-auto w-full max-w-[24rem] px-0 pb-6 pt-[18px]">
         <h1 className="text-[28px] font-semibold leading-none text-[#1F2A24]">
           Settings
         </h1>
 
-        <div className="mt-7 space-y-7">
-          <div className="space-y-2">
+        <div className="mt-5 space-y-5">
+          <div className="space-y-1.5">
             <ActionRow label="Restart onboarding" onClick={handleRestartOnboarding} />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <NavigationRow
               label="Activity preferences"
               to="/settings/activity-preferences"
@@ -322,7 +322,7 @@ export default function SettingsPage() {
             <NavigationRow label="Presets" to="/presets" />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <InlineSettingRow
               label="Units"
               value={unitLabel}
@@ -331,15 +331,15 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <NavigationRow label="Equipment" to="/settings/equipment" icon={Dumbbell} />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <NavigationRow label="Social circle" to="/settings/circle" icon={Users} />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <NavigationRow
               label="External connections"
               to="/settings/connections"
@@ -347,7 +347,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <ActionRow
               label={exporting ? "Exporting..." : "Export data"}
               onClick={handleExport}
@@ -361,7 +361,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <ActionRow label="Log out" onClick={handleLogout} />
           </div>
         </div>
