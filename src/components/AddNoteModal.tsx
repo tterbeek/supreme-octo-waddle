@@ -10,6 +10,14 @@ import { fetchActivityPhotoCount, insertActivityPhotos } from "../services/activ
 import { resolveActivityLocationTag } from "../services/activityLocation.service";
 import { refreshSharedActivity } from "../services/circle.service";
 import { MAX_ACTIVITY_PHOTOS } from "../lib/photos";
+import {
+  createImageFile,
+  getImage,
+  getImages,
+  isImagePickerCancelledError,
+  type ImageFile,
+  type ImageSource,
+} from "../lib/media/getImage";
 
 interface AddNoteModalProps {
   activityId: string;
@@ -27,14 +35,12 @@ export default function AddNoteModal({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([]);
   const [visible, setVisible] = useState(true);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(
     typeof window !== "undefined" ? window.innerWidth <= 768 : false
   );
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const writingSoundRef = useRef<HTMLAudioElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -49,25 +55,68 @@ export default function AddNoteModal({
     userInteracted.current = true;
   };
 
-  const appendFiles = (files: FileList | null) => {
-    if (!files) return;
-    const incoming = Array.from(files);
-    if (incoming.length === 0) return;
+  const appendFiles = (files: ImageFile[]) => {
+    if (files.length === 0) return;
 
-    const available = MAX_ACTIVITY_PHOTOS - selectedFiles.length;
-    if (available <= 0) {
-      setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
-      return;
-    }
+    setSelectedFiles((prev) => {
+      const available = MAX_ACTIVITY_PHOTOS - prev.length;
+      if (available <= 0) {
+        setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+        return prev;
+      }
 
-    const next = [...selectedFiles, ...incoming.slice(0, available)];
-    if (incoming.length > available) {
-      setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
-    } else {
-      setUploadError(null);
+      const nextFiles = files.slice(0, available);
+      if (files.length > available) {
+        setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+      } else {
+        setUploadError(null);
+      }
+
+      setUploadProgress(0);
+      return [...prev, ...nextFiles];
+    });
+  };
+
+  const handlePickImage = async (source: ImageSource) => {
+    markInteraction();
+    setUploadError(null);
+
+    try {
+      if (source === "library") {
+        const remaining = MAX_ACTIVITY_PHOTOS - selectedFiles.length;
+        if (remaining <= 0) {
+          setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+          return;
+        }
+
+        const images = await getImages("library", {
+          maxCount: remaining,
+        });
+        appendFiles(
+          images.map((image, index) =>
+            createImageFile(
+              image.blob,
+              `activity-photo-${Date.now()}-${index + 1}`,
+              image.coords ?? null
+            )
+          )
+        );
+        return;
+      }
+
+      const image = await getImage(source);
+      appendFiles([
+        createImageFile(
+          image.blob,
+          `activity-photo-${Date.now()}`,
+          image.coords ?? null
+        ),
+      ]);
+    } catch (err: any) {
+      if (isImagePickerCancelledError(err)) return;
+      console.error("[AddNoteModal] Image picker error", err);
+      setUploadError(err?.message || "Could not select image.");
     }
-    setSelectedFiles(next);
-    setUploadProgress(0);
   };
 
   // 🎵 Preload sound
@@ -162,7 +211,7 @@ export default function AddNoteModal({
         }> = [];
 
         for (const file of selectedFiles) {
-          const coords = await extractPhotoGps(file);
+          const coords = file.coords ?? (await extractPhotoGps(file));
           const compressed = await compressImage(file);
           bump();
           const thumbnail = await createThumbnail(file);
@@ -309,52 +358,28 @@ export default function AddNoteModal({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => void handlePickImage("library")}
                   className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
                 >
                   <Camera className="w-4 h-4 text-amber-700" />
-                  <span>Snap or attach</span>
+                  <span>Choose photos</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={() => void handlePickImage("camera")}
                   className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
                 >
                   <Camera className="w-4 h-4 text-amber-700" />
                   <span>Open camera</span>
                 </button>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
-                  >
-                    <Camera className="w-4 h-4 text-amber-700" />
-                    <span>Choose photos</span>
-                  </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => {
-                    markInteraction();
-                    appendFiles(e.target.files);
-                    e.currentTarget.value = "";
-                  }}
-                  className="hidden"
-                />
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => {
-                    markInteraction();
-                    appendFiles(e.target.files);
-                    e.currentTarget.value = "";
-                  }}
-                  className="hidden"
-                />
+                <button
+                  type="button"
+                  onClick={() => void handlePickImage("library")}
+                  className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
+                >
+                  <Camera className="w-4 h-4 text-amber-700" />
+                  <span>Choose photos</span>
+                </button>
                 {selectedFiles.length > 0 && (
                   <button
                     type="button"

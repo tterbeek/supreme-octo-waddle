@@ -7,6 +7,14 @@ import { resolveEditFields } from "../lib/resolveEditActivityFields";
 import { kmToMiles, milesToKm, roundDurationMinutes } from "../lib/units";
 import { extractPhotoGps } from "../lib/exifGps";
 import { getActivityPhotos, MAX_ACTIVITY_PHOTOS } from "../lib/photos";
+import {
+  createImageFile,
+  getImage,
+  getImages,
+  type ImageFile,
+  isImagePickerCancelledError,
+  type ImageSource,
+} from "../lib/media/getImage";
 import { getCurrentUser } from "../services/auth.service";
 import { fetchActivityPreference } from "../services/quickLog.service";
 import {
@@ -70,7 +78,7 @@ export function useActivityEditForm({
   const [note, setNote] = useState(activity.notes || "");
   const [noteImageUrl, setNoteImageUrl] = useState(activity.note_image_url || null);
   const [noteThumbImageUrl, setNoteThumbImageUrl] = useState(activity.note_thumb_image_url || null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<ImageFile[]>([]);
   const [removeExistingPhotos, setRemoveExistingPhotos] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -84,8 +92,6 @@ export function useActivityEditForm({
   const [userId, setUserId] = useState<string | null>(null);
   const startY = useRef<number | null>(null);
   const openedAtRef = useRef<number>(Date.now());
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const existingPhotos = getActivityPhotos(activity);
   const existingPhotoTotal = existingPhotos.length;
   const existingPhotoCount = removeExistingPhotos ? 0 : existingPhotoTotal;
@@ -170,25 +176,67 @@ export function useActivityEditForm({
     };
   }, [activity.id, activityType]);
 
-  const appendFiles = (files: FileList | null) => {
-    if (!files) return;
-    const incoming = Array.from(files);
-    if (incoming.length === 0) return;
+  const appendSelectedFiles = (files: ImageFile[]) => {
+    if (files.length === 0) return;
 
-    const available = MAX_ACTIVITY_PHOTOS - existingPhotoCount - selectedFiles.length;
-    if (available <= 0) {
-      setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
-      return;
-    }
+    setSelectedFiles((prev) => {
+      const available = MAX_ACTIVITY_PHOTOS - existingPhotoCount - prev.length;
+      if (available <= 0) {
+        setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+        return prev;
+      }
 
-    const next = [...selectedFiles, ...incoming.slice(0, available)];
-    if (incoming.length > available) {
-      setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
-    } else {
-      setUploadError(null);
+      const nextFiles = files.slice(0, available);
+      if (files.length > available) {
+        setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+      } else {
+        setUploadError(null);
+      }
+
+      setUploadProgress(0);
+      return [...prev, ...nextFiles];
+    });
+  };
+
+  const pickImage = async (source: ImageSource) => {
+    setUploadError(null);
+
+    try {
+      if (source === "library") {
+        const remaining = MAX_ACTIVITY_PHOTOS - existingPhotoCount - selectedFiles.length;
+        if (remaining <= 0) {
+          setUploadError(`You can attach up to ${MAX_ACTIVITY_PHOTOS} photos.`);
+          return;
+        }
+
+        const images = await getImages("library", {
+          maxCount: remaining,
+        });
+        appendSelectedFiles(
+          images.map((image, index) =>
+            createImageFile(
+              image.blob,
+              `activity-photo-${activity.id}-${Date.now()}-${index + 1}`,
+              image.coords ?? null
+            )
+          )
+        );
+        return;
+      }
+
+      const image = await getImage(source);
+      appendSelectedFiles([
+        createImageFile(
+          image.blob,
+          `activity-photo-${activity.id}-${Date.now()}`,
+          image.coords ?? null
+        ),
+      ]);
+    } catch (err: any) {
+      if (isImagePickerCancelledError(err)) return;
+      console.error("[EditActivity] Image picker error:", err);
+      setUploadError(err?.message || "Could not select image.");
     }
-    setSelectedFiles(next);
-    setUploadProgress(0);
   };
 
   const handleSave = async () => {
@@ -259,7 +307,7 @@ export function useActivityEditForm({
         }> = [];
 
         for (const file of selectedFiles) {
-          const coords = await extractPhotoGps(file);
+          const coords = file.coords ?? (await extractPhotoGps(file));
           const compressed = await compressImage(file);
           bump();
           const thumbnail = await createThumbnail(file);
@@ -506,7 +554,7 @@ export function useActivityEditForm({
     setRemoveExistingPhotos,
     existingPhotoCount,
     existingPhotoTotal,
-    appendFiles,
+    pickImage,
     uploading,
     uploadError,
     uploadProgress,
@@ -516,8 +564,6 @@ export function useActivityEditForm({
     deleting,
     animateIn,
     dragY,
-    fileInputRef,
-    cameraInputRef,
     handleDistanceChange,
     distanceDisplay,
     handleSave,

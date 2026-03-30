@@ -53,7 +53,7 @@ export default function EditActivityModal({
     removeExistingPhotos,
     setRemoveExistingPhotos,
     existingPhotoTotal,
-    appendFiles,
+    pickImage,
     uploading,
     uploadError,
     uploadProgress,
@@ -61,8 +61,6 @@ export default function EditActivityModal({
     deleting,
     animateIn,
     dragY,
-    fileInputRef,
-    cameraInputRef,
     distanceDisplay,
     handleDistanceChange,
     activityType,
@@ -233,15 +231,15 @@ export default function EditActivityModal({
           <div className="flex items-center gap-3 flex-wrap mb-6">
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => void pickImage("library")}
               className="hidden md:inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
             >
               <Camera className="w-4 h-4 text-amber-700" />
-              <span>Snap or attach</span>
+              <span>Choose photos</span>
             </button>
             <button
               type="button"
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={() => void pickImage("camera")}
               className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
             >
               <Camera className="w-4 h-4 text-amber-700" />
@@ -249,34 +247,12 @@ export default function EditActivityModal({
             </button>
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => void pickImage("library")}
               className="inline-flex md:hidden items-center gap-2 px-3 py-2 rounded-full text-sm font-medium text-gray-800 bg-gradient-to-r from-amber-200 to-amber-100 border border-amber-300 shadow-sm hover:shadow-md active:scale-95 transition"
             >
               <Camera className="w-4 h-4 text-amber-700" />
               <span>Choose photos</span>
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => {
-                appendFiles(e.target.files);
-                e.currentTarget.value = "";
-              }}
-              className="hidden"
-            />
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => {
-                appendFiles(e.target.files);
-                e.currentTarget.value = "";
-              }}
-              className="hidden"
-            />
             {existingPhotoTotal > 0 && !removeExistingPhotos && (
               <button
                 type="button"
