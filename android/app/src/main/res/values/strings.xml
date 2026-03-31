@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">MoveNotes</string>
-    <string name="title_activity_main">MoveNotes</string>
-    <string name="package_name">app.movenotes</string>
-    <string name="custom_url_scheme">app.movenotes</string>
-</resources>
