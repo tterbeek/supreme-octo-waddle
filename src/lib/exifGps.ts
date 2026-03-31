@@ -43,6 +43,8 @@ const TYPE_SIZES: Record<number, number> = {
 };
 
 const asRoundedCoord = (value: number) => Math.round(value * 1e7) / 1e7;
+const isNullIsland = (lat: number, lng: number) =>
+  Math.abs(lat) < 1e-7 && Math.abs(lng) < 1e-7;
 
 const inBounds = (view: DataView, offset: number, length = 1) =>
   offset >= 0 && length >= 0 && offset + length <= view.byteLength;
@@ -596,7 +598,10 @@ export async function extractPhotoGps(file: Blob): Promise<GpsCoords | null> {
   try {
     const buffer = await file.arrayBuffer();
     const view = new DataView(buffer);
-    return parseExifGpsFromJpeg(view) || parseHeifExifGps(view);
+    const coords = parseExifGpsFromJpeg(view) || parseHeifExifGps(view);
+    if (!coords) return null;
+    if (isNullIsland(coords.lat, coords.lng)) return null;
+    return coords;
   } catch {
     return null;
   }

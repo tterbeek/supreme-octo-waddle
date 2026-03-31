@@ -114,6 +114,8 @@ const parseCoordinateValue = (value: unknown, ref: unknown) => {
 };
 
 const roundCoord = (value: number) => Math.round(value * 1e7) / 1e7;
+const isNullIsland = (lat: number, lng: number) =>
+  Math.abs(lat) < 1e-7 && Math.abs(lng) < 1e-7;
 
 const parseNativeExifCoords = (exif: unknown): ImageCoords | null => {
   const exifObject = toObject(exif);
@@ -147,6 +149,7 @@ const parseNativeExifCoords = (exif: unknown): ImageCoords | null => {
   );
 
   if (lat == null || lng == null) return null;
+  if (isNullIsland(lat, lng)) return null;
   return {
     lat: roundCoord(lat),
     lng: roundCoord(lng),
@@ -219,10 +222,10 @@ function pickFiles(
 
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/*";
     input.multiple = multiple;
 
     if (source === "camera") {
+      input.accept = "image/*";
       input.setAttribute("capture", "environment");
     }
 
@@ -256,6 +259,9 @@ function pickFiles(
 
 async function getBrowserImage(source: ImageSource): Promise<ImageResult> {
   const [file] = await pickFiles(source);
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Selected file is not an image.");
+  }
 
   return {
     blob: file,
@@ -266,8 +272,13 @@ async function getBrowserImage(source: ImageSource): Promise<ImageResult> {
 
 async function getBrowserImages(source: ImageSource): Promise<ImageResult[]> {
   const files = await pickFiles(source, { multiple: source === "library" });
+  const imageFiles = files.filter((file) => file.type.startsWith("image/"));
 
-  return files.map((file) => ({
+  if (imageFiles.length === 0) {
+    throw new Error("Selected file is not an image.");
+  }
+
+  return imageFiles.map((file) => ({
     blob: file,
     previewUrl: URL.createObjectURL(file),
     coords: null,
