@@ -47,6 +47,7 @@ const TYPE_NOUNS: Record<string, string> = {
   swim: "swim",
   strength: "strength session",
   yoga: "yoga session",
+  meditation: "meditation session",
   restore: "restore session",
   other: "session",
 };

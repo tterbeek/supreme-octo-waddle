@@ -4,11 +4,11 @@ import { supabase } from "../supabaseClient";
 import ModalSheet from "../components/ModalSheet";
 import {
   ACTIVITY_TYPES,
-  SETTINGS_ACTIVITY_TYPE_IDS,
   supportsMetricOverride,
 } from "../config/activityTypes";
 import { fetchActivityPreferences } from "../lib/fetchActivityPreferences";
 import {
+  normalizeUserActivityTypes,
   setCachedUserActivityTypes,
   type UserActivityTypeRow,
 } from "../lib/userActivityTypesCache";
@@ -31,19 +31,6 @@ function getSystemDefaultMetric(activityType: string): Metric {
   if (!config || !config.defaultFields.length) return "duration";
 
   return config.defaultFields[0] === "distance_km" ? "distance" : "duration";
-}
-
-function normalizeActivityTypes(rows: UserActivityTypeRow[]) {
-  const rowMap = new Map(rows.map((row) => [row.activity_type, row]));
-  return SETTINGS_ACTIVITY_TYPE_IDS.map((id, index) => {
-    const existing = rowMap.get(id);
-    if (existing) return existing;
-    return {
-      activity_type: id,
-      sort_order: (index + 1) * SORT_INCREMENT,
-      is_enabled: true,
-    };
-  });
 }
 
 export default function ActivityPreferencesPage({
@@ -145,7 +132,7 @@ export default function ActivityPreferencesPage({
         if (typesRes.error) throw typesRes.error;
 
         if (!cancelled) {
-          const normalized = normalizeActivityTypes(typesRes.data || []);
+          const normalized = normalizeUserActivityTypes(typesRes.data || []);
           setActivityTypes(normalized);
           setCachedUserActivityTypes(user.id, normalized);
           setPrefs(buildPreferenceMap(prefRows));

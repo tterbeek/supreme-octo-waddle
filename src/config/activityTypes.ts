@@ -11,6 +11,7 @@ import {
   IconDots,
   IconSparkles,
   IconPlant2,
+  IconUserPause,
   IconZzz,
 } from "@tabler/icons-react";
 
@@ -36,9 +37,13 @@ export const SETTINGS_ACTIVITY_TYPE_IDS = [
   "yoga",
   "hike",
   "swim",
-  "restore",
+  "meditation",
   "other",
 ] as const;
+
+export const CREATABLE_ACTIVITY_TYPE_IDS = SETTINGS_ACTIVITY_TYPE_IDS;
+
+export const LEGACY_ACTIVITY_TYPE_IDS = ["restore"] as const;
 
 export const METRIC_OVERRIDE_ACTIVITY_TYPE_IDS = [
   "run",
@@ -51,6 +56,25 @@ export const METRIC_OVERRIDE_ACTIVITY_TYPE_IDS = [
 
 export const supportsMetricOverride = (activityType: string) =>
   (METRIC_OVERRIDE_ACTIVITY_TYPE_IDS as readonly string[]).includes(activityType);
+
+export const EFFORT_ACTIVITY_TYPE_IDS = ["run", "ride", "swim", "hike"] as const;
+
+export const isCreatableActivityType = (activityType: string) =>
+  (CREATABLE_ACTIVITY_TYPE_IDS as readonly string[]).includes(activityType);
+
+export const supportsEffort = (activityType: string) =>
+  (EFFORT_ACTIVITY_TYPE_IDS as readonly string[]).includes(activityType);
+
+export const supportsActivityField = (
+  activityType: string,
+  field: ActivityField
+) => {
+  const config = ACTIVITY_TYPES[activityType];
+  if (!config) return false;
+  return (
+    config.defaultFields.includes(field) || config.optionalFields.includes(field)
+  );
+};
 
 export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
   any: {
@@ -117,6 +141,14 @@ export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
     // UPDATED: duration is default, distance optional
     defaultFields: ["duration_min"],
     optionalFields: ["distance_km"],
+  },
+  meditation: {
+    id: "meditation",
+    label: "Meditate",
+    equipmentLabel: "Meditation",
+    Icon: IconUserPause,
+    defaultFields: [],
+    optionalFields: ["duration_min"],
   },
   restore: {
     id: "restore",

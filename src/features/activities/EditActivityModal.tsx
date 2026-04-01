@@ -3,6 +3,7 @@ import { Trash2, Camera, ChevronDown } from "lucide-react";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { useActivityEditForm } from "../../hooks/useActivityEditForm";
 import { MAX_ACTIVITY_PHOTOS } from "../../lib/photos";
+import { supportsEffort } from "../../config/activityTypes";
 import EquipmentDialog from "../../components/EquipmentDialog";
 import DistanceDurationFields from "../../components/quick-log/DistanceDurationFields";
 import FeelingSelector from "../../components/quick-log/FeelingSelector";
@@ -81,6 +82,17 @@ export default function EditActivityModal({
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const supportsDistanceField =
+    defaultFields.includes("distance_km") || optionalFields.includes("distance_km");
+  const supportsDurationField =
+    defaultFields.includes("duration_min") || optionalFields.includes("duration_min");
+  const detailsSummary = [
+    supportsDistanceField ? "Distance" : null,
+    supportsDurationField ? "time" : null,
+    "equipment",
+  ]
+    .filter(Boolean)
+    .join(", ");
   const equipmentSummary = (() => {
     if (selectedEquipmentIds.length === 0) return "";
     const first = equipment.find((item) => item.id === selectedEquipmentIds[0]);
@@ -136,7 +148,7 @@ export default function EditActivityModal({
 
           <div className="space-y-4">
             <FeelingSelector value={rating} onChange={setRating} />
-            {["run", "ride", "swim", "hike"].includes(activityType) && (
+            {supportsEffort(activityType) && (
               <EffortSelector value={effort} onChange={setEffort} />
             )}
           </div>
@@ -150,15 +162,19 @@ export default function EditActivityModal({
                   const next = !detailsOpen;
                   setDetailsOpen(next);
                   if (next) {
-                    setShowOptionalDistance(true);
-                    setShowOptionalDuration(true);
+                    if (optionalFields.includes("distance_km")) {
+                      setShowOptionalDistance(true);
+                    }
+                    if (optionalFields.includes("duration_min")) {
+                      setShowOptionalDuration(true);
+                    }
                   }
                 }}
               >
                 <div className="text-left">
                   <div className="text-sm font-medium">Details</div>
                   <div className="text-xs text-gray-400">
-                    Distance, time, equipment
+                    {detailsSummary}
                   </div>
                 </div>
                 <ChevronDown
@@ -195,7 +211,6 @@ export default function EditActivityModal({
                     onDurationChange={setDuration}
                     onShowDistance={() => {}}
                     onShowDuration={() => {}}
-                    forceShowOptional
                     suppressAddButtons
                     dense
                   />

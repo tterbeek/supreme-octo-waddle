@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import type { Preset } from "../types";
 import { Zap } from "lucide-react";
-import { ACTIVITY_TYPES } from "../config/activityTypes";
+import {
+  ACTIVITY_TYPES,
+  isCreatableActivityType,
+  supportsEffort,
+} from "../config/activityTypes";
 import TooltipBubble from "../components/TooltipBubble";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
@@ -51,6 +55,11 @@ export default function PresetsPage() {
   }, [hasDoneOnboarding, hasSeen, showTooltip]);
 
   const filteredPresets = presets.filter((p) => p.type === selectedType);
+  const visibleTypes = Object.values(ACTIVITY_TYPES).filter((type) => {
+    if (type.id === "any") return false;
+    if (isCreatableActivityType(type.id)) return true;
+    return presets.some((preset) => preset.type === type.id);
+  });
   const selectedTypeLabel =
     ACTIVITY_TYPES[selectedType]?.label || selectedType;
   const equipmentSummaryForPreset = (preset: Preset) => {
@@ -64,6 +73,16 @@ export default function PresetsPage() {
     }
     return label;
   };
+
+  const canCreatePresetForSelectedType = isCreatableActivityType(selectedType);
+
+  useEffect(() => {
+    if (visibleTypes.some((type) => type.id === selectedType)) return;
+    const fallbackType = visibleTypes[0]?.id;
+    if (fallbackType) {
+      setSelectedType(fallbackType as keyof typeof ACTIVITY_TYPES);
+    }
+  }, [selectedType, visibleTypes]);
 
   return (
 <div className="mb-4">
@@ -80,9 +99,7 @@ export default function PresetsPage() {
 
 {/* Activity type selector */}
 <div className="flex gap-3 my-4 overflow-x-auto pb-2">
-  {Object.values(ACTIVITY_TYPES)
-    .filter((t) => t.id !== "any")
-    .map((t) => {
+  {visibleTypes.map((t) => {
     const Icon = t.Icon;
     return (
       <button
@@ -106,9 +123,11 @@ export default function PresetsPage() {
 <div className="flex gap-4 mb-6">
   <button
     onClick={() => {
+      if (!canCreatePresetForSelectedType) return;
       setEditingPreset(null);
       setShowForm(true);
     }}
+    disabled={!canCreatePresetForSelectedType}
     className="flex-1 bg-amber-300 border border-amber-400 text-primary-text py-3 rounded-full text-lg font-medium flex items-center justify-center gap-1.5 transition transform hover:-translate-y-0.5 active:scale-95"
   >
     <span className="text-xl">+</span>
@@ -128,9 +147,6 @@ export default function PresetsPage() {
 
           {filteredPresets.map((p) => {
             const typeConfig = ACTIVITY_TYPES[p.type] ?? ACTIVITY_TYPES["other"];
-            const isEndurance = ["run", "ride", "swim", "hike"].includes(
-              typeConfig.id
-            );
             const distanceUnit = unitSystem === "imperial" ? "mi" : "km";
             const distanceDisplay =
               p.distance_km != null
@@ -172,7 +188,7 @@ export default function PresetsPage() {
                 {equipmentSummary && (
                   <div className="text-sm text-gray-500 mt-1">{equipmentSummary}</div>
                 )}
-                {isEndurance && p.effort != null && (
+                {supportsEffort(typeConfig.id) && p.effort != null && (
                   <div className="flex items-center gap-1 mt-1">
                     {Array.from({ length: Number(p.effort) || 0 }).map((_, idx) => (
                       <Zap key={idx} className="w-4 h-4 text-movenotes-accent" />

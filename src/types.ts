@@ -32,6 +32,8 @@ export type Goal = {
     | "yoga"
     | "hike"
     | "swim"
+    | "meditation"
+    | "restore"
     | "other"
     | "any";
   metric: "distance" | "duration" | "count";
@@ -50,6 +52,7 @@ export type MoveNotesActivityType =
   | "yoga"
   | "hike"
   | "swim"
+  | "meditation"
   | "restore"
   | "other";
 

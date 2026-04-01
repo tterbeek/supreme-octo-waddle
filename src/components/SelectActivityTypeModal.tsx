@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import ModalSheet from "./ModalSheet";
-import { ACTIVITY_TYPES, SETTINGS_ACTIVITY_TYPE_IDS } from "../config/activityTypes";
+import {
+  ACTIVITY_TYPES,
+  SETTINGS_ACTIVITY_TYPE_IDS,
+  isCreatableActivityType,
+} from "../config/activityTypes";
 import { supabase } from "../supabaseClient";
 import {
   getCachedUserActivityTypes,
+  normalizeUserActivityTypes,
   setCachedUserActivityTypes,
   type UserActivityTypeRow,
 } from "../lib/userActivityTypesCache";
@@ -64,7 +69,7 @@ export function SelectActivityTypeModal({ open, onClose, onSelect }: Props) {
 
         const cached = getCachedUserActivityTypes(user.id);
         if (cached?.length) {
-          setActivityTypes(cached);
+          setActivityTypes(normalizeUserActivityTypes(cached));
           if (!hasLocalData) {
             setLoading(false);
           }
@@ -105,8 +110,9 @@ export function SelectActivityTypeModal({ open, onClose, onSelect }: Props) {
 
         const rows = (data || []) as UserActivityTypeRow[];
         if (rows.length > 0) {
-          setActivityTypes(rows);
-          setCachedUserActivityTypes(user.id, rows);
+          const normalized = normalizeUserActivityTypes(rows);
+          setActivityTypes(normalized);
+          setCachedUserActivityTypes(user.id, normalized);
         } else if (!hasLocalData) {
           setActivityTypes(fallbackActivityTypes());
         }
@@ -132,7 +138,9 @@ export function SelectActivityTypeModal({ open, onClose, onSelect }: Props) {
   const enabledActivities = useMemo(
     () =>
       activityTypes
-        .filter((row) => row.is_enabled)
+        .filter(
+          (row) => row.is_enabled && isCreatableActivityType(row.activity_type)
+        )
         .map((row) => ACTIVITY_TYPES[row.activity_type])
         .filter(Boolean),
     [activityTypes]
@@ -140,7 +148,9 @@ export function SelectActivityTypeModal({ open, onClose, onSelect }: Props) {
   const hiddenActivities = useMemo(
     () =>
       activityTypes
-        .filter((row) => !row.is_enabled)
+        .filter(
+          (row) => !row.is_enabled && isCreatableActivityType(row.activity_type)
+        )
         .map((row) => ACTIVITY_TYPES[row.activity_type])
         .filter(Boolean),
     [activityTypes]

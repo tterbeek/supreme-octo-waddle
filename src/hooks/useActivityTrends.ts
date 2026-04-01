@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import {
   getCachedUserActivityTypes,
+  normalizeUserActivityTypes,
   setCachedUserActivityTypes,
   type UserActivityTypeRow,
 } from "../lib/userActivityTypesCache";
@@ -155,7 +156,7 @@ export function useActivityTrends(userId: string | null, enabled: boolean) {
     const loadActivityTypes = async () => {
       const cached = getCachedUserActivityTypes(userId);
       if (cached?.length) {
-        setUserActivityTypes(cached);
+        setUserActivityTypes(normalizeUserActivityTypes(cached));
       }
 
       const { error: seedError } = await supabase.rpc(
@@ -176,7 +177,9 @@ export function useActivityTrends(userId: string | null, enabled: boolean) {
         return;
       }
       if (cancelled) return;
-      const rows = (data || []) as UserActivityTypeRow[];
+      const rows = normalizeUserActivityTypes(
+        (data || []) as UserActivityTypeRow[]
+      );
       setUserActivityTypes(rows);
       setCachedUserActivityTypes(userId, rows);
     };

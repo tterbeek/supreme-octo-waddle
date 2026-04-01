@@ -1,11 +1,28 @@
+import { SETTINGS_ACTIVITY_TYPE_IDS } from "../config/activityTypes";
+
 export type UserActivityTypeRow = {
   activity_type: string;
   sort_order: number;
   is_enabled: boolean;
 };
 
+const SORT_INCREMENT = 10;
+
 const cache = new Map<string, UserActivityTypeRow[]>();
 const listeners = new Map<string, Set<(rows: UserActivityTypeRow[]) => void>>();
+
+export const normalizeUserActivityTypes = (rows: UserActivityTypeRow[]) => {
+  const rowMap = new Map(rows.map((row) => [row.activity_type, row]));
+  return SETTINGS_ACTIVITY_TYPE_IDS.map((activity_type, index) => {
+    const existing = rowMap.get(activity_type);
+    if (existing) return existing;
+    return {
+      activity_type,
+      sort_order: (index + 1) * SORT_INCREMENT,
+      is_enabled: true,
+    };
+  });
+};
 
 export const getCachedUserActivityTypes = (userId: string) =>
   cache.get(userId) ?? null;

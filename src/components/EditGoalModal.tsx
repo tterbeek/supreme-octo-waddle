@@ -4,7 +4,7 @@ import ModalSheet from "./ModalSheet";
 import { supabase } from "../supabaseClient";
 import type { Goal } from "../types";
 import { Target, CalendarDays, Ruler, Hash } from "lucide-react";
-import { ACTIVITY_TYPES } from "../config/activityTypes";
+import { ACTIVITY_TYPES, supportsActivityField } from "../config/activityTypes";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { kmToMiles, milesToKm } from "../lib/units";
 
@@ -136,9 +136,12 @@ export default function EditGoalModal({
           if (safeActivityType === "any") {
             metricsForType = ["count"];
           } else {
-            if (typeConfig?.defaultFields.includes("distance_km")) metricsForType.push("distance");
-            if (typeConfig?.defaultFields.includes("duration_min"))
+            if (supportsActivityField(safeActivityType, "distance_km")) {
+              metricsForType.push("distance");
+            }
+            if (supportsActivityField(safeActivityType, "duration_min")) {
               metricsForType.push("duration" as Goal["metric"]);
+            }
             metricsForType.push("count");
           }
           if (metricsForType.length === 0) {

@@ -46,6 +46,7 @@ type MoveNotesActivityType =
   | "yoga"
   | "hike"
   | "swim"
+  | "meditation"
   | "restore"
   | "other";
 
@@ -368,6 +369,7 @@ const generateTitle = (
     yoga: "Yoga",
     hike: "Hike",
     swim: "Swim",
+    meditation: "Meditation",
     restore: "Recovery",
     other: "Activity",
   };

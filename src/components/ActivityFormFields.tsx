@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import DistanceDurationFields from "./quick-log/DistanceDurationFields";
 import FeelingSelector from "./quick-log/FeelingSelector";
 import EffortSelector from "./quick-log/EffortSelector";
+import { supportsEffort } from "../config/activityTypes";
 
 export type ActivityFormValues = {
   title: string;
@@ -132,7 +133,7 @@ export default function ActivityFormFields({
       {(showFeeling || showEffort) && (
         <div className="mb-4 flex flex-col items-center gap-4">
           {showFeeling && <FeelingSelector value={feeling} onChange={onFeelingChange} />}
-          {showEffort && ["run", "ride", "swim", "hike"].includes(activityType) && (
+          {showEffort && supportsEffort(activityType) && (
             <EffortSelector value={effort} onChange={onEffortChange} />
           )}
         </div>

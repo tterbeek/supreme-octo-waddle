@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ACTIVITY_TYPES } from "../config/activityTypes";
+import { ACTIVITY_TYPES, supportsEffort } from "../config/activityTypes";
 import {
   resolveActivityFields,
   type ActivityPreference,
@@ -278,9 +278,7 @@ export function useQuickLogForm({
         ? roundDurationMinutes(Number(duration))
         : null;
 
-    const effortValue = ["run", "ride", "swim", "hike"].includes(activityType)
-      ? Number(effort) || null
-      : null;
+    const effortValue = supportsEffort(activityType) ? Number(effort) || null : null;
 
     const feelingValue = Number(feeling) || null;
 

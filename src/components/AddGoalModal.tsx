@@ -3,11 +3,16 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "./ModalSheet";
 import type { Goal } from "../types";
-import { ACTIVITY_TYPES } from "../config/activityTypes";
+import {
+  ACTIVITY_TYPES,
+  isCreatableActivityType,
+  supportsActivityField,
+} from "../config/activityTypes";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { kmToMiles, milesToKm } from "../lib/units";
 import {
   getCachedUserActivityTypes,
+  normalizeUserActivityTypes,
   subscribeUserActivityTypes,
   type UserActivityTypeRow,
 } from "../lib/userActivityTypesCache";
@@ -21,9 +26,8 @@ interface AddGoalModalProps {
 
 export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGoals }: AddGoalModalProps) {
   const getDefaultMetric = (typeId: string): Goal["metric"] | "duration" => {
-    const cfg = ACTIVITY_TYPES[typeId];
-    if (cfg?.defaultFields.includes("distance_km")) return "distance";
-    if (cfg?.defaultFields.includes("duration_min")) return "duration";
+    if (supportsActivityField(typeId, "distance_km")) return "distance";
+    if (supportsActivityField(typeId, "duration_min")) return "duration";
     return "count";
   };
 
@@ -82,12 +86,12 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
   };
 
   const getMetricsForType = (typeId: string) => {
-    const cfg = ACTIVITY_TYPES[typeId];
     if (typeId === "any") return ["count"] as Array<Goal["metric"]>;
     const metrics: Array<Goal["metric"] | "duration"> = [];
-    if (cfg?.defaultFields.includes("distance_km")) metrics.push("distance");
-    if (cfg?.defaultFields.includes("duration_min"))
+    if (supportsActivityField(typeId, "distance_km")) metrics.push("distance");
+    if (supportsActivityField(typeId, "duration_min")) {
       metrics.push("duration" as Goal["metric"]);
+    }
     metrics.push("count");
     return metrics;
   };
@@ -111,7 +115,7 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
     if (!userId) return;
     const cached = getCachedUserActivityTypes(userId);
     if (cached?.length) {
-      setUserActivityTypes(cached);
+      setUserActivityTypes(normalizeUserActivityTypes(cached));
     }
     const unsubscribe = subscribeUserActivityTypes(userId, setUserActivityTypes);
     return () => {
@@ -122,11 +126,15 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
   const orderedActivityTypes = useMemo(() => {
     const anyType = ACTIVITY_TYPES["any"];
     if (!userActivityTypes.length) {
-      const defaults = Object.values(ACTIVITY_TYPES).filter((t) => t.id !== "any");
+      const defaults = Object.values(ACTIVITY_TYPES).filter(
+        (t) => t.id !== "any" && isCreatableActivityType(t.id)
+      );
       return anyType ? [anyType, ...defaults] : defaults;
     }
     const enabled = userActivityTypes
-      .filter((row) => row.is_enabled)
+      .filter(
+        (row) => row.is_enabled && isCreatableActivityType(row.activity_type)
+      )
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((row) => ACTIVITY_TYPES[row.activity_type])
       .filter(Boolean);
@@ -227,9 +235,12 @@ const save = async () => {
           if (activityType === "any") {
             metricsForType = ["count"];
           } else {
-            if (typeConfig?.defaultFields.includes("distance_km")) metricsForType.push("distance");
-            if (typeConfig?.defaultFields.includes("duration_min"))
+            if (supportsActivityField(activityType, "distance_km")) {
+              metricsForType.push("distance");
+            }
+            if (supportsActivityField(activityType, "duration_min")) {
               metricsForType.push("duration" as Goal["metric"]);
+            }
             metricsForType.push("count");
           }
           return metricsForType.map((m) => (

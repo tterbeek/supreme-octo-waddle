@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import ModalSheet from "../../components/ModalSheet";
-import { ACTIVITY_TYPES } from "../../config/activityTypes";
+import { ACTIVITY_TYPES, supportsEffort } from "../../config/activityTypes";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { kmToMiles, milesToKm, roundDurationMinutes } from "../../lib/units";
 import PresetForm from "./PresetFormContent";
@@ -86,9 +86,7 @@ export default function AddPresetModal({
         ? roundDurationMinutes(Number(duration))
         : null;
 
-    const effortValue = ["run", "ride", "swim", "hike"].includes(activityType)
-      ? effort
-      : null;
+    const effortValue = supportsEffort(activityType) ? effort : null;
 
     const payload = {
       user_id: user.id,

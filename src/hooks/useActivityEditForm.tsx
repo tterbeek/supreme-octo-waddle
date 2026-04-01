@@ -7,6 +7,7 @@ import { resolveEditFields } from "../lib/resolveEditActivityFields";
 import { kmToMiles, milesToKm, roundDurationMinutes } from "../lib/units";
 import { extractPhotoGps } from "../lib/exifGps";
 import { getActivityPhotos, MAX_ACTIVITY_PHOTOS } from "../lib/photos";
+import { supportsEffort } from "../config/activityTypes";
 import {
   createImageFile,
   getImage,
@@ -262,10 +263,7 @@ export function useActivityEditForm({
         ? roundDurationMinutes(Number(duration))
         : null;
 
-    const effortValue =
-      ["run", "ride", "swim", "hike"].includes(activityType)
-        ? Number(effort) || null
-        : null;
+    const effortValue = supportsEffort(activityType) ? Number(effort) || null : null;
 
     const feelingValue = Number(rating) || null;
 
