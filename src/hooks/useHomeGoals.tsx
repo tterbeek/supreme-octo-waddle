@@ -24,8 +24,10 @@ const ACTIVITY_ORDER: Record<GoalStat["activity_type"], number> = {
   yoga: 4,
   hike: 5,
   swim: 6,
-  other: 7,
-  any: 8,
+  meditation: 7,
+  restore: 8,
+  other: 9,
+  any: 10,
 };
 
 export function useHomeGoals(userId: string | null, useRpcGoals: boolean) {

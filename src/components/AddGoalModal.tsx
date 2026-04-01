@@ -229,21 +229,7 @@ const save = async () => {
       {/* Metric selector */}
       <label className="block text-sm mb-1">Metric</label>
       <div className="flex gap-2 mb-3">
-        {(() => {
-          const typeConfig = ACTIVITY_TYPES[activityType];
-          let metricsForType: Array<Goal["metric"] | "duration"> = [];
-          if (activityType === "any") {
-            metricsForType = ["count"];
-          } else {
-            if (supportsActivityField(activityType, "distance_km")) {
-              metricsForType.push("distance");
-            }
-            if (supportsActivityField(activityType, "duration_min")) {
-              metricsForType.push("duration" as Goal["metric"]);
-            }
-            metricsForType.push("count");
-          }
-          return metricsForType.map((m) => (
+        {getMetricsForType(activityType).map((m) => (
             <button
               key={m}
               type="button"
@@ -256,8 +242,7 @@ const save = async () => {
               {m === "duration" && "Duration"}
               {m === "count" && "Count"}
             </button>
-          ));
-        })()}
+          ))}
       </div>
 
       <label className="text-sm text-gray-600">Period</label>
