@@ -226,12 +226,14 @@ export default function Home() {
   ]);
 
   useEffect(() => {
+    if (!hasDoneOnboarding) return;
     if (!hasAcceptedCircleConnections) return;
     if (shareableActivityIds.length === 0) return;
     if (hasSeen("circle_share_onboarding")) return;
     if (visible !== null) return;
     showTooltip("circle_share_onboarding");
   }, [
+    hasDoneOnboarding,
     hasAcceptedCircleConnections,
     hasSeen,
     shareableActivityIds.length,
@@ -487,6 +489,7 @@ export default function Home() {
                           const showAfterLogTooltip =
                             visible === "after_first_log" && currentActivityIndex === 0;
                           const showCircleShareOnboardingTooltip =
+                            hasDoneOnboarding &&
                             visible === "circle_share_onboarding" &&
                             currentActivityIndex === 0;
                           return (
