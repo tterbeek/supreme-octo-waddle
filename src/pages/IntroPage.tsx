@@ -5,7 +5,7 @@ export default function IntroPage() {
     <div className="min-h-screen flex items-center justify-center px-6 bg-movenotes-bg text-movenotes-text">
       <div className="max-w-md w-full space-y-6 bg-movenotes-surface shadow-sm border border-movenotes-border rounded-2xl p-8">
         <h1 className="text-2xl font-semibold text-movenotes-primary">
-          A private movement journal.
+          A private movement journal
         </h1>
 
         <p className="text-movenotes-muted">
@@ -15,11 +15,15 @@ export default function IntroPage() {
 
         <ul className="space-y-2 text-movenotes-text">
           <li>• Log runs, walks, rides, yoga and more</li>
-          <li>• Optional distance or duration</li>
-          <li>• Notes and photos, just for you</li>
-          <li>• Gentle goals and trends</li>
-          <li>• No GPS, no feed, no pressure</li>
+          <li>• Add distance or duration if it matters to you</li>
+          <li>• Capture a note, a photo, a moment</li>
+          <li>• See patterns emerge over time</li>
+          <li>• Share selectively in the Gentle Circle, if you want</li>
         </ul>
+
+        <p className="text-movenotes-muted">
+          No GPS. No performance metrics. No pressure.
+        </p>
 
         <div className="space-y-3 pt-4">
           <Link
