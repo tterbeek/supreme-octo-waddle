@@ -55,10 +55,15 @@ export default function AboutPage() {
   </h1>
 
   <div className="text-center text-movenotes-muted text-lg mb-6 leading-relaxed max-w-2xl mx-auto space-y-4">
-    <p>MoveNotes is a quiet place to notice your movement.</p>
-    <p>It's not about performance or optimization.</p>
-    <p>It's about paying attention — gently, without pressure.</p>
-    <p>You don't need to change your routine or commit to anything.</p>
+    <p>MoveNotes is a different way to relate to movement.</p>
+    <p>
+      Most fitness tools are built around precision: pace, splits, segments,
+      records. Over time, it becomes easy to focus on what can be measured, and
+      lose sight of what actually mattered.
+    </p>
+    <p>MoveNotes started from that shift.</p>
+    <p>When the numbers began to feel louder than the experience itself.</p>
+    <p>This is an attempt to rebalance that.</p>
   </div>
 
   <div className="max-w-2xl mx-auto mb-8">
@@ -68,43 +73,62 @@ export default function AboutPage() {
   {/* How it works */}
   <section className="mb-10">
     <h2 className="text-xl font-semibold text-movenotes-primary mb-3">
-      How it works
+      A low-fidelity approach
     </h2>
     <p className="leading-relaxed mb-4">
-      After a walk, a run, a ride, or any kind of movement, you can leave a short
-      note about how it felt.
+      MoveNotes is intentionally low-fidelity by design.
     </p>
     <p className="leading-relaxed mb-4">
-      Nothing to complete. Nothing to prove.
+      Instead of detailed performance metrics, it keeps things simple: duration
+      or distance if you want it, a note or reflection, and a photo from the
+      moment.
     </p>
     <p className="leading-relaxed">
-      Just noticing what's already there.
+      It creates space for the parts that usually get lost: how something felt,
+      what stood out, and why it mattered that day. Because movement is more
+      than data.
     </p>
   </section>
 
         {/* Why */}
         <section className="mb-10">
           <h2 className="text-xl font-semibold text-movenotes-primary mb-3">
-            Why MoveNotes?
+            Logging an activity
           </h2>
           <p className="leading-relaxed mb-4">
-            MoveNotes is a simple, private movement journal for people who enjoy moving
-            without constant tracking pressure.
+            There are two natural ways to add an activity.
+          </p>
+          <p className="leading-relaxed mb-4">
+            You can log it manually, using simple presets like running, cycling,
+            or walking: quick to add, with just enough structure to capture the
+            moment.
           </p>
           <p className="leading-relaxed">
-            There's no pace stress, no heart-rate dashboards, and no social comparison — just
-            a calm place to reflect on runs, walks, rides, yoga, strength training, hikes,
-            and more.
+            Or, if you already track activities with Strava, you can choose to
+            bring them in. Imported activities are reduced to their essentials,
+            keeping the focus on the experience rather than the breakdown. Both
+            approaches lead to the same place: a record that leaves room for
+            reflection.
           </p>
         </section>
 
         {/* A small note */}
         <section className="mb-10">
           <h2 className="text-xl font-semibold text-movenotes-primary mb-3">
-            A small note
+            The Gentle Circle
           </h2>
-          <p className="leading-relaxed text-movenotes-muted">
-            MoveNotes is a small, independent project, made slowly in Brussels.
+          <p className="leading-relaxed mb-4">
+            MoveNotes includes a small, intentional social layer called The
+            Gentle Circle.
+          </p>
+          <p className="leading-relaxed mb-4">
+            It's a space to share moments, not performances.
+          </p>
+          <p className="leading-relaxed">
+            No likes. No leaderboards. No comparison metrics. Just glimpses into
+            how others experience movement: a short note after a run, a photo
+            from a ride, a simple &quot;this felt good today&quot;. It's designed
+            for connection without pressure, a quieter way of being social.
           </p>
         </section>
 
@@ -122,8 +146,8 @@ export default function AboutPage() {
         <IconRun size={20} strokeWidth={1.7} />
       </span>
       <p className="text-movenotes-muted">
-        <span className="font-medium text-movenotes-text">Log any activity</span> — 
-        runs, walks, rides, yoga, strength, hikes, and more.
+        <span className="font-medium text-movenotes-text">Log manually or import from Strava</span> — 
+        whatever gets you to a simpler record of the experience.
       </p>
     </li>
 
@@ -134,7 +158,7 @@ export default function AboutPage() {
       </span>
       <p className="text-movenotes-muted">
         <span className="font-medium text-movenotes-text">Add notes and photos</span> — 
-        remember how your movement felt.
+        hold on to what stood out, how it felt, and why it mattered that day.
       </p>
     </li>
 
@@ -145,7 +169,7 @@ export default function AboutPage() {
       </span>
       <p className="text-movenotes-muted">
         <span className="font-medium text-movenotes-text">Track gentle progress</span> — 
-        weekly and monthly stats without pressure.
+        less noise, more awareness, more honesty.
       </p>
     </li>
   </ul>
@@ -239,19 +263,28 @@ export default function AboutPage() {
             Privacy first
           </h2>
           <p className="leading-relaxed text-movenotes-muted">
-            MoveNotes collects only what you enter. No GPS tracking, no ads, no social
-            feeds, and no hidden analytics.
+            MoveNotes collects only what you choose to enter. No ads, no hidden
+            analytics, and no pressure to turn movement into performance.
           </p>
         </section>
 
         {/* Creator */}
         <section className="mb-6">
           <h2 className="text-xl font-semibold text-movenotes-primary mb-3">
-            Built by a real person
+            An ongoing experiment
           </h2>
+          <p className="leading-relaxed mb-4 text-movenotes-muted">
+            MoveNotes is still evolving.
+          </p>
+          <p className="leading-relaxed mb-4 text-movenotes-muted">
+            It's an exploration of what happens when you design against
+            over-optimization, make space for subjectivity, and treat movement
+            as something to experience, not just measure.
+          </p>
           <p className="leading-relaxed text-movenotes-muted">
-            MoveNotes is designed and built by Thijs ter Beek — a lifelong runner and cyclist
-            who wanted a calmer, more meaningful way to track movement.
+            It doesn't replace tools like Strava. It simply offers another
+            layer, one where movement isn't reduced to numbers. If that
+            resonates, you're in the right place.
           </p>
         </section>
 
