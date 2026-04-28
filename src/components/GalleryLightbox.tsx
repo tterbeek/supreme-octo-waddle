@@ -10,8 +10,6 @@ import { createPortal } from "react-dom";
 import type { GalleryItem } from "../lib/photos";
 import { formatActivityMeta, getActivityNoteText } from "../lib/photos";
 
-const SWIPE_THRESHOLD = 50;
-
 type GalleryLightboxProps = {
   open: boolean;
   items: GalleryItem[];
