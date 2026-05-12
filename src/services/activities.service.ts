@@ -1,5 +1,6 @@
 import { supabase } from "../supabaseClient";
 import { attachLocationTagsToActivities } from "./activityLocation.service";
+import type { FeelingAfter, FeelingDuring } from "../lib/feelings";
 
 export async function fetchActivitiesForGoals(userId: string, cutoffStr: string) {
   const { data, error } = await supabase
@@ -35,11 +36,18 @@ export async function restoreActivity(activity: any) {
   return { error };
 }
 
-export async function updateActivityFeeling(activityId: string, feeling: number) {
+export async function updateActivityFeeling(
+  activityId: string,
+  feeling: {
+    during?: FeelingDuring | null;
+    after?: FeelingAfter | null;
+  }
+) {
   const { error } = await supabase
     .from("activities")
     .update({
-      feeling,
+      ...(feeling.during !== undefined ? { feeling_during: feeling.during } : {}),
+      ...(feeling.after !== undefined ? { feeling_after: feeling.after } : {}),
       note_updated_at: new Date().toISOString(),
     })
     .eq("id", activityId);

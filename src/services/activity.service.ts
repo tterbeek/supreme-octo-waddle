@@ -1,3 +1,4 @@
+import type { FeelingAfter, FeelingDuring } from "../lib/feelings";
 import { supabase } from "../supabaseClient";
 
 export type UpdateActivityInput = {
@@ -6,7 +7,8 @@ export type UpdateActivityInput = {
   distance_km: number | null;
   duration_min: number | null;
   date: string;
-  feeling: number | null;
+  feeling_during: FeelingDuring | null;
+  feeling_after?: FeelingAfter | null;
   effort: number | null;
   notes: string;
   note_image_url: string | null;
@@ -21,7 +23,8 @@ export async function updateActivity(input: UpdateActivityInput) {
       distance_km: input.distance_km,
       duration_min: input.duration_min,
       date: input.date,
-      feeling: input.feeling,
+      feeling_during: input.feeling_during,
+      ...(input.feeling_after !== undefined ? { feeling_after: input.feeling_after } : {}),
       effort: input.effort,
       notes: input.notes,
       note_updated_at: new Date().toISOString(),

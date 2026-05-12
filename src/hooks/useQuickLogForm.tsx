@@ -5,6 +5,7 @@ import {
   type ActivityPreference,
 } from "../lib/resolveActivityFields";
 import { kmToMiles, milesToKm, roundDurationMinutes } from "../lib/units";
+import type { FeelingAfter, FeelingDuring } from "../lib/feelings";
 import type { TooltipKey } from "./useTooltipManager";
 import { getCurrentUser } from "../services/auth.service";
 import {
@@ -48,12 +49,13 @@ export function useQuickLogForm({
 
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [duration, setDuration] = useState("");
-  const [feeling, setFeeling] = useState(3);
+  const [feelingDuring, setFeelingDuring] = useState<FeelingDuring | null>(null);
+  const [feelingAfter, setFeelingAfter] = useState<FeelingAfter | null>(null);
   const [date, setDate] = useState(
     initialDate || new Date().toISOString().slice(0, 10)
   );
   const [title, setTitle] = useState("");
-  const [effort, setEffort] = useState<number>(3);
+  const [effort, setEffort] = useState<number | null>(null);
   const [saveAsPreset, setSaveAsPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [presetNameTouched, setPresetNameTouched] = useState(false);
@@ -139,7 +141,7 @@ export function useQuickLogForm({
         setShowOptionalDistance(!!first.distance_km);
         setShowOptionalDuration(!!first.duration_min);
         setTitle(first.name ?? "");
-        setEffort(first.effort ?? 3);
+        setEffort(first.effort ?? null);
         setSelectedEquipmentIds(first.equipment_ids ?? []);
       }
 
@@ -170,7 +172,7 @@ export function useQuickLogForm({
     setShowOptionalDistance(!!preset.distance_km);
     setShowOptionalDuration(!!preset.duration_min);
     setTitle(preset.name ?? "");
-    setEffort(preset.effort ?? 3);
+    setEffort(preset.effort ?? null);
     setSelectedEquipmentIds(preset.equipment_ids ?? []);
   };
 
@@ -184,6 +186,9 @@ export function useQuickLogForm({
     setShowOptionalDistance(false);
     setShowOptionalDuration(false);
     setSelectedEquipmentIds([]);
+    setFeelingDuring(null);
+    setFeelingAfter(null);
+    setEffort(null);
   };
 
   const addEquipment = async (name: string, notes: string) => {
@@ -280,8 +285,6 @@ export function useQuickLogForm({
 
     const effortValue = supportsEffort(activityType) ? Number(effort) || null : null;
 
-    const feelingValue = Number(feeling) || null;
-
     const saveInput: SaveQuickLogInput = {
       userId: currentUserId,
       activityType,
@@ -289,7 +292,8 @@ export function useQuickLogForm({
       distanceValue,
       durationValue,
       effortValue,
-      feelingValue,
+      feelingDuringValue: feelingDuring,
+      feelingAfterValue: feelingAfter,
       title,
       equipmentIds: selectedEquipmentIds,
     };
@@ -337,8 +341,10 @@ export function useQuickLogForm({
     setDistanceKm,
     duration,
     setDuration,
-    feeling,
-    setFeeling,
+    feelingDuring,
+    setFeelingDuring,
+    feelingAfter,
+    setFeelingAfter,
     date,
     setDate,
     title,

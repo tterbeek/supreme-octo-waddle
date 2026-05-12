@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Trash2, Camera, ChevronDown } from "lucide-react";
+import { Trash2, Camera, ChevronDown, CalendarDays } from "lucide-react";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { useActivityEditForm } from "../../hooks/useActivityEditForm";
 import { MAX_ACTIVITY_PHOTOS } from "../../lib/photos";
 import { supportsEffort } from "../../config/activityTypes";
 import EquipmentDialog from "../../components/EquipmentDialog";
 import DistanceDurationFields from "../../components/quick-log/DistanceDurationFields";
-import FeelingSelector from "../../components/quick-log/FeelingSelector";
+import FeelingPhasesSelector from "../../components/quick-log/FeelingPhasesSelector";
 import EffortSelector from "../../components/quick-log/EffortSelector";
 
 type EditActivityModalProps = {
@@ -40,8 +40,10 @@ export default function EditActivityModal({
     setDuration,
     date,
     setDate,
-    rating,
-    setRating,
+    feelingDuring,
+    setFeelingDuring,
+    feelingAfter,
+    setFeelingAfter,
     effort,
     setEffort,
     equipment,
@@ -135,19 +137,40 @@ export default function EditActivityModal({
 
         <div className="space-y-5">
           {!reflectionOnly && (
-            <div>
-              <label className="text-sm text-gray-700">Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full border border-warm-200 rounded-lg p-3 mt-1"
-              />
+            <div className="flex items-end gap-3">
+              <div className="min-w-0 flex-1">
+                <label className="sr-only">Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Title"
+                  className="w-full rounded-lg border border-warm-200/70 bg-white/70 px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400 focus:border-movenotes-primary/30 focus:ring-2 focus:ring-movenotes-primary/20"
+                />
+              </div>
+
+              <div className="shrink-0 rounded-full border border-warm-200/70 bg-white/70 px-2.5 py-2">
+                <label className="sr-only">Date</label>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <CalendarDays className="h-4 w-4 text-gray-400" />
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="compact-date-input w-[5.75rem] bg-transparent text-right text-sm text-gray-500 outline-none [color-scheme:light]"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
           <div className="space-y-4">
-            <FeelingSelector value={rating} onChange={setRating} />
+            <FeelingPhasesSelector
+              during={feelingDuring}
+              after={feelingAfter}
+              onDuringChange={setFeelingDuring}
+              onAfterChange={setFeelingAfter}
+            />
             {supportsEffort(activityType) && (
               <EffortSelector value={effort} onChange={setEffort} />
             )}
@@ -189,16 +212,6 @@ export default function EditActivityModal({
                 }`}
               >
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-sm text-gray-600">Date</label>
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full border border-warm-200 rounded-lg p-2.5"
-                    />
-                  </div>
-
                   <DistanceDurationFields
                     defaultFields={defaultFields}
                     optionalFields={optionalFields}

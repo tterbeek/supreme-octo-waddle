@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Frown, Laugh, MapPin, Meh, Smile, Zap } from "lucide-react";
+import { MapPin, Zap } from "lucide-react";
 import {
   IconBoxMultiple2,
   IconBoxMultiple3,
@@ -9,11 +9,18 @@ import {
   IconBoxMultiple7,
   IconBoxMultiple8,
   IconBoxMultiple9,
+  IconChevronRight,
+  IconMoodEmpty,
+  IconMoodHappy,
+  IconMoodSad,
+  IconMoodSmile,
+  IconMoodSpark,
   IconShare,
 } from "@tabler/icons-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
+import { resolveFeelingState, type FeelingAfter, type FeelingDuring } from "../lib/feelings";
 import { formatDistance, formatDurationMinutes, type UnitSystem } from "../lib/units";
 import { getActivityPhotos } from "../lib/photos";
 
@@ -33,7 +40,13 @@ type RecentActivityCardProps = {
   onOpenGallery: (activity: any) => void;
   onAddReflection?: (activity: any) => void;
   onAddNoteOnly?: (activity: any) => void;
-  onQuickFeelingSelect?: (activity: any, feeling: number) => void;
+  onQuickFeelingSelect?: (
+    activity: any,
+    selection: {
+      stage: "during" | "after";
+      value: FeelingDuring | FeelingAfter;
+    }
+  ) => void;
   showQuickFeelingPrompt?: boolean;
   onQuickEffortSelect?: (activity: any, effort: number) => void;
   showQuickEffortPrompt?: boolean;
@@ -126,15 +139,13 @@ export default function RecentActivityCard({
       .trim();
     return `Strava · ${spaced}`;
   })();
-  const feelingValue =
-    typeof activity.feeling === "number" && Number.isFinite(activity.feeling)
-      ? activity.feeling
-      : null;
+  const { during: feelingDuring, after: feelingAfter } = resolveFeelingState(activity);
+  const quickFeelingStage: "during" | "after" = feelingDuring ? "after" : "during";
   const effortValue =
     typeof activity.effort === "number" && Number.isFinite(activity.effort)
       ? Math.max(0, Math.trunc(activity.effort))
       : 0;
-  const showFeeling = (feelingValue ?? 0) > 0;
+  const showFeeling = Boolean(feelingDuring);
   const showEffort = effortValue > 0;
   const hasNotes = Boolean(activity.notes?.trim?.());
   const hasNoteOrFeeling = hasNotes || showFeeling;
@@ -155,10 +166,51 @@ export default function RecentActivityCard({
     !showQuickEffortPrompt &&
     !isOlderThan7Days;
   const showOptionalNotePrompt =
-    isImportedActivity && Boolean(onAddReflection) && !hasNotes && showFeeling && !showQuickEffortPrompt;
+    isImportedActivity &&
+    Boolean(onAddReflection) &&
+    !hasNotes &&
+    showFeeling &&
+    !showQuickEffortPrompt &&
+    !showQuickFeelingPrompt;
   const showShareWithCircle = canShareWithCircle && Boolean(onShareWithCircle);
   const shareTooltipClassName = "max-w-none p-4 text-left";
   const shareTooltipWrapperClassName = "right-0 left-auto translate-x-0";
+
+  const renderFeelingIcon = (
+    feeling: FeelingDuring | FeelingAfter | null,
+    className = "w-5 h-5 md:w-6 md:h-6"
+  ) => {
+    if (!feeling) return null;
+
+    switch (feeling) {
+      case "sad":
+        return <IconMoodSad className={`${className} text-movenotes-accent`} strokeWidth={1.8} />;
+      case "neutral":
+        return <IconMoodEmpty className={`${className} text-movenotes-accent`} strokeWidth={1.8} />;
+      case "smile":
+        return <IconMoodSmile className={`${className} text-movenotes-accent`} strokeWidth={1.8} />;
+      case "happy":
+        return <IconMoodHappy className={`${className} text-movenotes-accent`} strokeWidth={1.8} />;
+      case "spark":
+        return <IconMoodSpark className={`${className} text-movenotes-accent`} strokeWidth={1.8} />;
+      default:
+        return null;
+    }
+  };
+  const quickFeelingOptions =
+    quickFeelingStage === "during"
+      ? ([
+          { value: "sad", label: "Struggling" },
+          { value: "neutral", label: "Neutral" },
+          { value: "smile", label: "Flowing" },
+          { value: "happy", label: "Energized" },
+        ] as const)
+      : ([
+          { value: "sad", label: "Drained" },
+          { value: "smile", label: "Relaxed" },
+          { value: "happy", label: "Good" },
+          { value: "spark", label: "Uplifted" },
+        ] as const);
   useEffect(() => {
     onNoteImageLoadRef.current = onNoteImageLoad;
   }, [onNoteImageLoad]);
@@ -323,20 +375,21 @@ export default function RecentActivityCard({
         )}
 
         {(showFeeling || showEffort) && (
-          <div className="flex items-center justify-center gap-3 my-3">
-            {(() => {
-              const f = feelingValue ?? 0;
-              const base = "w-5 h-5 md:w-6 md:h-6";
-              if (f <= 1)
-                return <Frown className={`${base} text-movenotes-accent`} />;
-              if (f === 2)
-                return <Meh className={`${base} text-movenotes-accent`} />;
-              if (f === 3)
-                return <Smile className={`${base} text-movenotes-accent`} />;
-              if (f >= 4)
-                return <Laugh className={`${base} text-movenotes-accent`} />;
-              return null;
-            })()}
+          <div className="flex items-center justify-center gap-6 my-3">
+            {showFeeling && (
+              <div className="flex items-center justify-center gap-1">
+                {renderFeelingIcon(feelingDuring)}
+                {feelingAfter ? (
+                  <>
+                    <IconChevronRight
+                      className="h-3.5 w-3.5 text-gray-400 transition-opacity duration-150"
+                      strokeWidth={1.6}
+                    />
+                    {renderFeelingIcon(feelingAfter)}
+                  </>
+                ) : null}
+              </div>
+            )}
 
             <div className="flex items-center gap-1 md:gap-1.5">
               {Array.from({ length: effortValue }).map((_, i) => (
@@ -351,29 +404,52 @@ export default function RecentActivityCard({
 
         {showQuickFeelingPrompt && Boolean(onQuickFeelingSelect) && (
           <div className="mt-3 mb-2">
-            <p className="text-sm text-gray-700 mb-2">How did this feel?</p>
+            <p className="text-sm text-gray-700 mb-1">
+              {quickFeelingStage === "during"
+                ? "How did it feel?"
+                : "How does it feel afterward?"}
+            </p>
+            <p className="text-xs text-gray-500 mb-2">
+              {quickFeelingStage === "during" ? "During" : "After"}
+            </p>
             <div className="flex justify-between w-full max-w-sm mx-auto">
-              {[
-                { value: 1, Icon: Frown, label: "Tough" },
-                { value: 2, Icon: Meh, label: "Okay" },
-                { value: 3, Icon: Smile, label: "Good" },
-                { value: 4, Icon: Laugh, label: "Great" },
-              ].map(({ value, Icon, label }) => (
+              {quickFeelingOptions.map(({ value, label }) => (
                 <button
                   key={value}
                   type="button"
                   disabled={quickFeelingSaving}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onQuickFeelingSelect?.(activity, value);
+                    onQuickFeelingSelect?.(activity, {
+                      stage: quickFeelingStage,
+                      value,
+                    });
                   }}
                   aria-label={label}
                   className="transition transform active:scale-95 opacity-90 disabled:opacity-60"
                 >
-                  <Icon className="w-7 h-7 text-gray-500" />
+                  {renderFeelingIcon(value, "w-7 h-7")}
                 </button>
               ))}
             </div>
+            {quickFeelingStage === "after" && (
+              <div className="mt-2 flex justify-center">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (onAddNoteOnly) {
+                      onAddNoteOnly(activity);
+                    } else {
+                      onAddReflection?.(activity);
+                    }
+                  }}
+                  className="text-xs text-movenotes-primary underline"
+                >
+                  Skip to add note
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -42,3 +42,18 @@ body::-webkit-scrollbar {
 .animate-slide-up {
   animation: slide-up 0.18s ease-out;
 }
+
+.compact-date-input {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.compact-date-input::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+.compact-date-input::-webkit-clear-button,
+.compact-date-input::-webkit-inner-spin-button {
+  display: none;
+}

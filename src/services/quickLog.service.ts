@@ -1,6 +1,7 @@
 import { supabase } from "../supabaseClient";
 import type { Preset } from "../types";
 import { replaceActivityEquipment } from "./equipment.service";
+import type { FeelingAfter, FeelingDuring } from "../lib/feelings";
 
 export async function fetchActivityPreference(
   userId: string,
@@ -52,7 +53,8 @@ export type SaveQuickLogInput = {
   distanceValue: number | null;
   durationValue: number | null;
   effortValue: number | null;
-  feelingValue: number | null;
+  feelingDuringValue: FeelingDuring | null;
+  feelingAfterValue: FeelingAfter | null;
   title: string;
   equipmentIds: string[];
 };
@@ -68,7 +70,8 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
         distance_km: input.distanceValue,
         duration_min: input.durationValue,
         effort: input.effortValue,
-        feeling: input.feelingValue,
+        feeling_during: input.feelingDuringValue,
+        feeling_after: input.feelingAfterValue,
         title: input.title,
       },
     ])

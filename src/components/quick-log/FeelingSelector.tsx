@@ -1,7 +1,7 @@
 import { Frown, Meh, Smile, Laugh } from "lucide-react";
 
 type FeelingSelectorProps = {
-  value: number;
+  value: number | null;
   onChange: (value: number) => void;
 };
 
@@ -11,6 +11,11 @@ export default function FeelingSelector({ value, onChange }: FeelingSelectorProp
       <label className="block text-sm text-gray-600 mb-2 text-center">
         Feeling
       </label>
+      {value == null && (
+        <p className="mb-2 text-center text-xs text-gray-500">
+          Tap one to choose
+        </p>
+      )}
       <div className="flex justify-between w-full max-w-sm mx-auto">
         {[
           { Icon: Frown, value: 1 },

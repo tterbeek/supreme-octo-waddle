@@ -25,6 +25,7 @@ import { useNoteImages } from "../hooks/useNoteImages";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import { buildGalleryItemsForActivity } from "../lib/photos";
+import { resolveFeelingState, type FeelingAfter, type FeelingDuring } from "../lib/feelings";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
@@ -268,26 +269,52 @@ export default function Home() {
     const imported = activities.filter(
       (item) => item?.entry_kind !== "journal_entry" && item?.source === "strava"
     );
-    if (imported.length === 0) return { activityId: null as string | null, mode: null as "feeling" | "effort" | null };
+    if (imported.length === 0) {
+      return {
+        activityId: null as string | null,
+        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
+      };
+    }
 
     const latest = imported[0];
     const rawDate = latest.started_at || latest.created_at || latest.date;
-    if (!rawDate) return { activityId: null as string | null, mode: null as "feeling" | "effort" | null };
+    if (!rawDate) {
+      return {
+        activityId: null as string | null,
+        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
+      };
+    }
     const timeMs = new Date(rawDate).getTime();
-    if (!Number.isFinite(timeMs)) return { activityId: null as string | null, mode: null as "feeling" | "effort" | null };
+    if (!Number.isFinite(timeMs)) {
+      return {
+        activityId: null as string | null,
+        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
+      };
+    }
 
     const ageHours = (Date.now() - timeMs) / (1000 * 60 * 60);
-    if (ageHours > 48) return { activityId: null as string | null, mode: null as "feeling" | "effort" | null };
+    if (ageHours > 48) {
+      return {
+        activityId: null as string | null,
+        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
+      };
+    }
 
     const hasNote = Boolean(latest.notes?.trim?.());
-    if (hasNote) return { activityId: null as string | null, mode: null as "feeling" | "effort" | null };
+    if (hasNote) {
+      return {
+        activityId: null as string | null,
+        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
+      };
+    }
 
-    const hasFeeling =
-      typeof latest.feeling === "number" &&
-      Number.isFinite(latest.feeling) &&
-      latest.feeling > 0;
-    if (!hasFeeling) {
-      return { activityId: latest.id as string, mode: "feeling" as const };
+    const feelingState = resolveFeelingState(latest);
+    if (!feelingState.during) {
+      return { activityId: latest.id as string, mode: "feeling_during" as const };
+    }
+
+    if (!feelingState.after) {
+      return { activityId: latest.id as string, mode: "feeling_after" as const };
     }
 
     const hasEffort =
@@ -298,17 +325,38 @@ export default function Home() {
       return { activityId: latest.id as string, mode: "effort" as const };
     }
 
-    return { activityId: null as string | null, mode: null as "feeling" | "effort" | null };
+    return {
+      activityId: null as string | null,
+      mode: null as "feeling_during" | "feeling_after" | "effort" | null,
+    };
   }, [activities]);
 
-  const handleQuickFeelingSelect = async (activity: any, feeling: number) => {
+  const handleQuickFeelingSelect = async (
+    activity: any,
+    selection: {
+      stage: "during" | "after";
+      value: FeelingDuring | FeelingAfter;
+    }
+  ) => {
     if (!activity?.id) return;
     setQuickFeelingSavingId(activity.id);
     try {
-      const { error } = await updateActivityFeeling(activity.id, feeling);
+      const { error } = await updateActivityFeeling(activity.id, {
+        ...(selection.stage === "during" ? { during: selection.value as FeelingDuring } : {}),
+        ...(selection.stage === "after" ? { after: selection.value as FeelingAfter } : {}),
+      });
       if (error) throw error;
       setActivities((prev) =>
-        prev.map((item) => (item.id === activity.id ? { ...item, feeling } : item))
+        prev.map((item) =>
+          item.id === activity.id
+            ? {
+                ...item,
+                ...(selection.stage === "during"
+                  ? { feeling_during: selection.value }
+                  : { feeling_after: selection.value }),
+              }
+            : item
+        )
       );
     } catch (err: any) {
       setToastMessage(err?.message || "Could not save feeling.");
@@ -550,7 +598,8 @@ export default function Home() {
                               onAddNoteOnly={handleQuickAddNote}
                               showQuickFeelingPrompt={
                                 a.id === latestStravaQuickPrompt.activityId &&
-                                latestStravaQuickPrompt.mode === "feeling"
+                                (latestStravaQuickPrompt.mode === "feeling_during" ||
+                                  latestStravaQuickPrompt.mode === "feeling_after")
                               }
                               showQuickEffortPrompt={
                                 a.id === latestStravaQuickPrompt.activityId &&

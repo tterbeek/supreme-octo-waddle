@@ -5,6 +5,7 @@ import {
 } from "../lib/resolveActivityFields";
 import { resolveEditFields } from "../lib/resolveEditActivityFields";
 import { kmToMiles, milesToKm, roundDurationMinutes } from "../lib/units";
+import { resolveFeelingState } from "../lib/feelings";
 import { extractPhotoGps } from "../lib/exifGps";
 import { getActivityPhotos, MAX_ACTIVITY_PHOTOS } from "../lib/photos";
 import { supportsEffort } from "../config/activityTypes";
@@ -72,7 +73,9 @@ export function useActivityEditForm({
     activity.duration_min != null
   );
   const [date, setDate] = useState(activity.date || "");
-  const [rating, setRating] = useState(activity.feeling || 3);
+  const initialFeelingState = resolveFeelingState(activity);
+  const [feelingDuring, setFeelingDuring] = useState(initialFeelingState.during);
+  const [feelingAfter, setFeelingAfter] = useState(initialFeelingState.after);
   const [effort, setEffort] = useState<number | null>(
     activity.effort == null ? null : Number(activity.effort)
   );
@@ -265,7 +268,8 @@ export function useActivityEditForm({
 
     const effortValue = supportsEffort(activityType) ? Number(effort) || null : null;
 
-    const feelingValue = Number(rating) || null;
+    const feelingDuringValue = feelingDuring;
+    const feelingAfterValue = feelingAfter;
 
     try {
       if (existingPhotoCount + selectedFiles.length > MAX_ACTIVITY_PHOTOS) {
@@ -358,7 +362,8 @@ export function useActivityEditForm({
         distance_km: distanceValue,
         duration_min: durationValue,
         date,
-        feeling: feelingValue,
+        feeling_during: feelingDuringValue,
+        feeling_after: feelingAfterValue,
         effort: effortValue,
         notes: note,
         note_image_url: imageUrl,
@@ -533,8 +538,10 @@ export function useActivityEditForm({
     setShowOptionalDuration,
     date,
     setDate,
-    rating,
-    setRating,
+    feelingDuring,
+    setFeelingDuring,
+    feelingAfter,
+    setFeelingAfter,
     effort,
     setEffort,
     equipment,

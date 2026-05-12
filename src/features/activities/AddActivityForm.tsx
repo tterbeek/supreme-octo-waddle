@@ -9,6 +9,8 @@ import { formatDistance, formatDurationMinutes } from "../../lib/units";
 import { useQuickLogForm } from "../../hooks/useQuickLogForm";
 import EquipmentDialog from "../../components/EquipmentDialog";
 import ActivityFormFields from "../../components/ActivityFormFields";
+import FeelingPhasesSelector from "../../components/quick-log/FeelingPhasesSelector";
+import DistanceDurationFields from "../../components/quick-log/DistanceDurationFields";
 
 type QuickLogFormProps = {
   initialType?: string;
@@ -38,7 +40,8 @@ export default function AddActivityForm({
   const {
     activePreset,
     duration,
-    feeling,
+    feelingDuring,
+    feelingAfter,
     date,
     title,
     effort,
@@ -63,7 +66,8 @@ export default function AddActivityForm({
     setTitle,
     setDate,
     setDuration,
-    setFeeling,
+    setFeelingDuring,
+    setFeelingAfter,
     setEffort,
     setSaveAsPreset,
     setPresetName,
@@ -121,7 +125,7 @@ export default function AddActivityForm({
             date,
             distanceDisplay: displayDistance,
             duration,
-            feeling,
+            feeling: null,
             effort,
             activityType,
             defaultFields,
@@ -130,17 +134,65 @@ export default function AddActivityForm({
             showOptionalDuration,
           }}
           unitSystem={unitSystem}
+          metricMode="primaryOnly"
           onTitleChange={setTitle}
           onDateChange={setDate}
           onDistanceChange={handleDistanceChange}
           onDurationChange={setDuration}
           onShowDistance={() => setShowOptionalDistance(true)}
           onShowDuration={() => setShowOptionalDuration(true)}
-          onFeelingChange={setFeeling}
+          onFeelingChange={() => {}}
           onEffortChange={setEffort}
           equipmentSummary={equipmentSummary}
+          hideEquipment
           onEquipmentClick={() => setShowEquipmentDialog(true)}
+          renderFeelingSection={
+            <FeelingPhasesSelector
+              during={feelingDuring}
+              after={feelingAfter}
+              onDuringChange={setFeelingDuring}
+              onAfterChange={setFeelingAfter}
+            />
+          }
         />
+
+        <div className="mb-5">
+          <DistanceDurationFields
+            defaultFields={defaultFields}
+            optionalFields={optionalFields}
+            showOptionalDistance={showOptionalDistance}
+            showOptionalDuration={showOptionalDuration}
+            displayDistance={displayDistance}
+            duration={duration}
+            unitSystem={unitSystem}
+            onDistanceChange={handleDistanceChange}
+            onDurationChange={setDuration}
+            onShowDistance={() => setShowOptionalDistance(true)}
+            onShowDuration={() => setShowOptionalDuration(true)}
+            mode="optionalOnly"
+          />
+
+          <div className="mt-1">
+            {equipmentSummary ? (
+              <button
+                type="button"
+                onClick={() => setShowEquipmentDialog(true)}
+                className="block w-full rounded-md border border-warm-200 p-3 text-left"
+              >
+                <div className="text-sm text-gray-600">Equipment</div>
+                <div className="text-base text-gray-900">{equipmentSummary}</div>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="block text-sm text-movenotes-primary underline"
+                onClick={() => setShowEquipmentDialog(true)}
+              >
+                + Add equipment
+              </button>
+            )}
+          </div>
+        </div>
 
         <SavePresetFooter
           saveAsPreset={saveAsPreset}
