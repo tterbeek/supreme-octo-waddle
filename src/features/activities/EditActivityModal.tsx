@@ -118,26 +118,28 @@ export default function EditActivityModal({
       >
         <div
           onClick={(e) => e.stopPropagation()}
-          onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           style={{
             transform: `translateY(${dragY}px)`,
-            touchAction: "pan-y",
+            touchAction: "auto",
           }}
-          className={`w-full max-w-md sm:max-w-2xl max-h-[96vh] overflow-y-auto bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 
+          className={`w-full max-w-md sm:max-w-2xl max-h-[100dvh] overflow-hidden bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 flex flex-col
       ${animateIn ? "translate-y-0" : "translate-y-full"} animate-fadeIn 
-      shadow-lg will-change-transform sm:rounded-2xl sm:mt-20`}
+      shadow-lg will-change-transform sm:rounded-2xl`}
         >
-        <div className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4" />
+        <div
+          className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4 touch-none"
+          onTouchStart={handleTouchStart}
+        />
 
         <h2 className="text-lg font-semibold text-center mb-4">
           {reflectionOnly ? "Add reflection" : "Edit Activity"}
         </h2>
 
-        <div className="space-y-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-5 pb-4">
           {!reflectionOnly && (
-            <div className="flex items-end gap-3">
+            <div className="flex items-end gap-2">
               <div className="min-w-0 flex-1">
                 <label className="sr-only">Title</label>
                 <input
@@ -149,15 +151,15 @@ export default function EditActivityModal({
                 />
               </div>
 
-              <div className="shrink-0 rounded-full border border-warm-200/70 bg-white/70 px-2.5 py-2">
+              <div className="shrink-0 rounded-full border border-warm-200/70 bg-white/70 px-2 py-2">
                 <label className="sr-only">Date</label>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-1 text-sm text-gray-500">
                   <CalendarDays className="h-4 w-4 text-gray-400" />
                   <input
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="compact-date-input w-[5.75rem] bg-transparent text-right text-sm text-gray-500 outline-none [color-scheme:light]"
+                    className="compact-date-input w-[5.25rem] bg-transparent text-right text-sm text-gray-500 outline-none [color-scheme:light]"
                   />
                 </div>
               </div>
@@ -334,72 +336,74 @@ export default function EditActivityModal({
           )}
         </div>
 
-        {uploadError && (
-          <p className="text-sm text-red-600 mb-2">{uploadError}</p>
-        )}
-        {(uploading || saving) && (
-          <div className="mb-4">
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-2 bg-movenotes-primary transition-all"
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-600 mt-1">
-              {uploading ? "Uploading image..." : "Saving..."}
-            </p>
-          </div>
-        )}
-
-        <button
-          onClick={handleSave}
-          disabled={saving || deleting}
-          className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50 mt-4"
-        >
-          {saving ? "Saving..." : reflectionOnly ? "Save reflection" : "Save Changes"}
-        </button>
-
-        {!reflectionOnly && (
-          <>
-            {confirmDelete && !deleting && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                Delete this activity permanently?
+        <div className="shrink-0 border-t border-warm-200/70 bg-warm-100 pt-4 pb-[env(safe-area-inset-bottom)]">
+          {uploadError && (
+            <p className="text-sm text-red-600 mb-2">{uploadError}</p>
+          )}
+          {(uploading || saving) && (
+            <div className="mb-4">
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-2 bg-movenotes-primary transition-all"
+                  style={{ width: `${uploadProgress}%` }}
+                />
               </div>
-            )}
-            <button
-              onClick={() => {
-                if (deleting) return;
-                if (!confirmDelete) {
-                  setConfirmDelete(true);
-                  return;
-                }
-                void handleDelete();
-              }}
-              disabled={saving || deleting}
-              className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition disabled:opacity-50"
-            >
-              {deleting ? (
-                "Deleting..."
-              ) : confirmDelete ? (
-                "Confirm Delete"
-              ) : (
-                <>
-                  <Trash2 className="inline w-4 h-4 mr-1 -mt-0.5" />
-                  Delete Activity
-                </>
+              <p className="text-xs text-gray-600 mt-1">
+                {uploading ? "Uploading image..." : "Saving..."}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={handleSave}
+            disabled={saving || deleting}
+            className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50"
+          >
+            {saving ? "Saving..." : reflectionOnly ? "Save reflection" : "Save Changes"}
+          </button>
+
+          {!reflectionOnly && (
+            <>
+              {confirmDelete && !deleting && (
+                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  Delete this activity permanently?
+                </div>
               )}
-            </button>
-            {confirmDelete && !deleting && (
               <button
-                type="button"
-                onClick={() => setConfirmDelete(false)}
-                className="w-full mt-2 py-3 border border-warm-200 text-gray-700 rounded-full text-sm font-medium hover:bg-white/60 transition"
+                onClick={() => {
+                  if (deleting) return;
+                  if (!confirmDelete) {
+                    setConfirmDelete(true);
+                    return;
+                  }
+                  void handleDelete();
+                }}
+                disabled={saving || deleting}
+                className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition disabled:opacity-50"
               >
-                Cancel
+                {deleting ? (
+                  "Deleting..."
+                ) : confirmDelete ? (
+                  "Confirm Delete"
+                ) : (
+                  <>
+                    <Trash2 className="inline w-4 h-4 mr-1 -mt-0.5" />
+                    Delete Activity
+                  </>
+                )}
               </button>
-            )}
-          </>
-        )}
+              {confirmDelete && !deleting && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="w-full mt-2 py-3 border border-warm-200 text-gray-700 rounded-full text-sm font-medium hover:bg-white/60 transition"
+                >
+                  Cancel
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
 

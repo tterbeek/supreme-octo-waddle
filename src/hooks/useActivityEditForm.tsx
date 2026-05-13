@@ -95,6 +95,7 @@ export function useActivityEditForm({
   const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const startY = useRef<number | null>(null);
+  const draggingFromHandle = useRef(false);
   const openedAtRef = useRef<number>(Date.now());
   const existingPhotos = getActivityPhotos(activity);
   const existingPhotoTotal = existingPhotos.length;
@@ -474,10 +475,12 @@ export function useActivityEditForm({
   };
 
   const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    draggingFromHandle.current = true;
     startY.current = e.touches[0].clientY;
   };
 
   const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    if (!draggingFromHandle.current) return;
     if (startY.current == null) return;
     const currentY = e.touches[0].clientY;
     const diff = currentY - startY.current;
@@ -488,6 +491,7 @@ export function useActivityEditForm({
   };
 
   const handleTouchEnd = () => {
+    if (!draggingFromHandle.current) return;
     const threshold = 80;
     if (dragY > threshold) {
       setAnimateIn(false);
@@ -496,6 +500,7 @@ export function useActivityEditForm({
       }, 200);
     }
     setDragY(0);
+    draggingFromHandle.current = false;
     startY.current = null;
   };
 

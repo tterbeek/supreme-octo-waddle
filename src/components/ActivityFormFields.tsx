@@ -80,7 +80,7 @@ export default function ActivityFormFields({
 
   return (
     <>
-      <div className="mb-4 flex items-end gap-3">
+      <div className="mb-4 flex items-end gap-2">
         <div className="min-w-0 flex-1">
           <label className="sr-only">Title</label>
           <input
@@ -93,15 +93,15 @@ export default function ActivityFormFields({
         </div>
 
         {showDate && onDateChange && (
-          <div className="shrink-0 rounded-full border border-warm-200/70 bg-white/70 px-2.5 py-2">
+          <div className="shrink-0 rounded-full border border-warm-200/70 bg-white/70 px-2 py-2">
             <label className="sr-only">Date</label>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-1 text-sm text-gray-500">
               <CalendarDays className="h-4 w-4 text-gray-400" />
               <input
                 type="date"
                 value={date}
                 onChange={(e) => onDateChange(e.target.value)}
-                className="compact-date-input w-[5.75rem] bg-transparent text-right text-sm text-gray-500 outline-none [color-scheme:light]"
+                className="compact-date-input w-[5.25rem] bg-transparent text-right text-sm text-gray-500 outline-none [color-scheme:light]"
               />
             </div>
           </div>
