@@ -18,6 +18,7 @@ export default function ModalSheet({
   const [animateIn, setAnimateIn] = useState(false);
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
+  const draggingFromHandle = useRef(false);
   const [mounted, setMounted] = useState(false);
   const openedAt = useRef<number>(Date.now());
   const [allowOverlayClose, setAllowOverlayClose] = useState(false);
@@ -52,12 +53,9 @@ export default function ModalSheet({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={(e) => {
-          if (!enableDragToClose) return;
-          startY.current = e.touches[0].clientY;
-        }}
         onTouchMove={(e) => {
           if (!enableDragToClose) return;
+          if (!draggingFromHandle.current) return;
           if (startY.current == null) return;
           const currentY = e.touches[0].clientY;
           const diff = currentY - startY.current;
@@ -68,23 +66,32 @@ export default function ModalSheet({
         }}
         onTouchEnd={() => {
           if (!enableDragToClose) return;
+          if (!draggingFromHandle.current) return;
           const threshold = 80;
           if (dragY > threshold) {
             handleRequestClose();
           } else {
             setDragY(0);
           }
+          draggingFromHandle.current = false;
           startY.current = null;
         }}
         style={{
           transform: `translateY(${dragY}px)`,
-          touchAction: enableDragToClose ? "none" : "auto",
+          touchAction: "auto",
         }}
         className={`w-full ${sheetClassName} bg-warm-100 rounded-t-2xl p-6 shadow-lg will-change-transform
         transition-transform duration-200
         ${animateIn ? "translate-y-0" : "translate-y-full"}`}
       >
-        <div className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4" />
+        <div
+          className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4 touch-none"
+          onTouchStart={(e) => {
+            if (!enableDragToClose) return;
+            draggingFromHandle.current = true;
+            startY.current = e.touches[0].clientY;
+          }}
+        />
         {children}
       </div>
     </div>

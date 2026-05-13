@@ -110,111 +110,120 @@ export default function AddActivityForm({
   return (
     <>
       {/* MAIN QUICKLOG SHEET */}
-      <ModalSheet onClose={onClose} enableDragToClose>
-        <PresetsBar
-          presets={filteredPresets}
-          activePreset={activePreset}
-          onSelectPreset={applyPreset}
-          onSelectCustom={resetToCustom}
-          onOpenMore={() => setShowMorePresets(true)}
-        />
+      <ModalSheet
+        onClose={onClose}
+        enableDragToClose
+        sheetClassName="max-w-md max-h-[100dvh] flex flex-col overflow-hidden"
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4">
+          <PresetsBar
+            presets={filteredPresets}
+            activePreset={activePreset}
+            onSelectPreset={applyPreset}
+            onSelectCustom={resetToCustom}
+            onOpenMore={() => setShowMorePresets(true)}
+          />
 
-        <ActivityFormFields
-          values={{
-            title,
-            date,
-            distanceDisplay: displayDistance,
-            duration,
-            feeling: null,
-            effort,
-            activityType,
-            defaultFields,
-            optionalFields,
-            showOptionalDistance,
-            showOptionalDuration,
-          }}
-          unitSystem={unitSystem}
-          metricMode="primaryOnly"
-          onTitleChange={setTitle}
-          onDateChange={setDate}
-          onDistanceChange={handleDistanceChange}
-          onDurationChange={setDuration}
-          onShowDistance={() => setShowOptionalDistance(true)}
-          onShowDuration={() => setShowOptionalDuration(true)}
-          onFeelingChange={() => {}}
-          onEffortChange={setEffort}
-          equipmentSummary={equipmentSummary}
-          hideEquipment
-          onEquipmentClick={() => setShowEquipmentDialog(true)}
-          renderFeelingSection={
-            <FeelingPhasesSelector
-              during={feelingDuring}
-              after={feelingAfter}
-              onDuringChange={setFeelingDuring}
-              onAfterChange={setFeelingAfter}
-            />
-          }
-        />
-
-        <div className="mb-5">
-          <DistanceDurationFields
-            defaultFields={defaultFields}
-            optionalFields={optionalFields}
-            showOptionalDistance={showOptionalDistance}
-            showOptionalDuration={showOptionalDuration}
-            displayDistance={displayDistance}
-            duration={duration}
+          <ActivityFormFields
+            values={{
+              title,
+              date,
+              distanceDisplay: displayDistance,
+              duration,
+              feeling: null,
+              effort,
+              activityType,
+              defaultFields,
+              optionalFields,
+              showOptionalDistance,
+              showOptionalDuration,
+            }}
             unitSystem={unitSystem}
+            metricMode="primaryOnly"
+            onTitleChange={setTitle}
+            onDateChange={setDate}
             onDistanceChange={handleDistanceChange}
             onDurationChange={setDuration}
             onShowDistance={() => setShowOptionalDistance(true)}
             onShowDuration={() => setShowOptionalDuration(true)}
-            mode="optionalOnly"
+            onFeelingChange={() => {}}
+            onEffortChange={setEffort}
+            equipmentSummary={equipmentSummary}
+            hideEquipment
+            onEquipmentClick={() => setShowEquipmentDialog(true)}
+            renderFeelingSection={
+              <FeelingPhasesSelector
+                during={feelingDuring}
+                after={feelingAfter}
+                onDuringChange={setFeelingDuring}
+                onAfterChange={setFeelingAfter}
+              />
+            }
           />
 
-          <div className="mt-1">
-            {equipmentSummary ? (
-              <button
-                type="button"
-                onClick={() => setShowEquipmentDialog(true)}
-                className="block w-full rounded-md border border-warm-200 p-3 text-left"
-              >
-                <div className="text-sm text-gray-600">Equipment</div>
-                <div className="text-base text-gray-900">{equipmentSummary}</div>
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="block text-sm text-movenotes-primary underline"
-                onClick={() => setShowEquipmentDialog(true)}
-              >
-                + Add equipment
-              </button>
-            )}
+          <div>
+            <DistanceDurationFields
+              defaultFields={defaultFields}
+              optionalFields={optionalFields}
+              showOptionalDistance={showOptionalDistance}
+              showOptionalDuration={showOptionalDuration}
+              displayDistance={displayDistance}
+              duration={duration}
+              unitSystem={unitSystem}
+              onDistanceChange={handleDistanceChange}
+              onDurationChange={setDuration}
+              onShowDistance={() => setShowOptionalDistance(true)}
+              onShowDuration={() => setShowOptionalDuration(true)}
+              mode="optionalOnly"
+            />
+
+            <div className="mt-1">
+              {equipmentSummary ? (
+                <button
+                  type="button"
+                  onClick={() => setShowEquipmentDialog(true)}
+                  className="block w-full rounded-md border border-warm-200 p-3 text-left"
+                >
+                  <div className="text-sm text-gray-600">Equipment</div>
+                  <div className="text-base text-gray-900">{equipmentSummary}</div>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="block text-sm text-movenotes-primary underline"
+                  onClick={() => setShowEquipmentDialog(true)}
+                >
+                  + Add equipment
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <SavePresetFooter
-          saveAsPreset={saveAsPreset}
-          presetName={presetName}
-          showMetricTooltip={showMetricTooltip}
-          metricTooltip={metricTooltip}
-          onToggleSaveAsPreset={() => {
-            const next = !saveAsPreset;
-            setSaveAsPreset(next);
-            if (next && !presetNameTouched && !presetName) {
-              setPresetName(title || "");
-            }
-          }}
-          onPresetNameChange={setPresetName}
-          onPresetNameTouched={() => setPresetNameTouched(true)}
-          onSave={save}
-          onCloseMetricTooltip={() => {
-            setShowMetricTooltip(false);
-            setMetricTooltipAcknowledged(true);
-            localStorage.setItem(tooltipSeenKey, "true");
-          }}
-        />
+        <div className="shrink-0 border-t border-warm-200/70 bg-warm-100 pt-4 pb-[env(safe-area-inset-bottom)]">
+          <SavePresetFooter
+            className="mb-4 space-y-3"
+            saveAsPreset={saveAsPreset}
+            presetName={presetName}
+            showMetricTooltip={showMetricTooltip}
+            metricTooltip={metricTooltip}
+            onToggleSaveAsPreset={() => {
+              const next = !saveAsPreset;
+              setSaveAsPreset(next);
+              if (next && !presetNameTouched && !presetName) {
+                setPresetName(title || "");
+              }
+            }}
+            onPresetNameChange={setPresetName}
+            onPresetNameTouched={() => setPresetNameTouched(true)}
+            onSave={save}
+            onCloseMetricTooltip={() => {
+              setShowMetricTooltip(false);
+              setMetricTooltipAcknowledged(true);
+              localStorage.setItem(tooltipSeenKey, "true");
+            }}
+          />
+        </div>
       </ModalSheet>
 
       {showEquipmentDialog && (

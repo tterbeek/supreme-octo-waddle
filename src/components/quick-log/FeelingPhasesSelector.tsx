@@ -56,8 +56,9 @@ function FeelingRow<T extends string>({
   return (
     <div className="grid gap-1.5 md:grid-cols-[6.5rem_minmax(0,1fr)] md:gap-2 md:items-start">
       <div className="pt-1.5">
-        <div className="text-left text-sm text-gray-600">{label}</div>
-        <div className="mt-1 text-left text-[11px] text-gray-400/90">{hint}</div>
+        <div className="text-left text-sm text-gray-600">
+          {label} <span className="text-[11px] text-gray-400/90">{hint}</span>
+        </div>
       </div>
 
       <div>
@@ -70,7 +71,7 @@ function FeelingRow<T extends string>({
                 key={optionValue}
                 type="button"
                 onClick={() => onChange(optionValue)}
-                className={`rounded-2xl border px-2 py-5 text-center transition duration-150 active:scale-[0.98] ${
+                className={`rounded-2xl border px-2 py-3 text-center transition duration-150 active:scale-[0.98] ${
                   active
                     ? "scale-[1.06] border-[#EEDFD2] bg-[#FBF4EE] shadow-[0_0_0_1px_rgba(238,223,210,0.45)]"
                     : "border-[#F1ECE5] bg-[#FCFAF7]"
@@ -89,7 +90,7 @@ function FeelingRow<T extends string>({
           })}
         </div>
 
-        <div className="mt-1.5 grid min-h-[1rem] grid-cols-4 gap-3">
+        <div className="grid min-h-2 grid-cols-4 gap-3">
           {selectedOption ? (
             <div
               className="flex justify-center"
@@ -120,7 +121,7 @@ export default function FeelingPhasesSelector({
         </label>
       </div>
 
-      <div className="space-y-0.5">
+      <div>
         <FeelingRow
           label="During"
           hint="in the moment"

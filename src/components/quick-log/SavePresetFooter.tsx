@@ -11,6 +11,7 @@ type SavePresetFooterProps = {
   onPresetNameTouched: () => void;
   onSave: () => void;
   onCloseMetricTooltip: () => void;
+  className?: string;
 };
 
 export default function SavePresetFooter({
@@ -23,10 +24,11 @@ export default function SavePresetFooter({
   onPresetNameTouched,
   onSave,
   onCloseMetricTooltip,
+  className = "mt-6 mb-5 space-y-3",
 }: SavePresetFooterProps) {
   return (
     <>
-      <div className="mt-6 mb-5 space-y-3">
+      <div className={className}>
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"
