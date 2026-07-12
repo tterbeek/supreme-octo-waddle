@@ -62,6 +62,7 @@ export default function GalleryLightbox({
     offsetX: number;
     offsetY: number;
   } | null>(null);
+  const gallerySwipeRef = useRef<{ x: number; y: number } | null>(null);
 
   const activeItem = items[activeIndex];
 
@@ -93,6 +94,7 @@ export default function GalleryLightbox({
     panOffsetRef.current = { x: 0, y: 0 };
     touchPanRef.current = null;
     pointerPanRef.current = null;
+    gallerySwipeRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -366,11 +368,15 @@ export default function GalleryLightbox({
 
   const handleTouchPanStart = useCallback((event: TouchEvent) => {
     if (isClosing) return;
-    if (zoomScaleRef.current <= 1) return;
     if (event.touches.length !== 1) return;
 
     const touch = event.touches[0];
     if (!touch) return;
+
+    if (zoomScaleRef.current <= 1) {
+      gallerySwipeRef.current = { x: touch.clientX, y: touch.clientY };
+      return;
+    }
 
     event.preventDefault();
     touchPanRef.current = {
@@ -401,9 +407,26 @@ export default function GalleryLightbox({
     setPanOffset(nextPan);
   }, [clampPan]);
 
-  const endTouchPan = useCallback(() => {
+  const endTouchPan = useCallback((event: TouchEvent) => {
+    const swipeStart = gallerySwipeRef.current;
+    gallerySwipeRef.current = null;
+
+    if (swipeStart && zoomScaleRef.current <= 1) {
+      const touch = event.changedTouches[0];
+      if (touch) {
+        const dx = touch.clientX - swipeStart.x;
+        const dy = touch.clientY - swipeStart.y;
+        if (Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy)) {
+          ignoreClickRef.current = true;
+          const nextIndex = dx < 0 ? activeIndex + 1 : activeIndex - 1;
+          if (nextIndex >= 0 && nextIndex < items.length) {
+            onActiveIndexChange(nextIndex);
+          }
+        }
+      }
+    }
     touchPanRef.current = null;
-  }, []);
+  }, [activeIndex, items.length, onActiveIndexChange]);
 
   useEffect(() => {
     if (!open) return;
