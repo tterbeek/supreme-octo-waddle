@@ -1,8 +1,13 @@
 # Supabase development workflow
 
-The production database currently contains the authoritative schema in
-`remote-schema-baseline.sql`. The numbered files in `migrations/` are later
-incremental migrations and do not include the original core schema.
+The production database schema has been captured as the first active migration:
+`migrations/00000000000000_production_baseline.sql`. It is the starting point
+for all future local development migrations.
+
+The previous migration files are retained in `migrations-legacy/` for audit and
+reference only. They are not part of the active replay path because they cannot
+be applied cleanly to an empty database without the missing historical base
+schema.
 
 For local validation, run:
 
@@ -10,14 +15,18 @@ For local validation, run:
 npm run supabase:verify-local
 ```
 
-This command creates a temporary Supabase project directory, copies the
-baseline into that directory as its only migration, starts a local Docker
-stack, and resets the local database from scratch. The temporary project is
-removed and the local stack is stopped when the command finishes.
+This command creates a temporary Supabase project directory, copies the active
+migrations into it, starts a local Docker stack, and resets the local database
+from scratch. The temporary project is removed and the local stack is stopped
+when the command finishes.
 
 The script intentionally does not run `supabase db push`, `supabase db pull`,
 or any command that targets the linked hosted project.
 
-Do not place `remote-schema-baseline.sql` inside the normal `migrations/`
-directory yet. Doing so would make it appear to be a new production migration
-until the hosted migration history has been deliberately reconciled.
+Do not run `supabase db push` against the linked production project yet. The
+hosted migration history still needs to be deliberately reconciled with this
+baseline; the baseline belongs in the repository for local replay, but must not
+be treated as an unapplied production change automatically.
+
+Future migrations should be created with timestamps later than the baseline and
+should be validated with `npm run supabase:verify-local` before review.

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-baseline_file="$repo_root/supabase/remote-schema-baseline.sql"
+migrations_dir="$repo_root/supabase/migrations"
 config_file="$repo_root/supabase/config.toml"
 temp_root="$(mktemp -d "${TMPDIR:-/tmp}/movenotes-schema-XXXXXX")"
 local_project="$temp_root/project"
@@ -22,8 +22,8 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-if [[ ! -f "$baseline_file" ]]; then
-  echo "Missing schema baseline: $baseline_file" >&2
+if [[ ! -d "$migrations_dir" ]] || [[ -z "$(find "$migrations_dir" -maxdepth 1 -type f -name '*.sql' -print -quit)" ]]; then
+  echo "No active Supabase migrations found: $migrations_dir" >&2
   exit 1
 fi
 
@@ -34,8 +34,7 @@ fi
 
 mkdir -p "$local_supabase/migrations"
 cp "$config_file" "$local_supabase/config.toml"
-cp "$baseline_file" \
-  "$local_supabase/migrations/00000000000000_remote_schema_baseline.sql"
+cp "$migrations_dir"/*.sql "$local_supabase/migrations/"
 
 echo "Starting isolated local Supabase stack..."
 (
@@ -44,7 +43,7 @@ echo "Starting isolated local Supabase stack..."
 )
 stack_started=1
 
-echo "Resetting local database from the remote schema baseline..."
+echo "Resetting local database from repository migrations..."
 (
   cd "$local_project"
   npx supabase db reset --local --no-seed
