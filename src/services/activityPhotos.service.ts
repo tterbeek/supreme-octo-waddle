@@ -47,7 +47,7 @@ export async function insertActivityPhotos(
       user_id: userId,
       activity_id: activityId,
       image_path: photo.imagePath,
-      thumb_path: photo.thumbPath,
+      thumb_path: photo.thumbPath ?? photo.imagePath,
       sort_order: photo.sortOrder,
       lat: coords.lat,
       lng: coords.lng,

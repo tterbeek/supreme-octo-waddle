@@ -69,8 +69,12 @@ export function getActivitiesForGoalPeriod(
 // MAIN: COMPUTE PROGRESS (CURRENT PERIOD)
 // --------------------------------------------------------
 
-export function computeGoalProgress(goal: Goal, activities: ActivityLike[]) {
-  const periodActs = getActivitiesForGoalPeriod(activities, goal);
+export function computeGoalProgress(
+  goal: Goal,
+  activities: ActivityLike[],
+  now = new Date()
+) {
+  const periodActs = getActivitiesForGoalPeriod(activities, goal, now);
 
   const relevant =
     goal.activity_type === "any"

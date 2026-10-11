@@ -96,7 +96,11 @@ export function useGoalTrackingStats() {
       console.error("Could not load goal preferences", prefsRes.error);
       setStarredGoalIds([]);
     } else {
-      setStarredGoalIds((prefsRes.data || []).map((p) => p.goal_id));
+      setStarredGoalIds(
+        (prefsRes.data || [])
+          .map((p) => p.goal_id)
+          .filter((id): id is string => id !== null)
+      );
     }
 
     if (dotsRes.error) {

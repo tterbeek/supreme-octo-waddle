@@ -42,7 +42,11 @@ export function useHomeGoals(userId: string | null, useRpcGoals: boolean) {
     setGoals((g as Goal[]) || []);
 
     const { data: prefs } = await fetchGoalPreferences(userId);
-    setSelectedGoals(prefs?.map((p) => p.goal_id) || []);
+    setSelectedGoals(
+      (prefs || [])
+        .map((p) => p.goal_id)
+        .filter((id): id is string => id !== null)
+    );
 
     if (useRpcGoals) {
       const { data, error } = await fetchGoalStats(userId);

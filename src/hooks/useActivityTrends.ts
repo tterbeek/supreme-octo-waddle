@@ -39,7 +39,7 @@ async function fetchTrendMeta(userId: string) {
       {
         p_target_user: userId,
         p_weeks_back: 9,
-      }
+      } as never
     );
     if (!fallbackError) return fallbackData as TrendMeta[];
   }
@@ -68,7 +68,7 @@ async function fetchTrendSeries(
         p_activity_type: activityType,
         p_metric: metric,
         p_weeks_back: 9,
-      }
+      } as never
     );
     if (!fallbackError) return fallbackData as TrendPoint[];
   }

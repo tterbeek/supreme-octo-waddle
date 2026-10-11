@@ -19,7 +19,16 @@ export async function fetchActivityPreference(
     return undefined;
   }
 
-  return data ?? undefined;
+  if (!data) return undefined;
+  const defaultMetric = data.default_metric;
+  if (defaultMetric !== "distance" && defaultMetric !== "duration") {
+    return undefined;
+  }
+
+  return {
+    activity_type: data.activity_type,
+    default_metric: defaultMetric as "distance" | "duration",
+  };
 }
 
 const mapPresetRow = (row: any) => {

@@ -81,7 +81,7 @@ function DirectionStep({ onDone }: DirectionStepProps) {
 
       const { data, error } = await supabase
         .from("goals")
-        .select("id, user_id, activity_type, metric, period, target, name, updated_at, created_at")
+        .select("id, user_id, activity_type, metric, period, target, name, updated_at")
         .eq("user_id", user.id);
 
       if (!active) return;

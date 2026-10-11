@@ -99,7 +99,8 @@ export default function MicroAdjustmentCreateModal({
       let resolvedError: any = null;
 
       for (const params of rpcParamSets) {
-        const { data, error } = await supabase.rpc(RPC_NAME, params);
+        // These parameter shapes support older deployed RPC signatures.
+        const { data, error } = await supabase.rpc(RPC_NAME, params as never);
         if (!error) {
           resolvedData = data as Suggestion[];
           resolvedError = null;

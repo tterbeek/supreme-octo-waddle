@@ -20,6 +20,12 @@ type TinyTweak = {
   end_flow_state?: EndFlowState | null;
 };
 
+const isEndFlowState = (value: string): value is EndFlowState =>
+  value === "none" ||
+  value === "prompt_reflection" ||
+  value === "prompt_renew" ||
+  value === "renew_dismissed";
+
 const ACTIVE_ACTIVITY_LIMIT = 7;
 const ACTIVE_DAY_LIMIT = 7;
 
@@ -62,7 +68,11 @@ export default function TinyTweakStrip({
           return;
         }
 
-        endedTweak = data?.[0] ?? null;
+        const row = data?.[0];
+        endedTweak =
+          row && isEndFlowState(row.end_flow_state)
+            ? { ...row, end_flow_state: row.end_flow_state }
+            : null;
       }
 
       if (!endedTweak?.id || !endedTweak.end_flow_state) {

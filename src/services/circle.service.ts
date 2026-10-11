@@ -114,9 +114,9 @@ export async function getCircleFeed(params: {
   const { data, error } = await supabase.rpc("get_circle_feed", {
     p_user_id: userId,
     p_limit: limit,
-    p_before_occurred_on: beforeOccurredOn,
-    p_before_shared_at: beforeSharedAt,
-    p_before_recipient_id: beforeRecipientId,
+    p_before_occurred_on: beforeOccurredOn ?? undefined,
+    p_before_shared_at: beforeSharedAt ?? undefined,
+    p_before_recipient_id: beforeRecipientId ?? undefined,
   });
   if (error) throw error;
   return (data || []) as CircleFeedItem[];
