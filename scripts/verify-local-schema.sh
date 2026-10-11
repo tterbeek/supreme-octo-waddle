@@ -5,6 +5,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 migrations_dir="$repo_root/supabase/migrations"
 config_file="$repo_root/supabase/config.toml"
+seed_file="$repo_root/supabase/seed.sql"
 temp_root="$(mktemp -d "${TMPDIR:-/tmp}/movenotes-schema-XXXXXX")"
 local_project="$temp_root/project"
 local_supabase="$local_project/supabase"
@@ -32,9 +33,15 @@ if [[ ! -f "$config_file" ]]; then
   exit 1
 fi
 
+if [[ ! -f "$seed_file" ]]; then
+  echo "Missing Supabase seed file: $seed_file" >&2
+  exit 1
+fi
+
 mkdir -p "$local_supabase/migrations"
 cp "$config_file" "$local_supabase/config.toml"
 cp "$migrations_dir"/*.sql "$local_supabase/migrations/"
+cp "$seed_file" "$local_supabase/seed.sql"
 
 echo "Starting isolated local Supabase stack..."
 (
@@ -46,7 +53,7 @@ stack_started=1
 echo "Resetting local database from repository migrations..."
 (
   cd "$local_project"
-  npx supabase db reset --local --no-seed
+  npx supabase db reset --local
 )
 
 echo "Local schema verification passed. No hosted Supabase project was changed."

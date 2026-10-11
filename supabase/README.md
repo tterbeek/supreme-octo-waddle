@@ -30,3 +30,8 @@ be treated as an unapplied production change automatically.
 
 Future migrations should be created with timestamps later than the baseline and
 should be validated with `npm run supabase:verify-local` before review.
+
+Local storage is configured with the application's `actvity-notes` bucket in
+`config.toml`. The local `seed.sql` file adds owner-only storage policies so
+authenticated development users can upload, read, update, and delete their own
+test images. These seed policies are not applied to hosted projects.
