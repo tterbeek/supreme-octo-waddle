@@ -9,6 +9,10 @@ import {
   STRAVA_PAUSED_NOTICE,
   type UserStravaConnection,
 } from "../services/strava.service";
+import {
+  disconnectPolar, fetchPolarConnection, importPolarActivities, startPolarOAuth,
+  type PolarConnection,
+} from "../services/polar.service";
 
 export default function ConnectionsPage() {
   const [loadingStrava, setLoadingStrava] = useState(true);
@@ -19,6 +23,43 @@ export default function ConnectionsPage() {
     useState<UserStravaConnection | null>(null);
   const [stravaError, setStravaError] = useState<string | null>(null);
   const [stravaImportResult, setStravaImportResult] = useState<string | null>(null);
+  const [polarConnection, setPolarConnection] = useState<PolarConnection | null>(null);
+  const [polarLoading, setPolarLoading] = useState(true);
+  const [polarBusy, setPolarBusy] = useState(false);
+  const [polarMessage, setPolarMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPolarConnection().then((connection) => {
+      if (!cancelled) setPolarConnection(connection);
+    }).catch((error) => {
+      if (!cancelled) setPolarMessage(error instanceof Error ? error.message : "Could not load Polar connection.");
+    }).finally(() => { if (!cancelled) setPolarLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const syncPolar = async () => {
+    setPolarBusy(true);
+    setPolarMessage(null);
+    try {
+      const result = await importPolarActivities();
+      setPolarMessage(`Fetched ${result.fetched} · imported ${result.inserted} · already present ${result.skipped}`);
+      setPolarConnection(await fetchPolarConnection());
+    } catch (error) {
+      setPolarMessage(error instanceof Error ? error.message : "Could not import Polar workouts.");
+    } finally { setPolarBusy(false); }
+  };
+
+  const removePolar = async () => {
+    setPolarBusy(true);
+    setPolarMessage(null);
+    try {
+      setPolarConnection(await disconnectPolar());
+      setPolarMessage("Polar disconnected. Previously imported activities remain in your Journal.");
+    } catch (error) {
+      setPolarMessage(error instanceof Error ? error.message : "Could not disconnect Polar.");
+    } finally { setPolarBusy(false); }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -105,6 +146,25 @@ export default function ConnectionsPage() {
   return (
     <div className="p-6 max-w-lg mx-auto">
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">Manage connections</h1>
+
+      <section className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
+        <h2 className="font-semibold text-movenotes-text">Polar Flow</h2>
+        <p className="mt-1 text-sm text-gray-600">Completed workouts are imported into your Journal. You can add MoveNotes details and reflections later.</p>
+        {polarLoading ? <p className="mt-3 text-xs text-gray-500">Checking connection...</p> : (
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {polarConnection?.connected ? <>
+              <span className="text-sm text-gray-700">Connected</span>
+              <button type="button" onClick={syncPolar} disabled={polarBusy} className="px-3 py-2 rounded-full bg-movenotes-primary text-primary-text text-sm disabled:opacity-60">{polarBusy ? "Syncing..." : "Sync now"}</button>
+              <button type="button" onClick={removePolar} disabled={polarBusy} className="px-3 py-2 rounded-full border border-warm-300 text-sm disabled:opacity-60">Remove connection</button>
+            </> : <button type="button" onClick={() => {
+              try { window.location.href = startPolarOAuth(); }
+              catch (error) { setPolarMessage(error instanceof Error ? error.message : "Could not start Polar connection."); }
+            }} className="px-3 py-2 rounded-full bg-movenotes-primary text-primary-text text-sm">Connect Polar</button>}
+          </div>
+        )}
+        {polarConnection?.last_synced_at && <p className="mt-2 text-xs text-gray-500">Last sync {new Date(polarConnection.last_synced_at).toLocaleString("en-GB")}</p>}
+        {polarMessage && <p role="status" className="mt-2 text-xs text-gray-700">{polarMessage}</p>}
+      </section>
 
       <div className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
         {STRAVA_INTEGRATION_PAUSED && (

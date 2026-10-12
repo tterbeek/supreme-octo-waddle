@@ -10,6 +10,7 @@ import type { TooltipKey } from "./useTooltipManager";
 import { getCurrentUser } from "../services/auth.service";
 import {
   createPresetFromActivity,
+  completeImportedActivity,
   fetchActivityPreference,
   fetchPresets,
   saveQuickLog,
@@ -18,6 +19,8 @@ import {
 } from "../services/quickLog.service";
 import { createEquipment, fetchActiveEquipment } from "../services/equipment.service";
 import type { Preset, Equipment } from "../types";
+import { resolveFeelingState } from "../lib/feelings";
+import type { ImportedActivity } from "../lib/importedActivity";
 
 type UseQuickLogFormArgs = {
   initialType: string;
@@ -30,6 +33,7 @@ type UseQuickLogFormArgs = {
   showTooltip: (key: TooltipKey) => void;
   navigate: (path: string) => void;
   ding: HTMLAudioElement;
+  existingActivity?: ImportedActivity;
 };
 
 export function useQuickLogForm({
@@ -43,24 +47,25 @@ export function useQuickLogForm({
   showTooltip,
   navigate,
   ding,
+  existingActivity,
 }: UseQuickLogFormArgs) {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [activePreset, setActivePreset] = useState<Preset | null>(null);
 
-  const [distanceKm, setDistanceKm] = useState<number | null>(null);
-  const [duration, setDuration] = useState("");
-  const [feelingDuring, setFeelingDuring] = useState<FeelingDuring | null>(null);
-  const [feelingAfter, setFeelingAfter] = useState<FeelingAfter | null>(null);
+  const [distanceKm, setDistanceKm] = useState<number | null>(existingActivity?.distance_km ?? null);
+  const [duration, setDuration] = useState(existingActivity?.duration_min != null ? String(existingActivity.duration_min) : "");
+  const [feelingDuring, setFeelingDuring] = useState<FeelingDuring | null>(() => resolveFeelingState(existingActivity ?? {}).during);
+  const [feelingAfter, setFeelingAfter] = useState<FeelingAfter | null>(() => resolveFeelingState(existingActivity ?? {}).after);
   const [date, setDate] = useState(
-    initialDate || new Date().toISOString().slice(0, 10)
+    existingActivity?.date || initialDate || new Date().toISOString().slice(0, 10)
   );
-  const [title, setTitle] = useState("");
-  const [effort, setEffort] = useState<number | null>(null);
+  const [title, setTitle] = useState(existingActivity?.title ?? "");
+  const [effort, setEffort] = useState<number | null>(existingActivity?.effort ?? null);
   const [saveAsPreset, setSaveAsPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [presetNameTouched, setPresetNameTouched] = useState(false);
-  const [showOptionalDistance, setShowOptionalDistance] = useState(false);
-  const [showOptionalDuration, setShowOptionalDuration] = useState(false);
+  const [showOptionalDistance, setShowOptionalDistance] = useState(existingActivity?.distance_km != null);
+  const [showOptionalDuration, setShowOptionalDuration] = useState(existingActivity?.duration_min != null);
   const [showMetricTooltip, setShowMetricTooltip] = useState(false);
   const [metricTooltip, setMetricTooltip] = useState<ReactNode>("");
   const [metricTooltipAcknowledged, setMetricTooltipAcknowledged] = useState(false);
@@ -82,6 +87,7 @@ export function useQuickLogForm({
   const filteredPresets = presets.filter((p) => p.type === activityType);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
   const displayDistance =
@@ -111,10 +117,14 @@ export function useQuickLogForm({
   };
 
   useEffect(() => {
-    setShowOptionalDistance(false);
-    setShowOptionalDuration(false);
+    setShowOptionalDistance(existingActivity?.distance_km != null);
+    setShowOptionalDuration(existingActivity?.duration_min != null);
     setPreference(undefined);
-    setSelectedEquipmentIds([]);
+    setSelectedEquipmentIds(
+      existingActivity?.activity_equipment?.map((row) => row.equipment?.id).filter((id): id is string => Boolean(id))
+      ?? existingActivity?.equipment?.map((item) => item.id)
+      ?? []
+    );
     const load = async () => {
       const user = await getCurrentUser();
 
@@ -129,7 +139,7 @@ export function useQuickLogForm({
         (p) => p.type === activityType
       );
 
-      if (initialPresets.length > 0) {
+      if (!existingActivity && initialPresets.length > 0) {
         const first = initialPresets[0];
         setActivePreset(first);
         setDistanceKm(first.distance_km ?? null);
@@ -153,7 +163,7 @@ export function useQuickLogForm({
     };
 
     load();
-  }, [activityType]);
+  }, [activityType, existingActivity]);
 
   useEffect(() => {
     if (!presetNameTouched) {
@@ -214,6 +224,7 @@ export function useQuickLogForm({
   };
 
   const save = async () => {
+    setSaveError(null);
     const needsDistance = defaultFields.includes("distance_km");
     const needsDuration = defaultFields.includes("duration_min");
     const defaultMetricLabel = needsDistance ? "distance" : "duration";
@@ -223,7 +234,7 @@ export function useQuickLogForm({
       needsDistance &&
       distanceKm == null &&
       !metricTooltipAcknowledged &&
-      !tooltipAlreadySeen
+      !tooltipAlreadySeen && !existingActivity
     ) {
       setMetricTooltip(
         <>
@@ -247,7 +258,7 @@ export function useQuickLogForm({
       return;
     }
 
-    if (needsDuration && !duration && !metricTooltipAcknowledged && !tooltipAlreadySeen) {
+    if (needsDuration && !duration && !metricTooltipAcknowledged && !tooltipAlreadySeen && !existingActivity) {
       setMetricTooltip(
         <>
           <p className="text-sm text-gray-800">
@@ -298,9 +309,12 @@ export function useQuickLogForm({
       equipmentIds: selectedEquipmentIds,
     };
 
-    const { id: newActivityId, error } = await saveQuickLog(saveInput);
+    const { id: newActivityId, error } = existingActivity
+      ? await completeImportedActivity(existingActivity.id, saveInput, currentUserId)
+      : await saveQuickLog(saveInput);
 
     if (error || !newActivityId) {
+      setSaveError(error?.message || "Could not save activity details.");
       return;
     }
 
@@ -329,6 +343,23 @@ export function useQuickLogForm({
     setTimeout(() => {
       onClose();
       navigate(targetPath);
+    }, 400);
+  };
+
+  const keepImportedData = async () => {
+    setSaveError(null);
+    if (!existingActivity) return;
+    const currentUserId = await ensureUserId();
+    if (!currentUserId) return;
+    const { id, error } = await completeImportedActivity(existingActivity.id, null, currentUserId);
+    if (error || !id) {
+      setSaveError(error?.message || "Could not complete imported activity.");
+      return;
+    }
+    onLogged(id);
+    setTimeout(() => {
+      onClose();
+      navigate(returnTo || "/");
     }, 400);
   };
 
@@ -384,5 +415,7 @@ export function useQuickLogForm({
     usePreset,
     useCustom,
     save,
+    keepImportedData,
+    saveError,
   };
 }

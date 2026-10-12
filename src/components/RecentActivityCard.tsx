@@ -23,6 +23,8 @@ import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { resolveFeelingState, type FeelingAfter, type FeelingDuring } from "../lib/feelings";
 import { formatDistance, formatDurationMinutes, type UnitSystem } from "../lib/units";
 import { getActivityPhotos } from "../lib/photos";
+import { needsImportedEnrichment } from "../lib/importedActivity";
+import ActivitySourceMark from "./ActivitySourceMark";
 
 type RecentActivityCardProps = {
   imageLoading?: "lazy" | "eager";
@@ -139,6 +141,9 @@ export default function RecentActivityCard({
       .trim();
     return `Strava · ${spaced}`;
   })();
+  const importedSource = isImportedActivity && !stravaSource
+    ? String(activity.source || activity.external_source)
+    : null;
   const { during: feelingDuring, after: feelingAfter } = resolveFeelingState(activity);
   const quickFeelingStage: "during" | "after" = feelingDuring ? "after" : "during";
   const effortValue =
@@ -148,23 +153,6 @@ export default function RecentActivityCard({
   const showFeeling = Boolean(feelingDuring);
   const showEffort = effortValue > 0;
   const hasNotes = Boolean(activity.notes?.trim?.());
-  const hasNoteOrFeeling = hasNotes || showFeeling;
-  const activityDateMs = (() => {
-    const raw = activity.started_at || activity.created_at || activity.date;
-    if (!raw) return null;
-    const ms = new Date(raw).getTime();
-    return Number.isFinite(ms) ? ms : null;
-  })();
-  const ageHours =
-    activityDateMs != null ? (Date.now() - activityDateMs) / (1000 * 60 * 60) : null;
-  const isOlderThan7Days = ageHours != null && ageHours > 24 * 7;
-  const showAddReflection =
-    isImportedActivity &&
-    Boolean(onAddReflection) &&
-    !hasNoteOrFeeling &&
-    !showQuickFeelingPrompt &&
-    !showQuickEffortPrompt &&
-    !isOlderThan7Days;
   const showOptionalNotePrompt =
     isImportedActivity &&
     Boolean(onAddReflection) &&
@@ -332,8 +320,13 @@ export default function RecentActivityCard({
           )}
         </div>
 
-        {stravaSportLabel && (
-          <div className="text-xs text-gray-500 mb-1">{stravaSportLabel}</div>
+        {stravaSportLabel && <div className="text-xs text-gray-500 mb-1">{stravaSportLabel}</div>}
+        {importedSource && (
+          <div className="mb-1 flex items-center justify-center gap-1.5 text-xs text-gray-600">
+            <ActivitySourceMark source={importedSource} />
+            {needsImportedEnrichment(activity) && <span aria-hidden="true">·</span>}
+            {needsImportedEnrichment(activity) && <span>Add details</span>}
+          </div>
         )}
 
         {metricParts.length > 0 && (
@@ -579,21 +572,6 @@ export default function RecentActivityCard({
                 )}
               </div>
             )}
-          </div>
-        )}
-
-        {showAddReflection && (
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onAddReflection?.(activity);
-              }}
-              className="text-xs text-movenotes-primary underline"
-            >
-              Add reflection
-            </button>
           </div>
         )}
 

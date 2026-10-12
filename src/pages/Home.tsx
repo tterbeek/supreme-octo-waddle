@@ -29,10 +29,12 @@ import { resolveFeelingState, type FeelingAfter, type FeelingDuring } from "../l
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
+import { POLAR_SYNC_COMPLETED_EVENT, syncPolarIfStale } from "../services/polar.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
 import { NOTE_STORAGE_BUCKET } from "../services/storage.service";
 import { useCircleAccessState } from "../hooks/useCircleAccessState";
 import { useCircleSharePromptSequence } from "../hooks/useCircleSharePromptSequence";
+import { needsImportedEnrichment, type ImportedActivity } from "../lib/importedActivity";
 
 export default function Home() {
   const { unitSystem } = useUnitSystem();
@@ -68,6 +70,7 @@ export default function Home() {
   const [showUndoToast, setShowUndoToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
+  const [importedActivity, setImportedActivity] = useState<ImportedActivity | null>(null);
   const [noteOnlyActivityId, setNoteOnlyActivityId] = useState<string | null>(null);
   const [journalEntryDraftOpen, setJournalEntryDraftOpen] = useState(false);
   const [editingJournalEntry, setEditingJournalEntry] = useState<any | null>(null);
@@ -191,13 +194,23 @@ export default function Home() {
       void refreshFeed();
     };
     window.addEventListener(STRAVA_SYNC_COMPLETED_EVENT, handleStravaSyncComplete);
+    window.addEventListener(POLAR_SYNC_COMPLETED_EVENT, handleStravaSyncComplete);
     return () => {
       window.removeEventListener(
         STRAVA_SYNC_COMPLETED_EVENT,
         handleStravaSyncComplete
       );
+      window.removeEventListener(POLAR_SYNC_COMPLETED_EVENT, handleStravaSyncComplete);
     };
   }, [refreshFeed, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const run = () => { void syncPolarIfStale().catch((error) => console.warn("[Polar] Auto-sync failed:", error)); };
+    run();
+    const timer = window.setInterval(run, 30 * 60_000);
+    return () => window.clearInterval(timer);
+  }, [userId]);
 
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
@@ -549,7 +562,8 @@ export default function Home() {
                               noteImageOrientation={noteImageOrientation}
                               onEdit={(activity) => {
                                 hideTooltip();
-                                setEditActivity(activity);
+                                if (needsImportedEnrichment(activity)) setImportedActivity(activity);
+                                else setEditActivity(activity);
                               }}
                               onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {
                                 setNoteImageOrientation((prev) => ({
@@ -701,6 +715,17 @@ export default function Home() {
               if (hasDoneOnboarding) {
                 showTooltip("after_first_log");
               }
+              noteFlow.handleLogged(activityId);
+              await refreshActivities();
+            }}
+          />
+        )}
+
+        {importedActivity && (
+          <AddActivityModal
+            existingActivity={importedActivity}
+            onClose={() => setImportedActivity(null)}
+            onLogged={async (activityId) => {
               noteFlow.handleLogged(activityId);
               await refreshActivities();
             }}

@@ -27,7 +27,23 @@ export async function fetchFeedPage(
     return { data: rows, error };
   }
 
-  const taggedRows = await attachLocationTagsToActivities(rows);
+  const importedIds = rows
+    .filter((row) => row.entry_kind === "activity" && row.source !== "manual")
+    .map((row) => row.id);
+  let enrichedRows = rows;
+  if (importedIds.length > 0) {
+    const statusResult = await supabase
+      .from("activities")
+      .select("id, user_enrichment_status")
+      .in("id", importedIds);
+    if (statusResult.error) return { data: rows, error: statusResult.error };
+    const statuses = new Map(statusResult.data.map((row) => [row.id, row.user_enrichment_status]));
+    enrichedRows = rows.map((row) => ({
+      ...row,
+      user_enrichment_status: statuses.get(row.id) ?? "completed",
+    }));
+  }
+  const taggedRows = await attachLocationTagsToActivities(enrichedRows);
   return { data: taggedRows, error };
 }
 

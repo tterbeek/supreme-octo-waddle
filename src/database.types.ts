@@ -64,6 +64,7 @@ export type Database = {
           started_at: string | null
           title: string | null
           type: string
+          user_enrichment_status: string
           user_id: string | null
         }
         Insert: {
@@ -90,6 +91,7 @@ export type Database = {
           started_at?: string | null
           title?: string | null
           type: string
+          user_enrichment_status?: string
           user_id?: string | null
         }
         Update: {
@@ -116,6 +118,7 @@ export type Database = {
           started_at?: string | null
           title?: string | null
           type?: string
+          user_enrichment_status?: string
           user_id?: string | null
         }
         Relationships: []
@@ -961,6 +964,36 @@ export type Database = {
           social_profile_thumb_path?: string | null
           unit_system?: string
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_polar_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          last_synced_at: string | null
+          refresh_token: string
+          token_expires_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          last_synced_at?: string | null
+          refresh_token: string
+          token_expires_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          last_synced_at?: string | null
+          refresh_token?: string
+          token_expires_at?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

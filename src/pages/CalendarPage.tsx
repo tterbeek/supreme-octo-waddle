@@ -5,6 +5,7 @@ import { supabase } from "../supabaseClient";
 import ModalSheet from "../components/ModalSheet";
 import AddBottomSheet from "../components/AddBottomSheet";
 import AddActivityModal from "../features/activities/AddActivityModal";
+import { needsImportedEnrichment, type ImportedActivity } from "../lib/importedActivity";
 import EditActivityModal from "../features/activities/EditActivityModal";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { getCurrentUser } from "../services/auth.service";
@@ -22,6 +23,7 @@ import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { buildGalleryItemsForActivity } from "../lib/photos";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
+import { POLAR_SYNC_COMPLETED_EVENT, syncPolarIfStale } from "../services/polar.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
 import {
   ACTIVITY_LOCATION_UPDATED_EVENT,
@@ -37,6 +39,7 @@ type CalendarActivity = {
   date: string;
   type: string;
   source?: string | null;
+  user_enrichment_status?: string | null;
   raw_sport_type?: string | null;
   raw_type?: string | null;
   started_at?: string | null;
@@ -170,6 +173,7 @@ export default function CalendarPage() {
     editActivity,
     setEditActivity,
   } = useHomeModals();
+  const [importedActivity, setImportedActivity] = useState<ImportedActivity | null>(null);
   const noteFlow = usePostLogNoteFlow();
   const { circleEnabled, hasAcceptedCircleConnections } = useCircleAccessState(userId);
 
@@ -256,7 +260,7 @@ export default function CalendarPage() {
           supabase
             .from("activities")
             .select(
-              "id, user_id, type, source, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
+              "id, user_id, type, source, user_enrichment_status, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, feeling_during, feeling_after, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
             )
             .eq("user_id", userId)
             .gte("date", formatDateKey(monthStart))
@@ -493,13 +497,23 @@ export default function CalendarPage() {
       void refreshLoadedCalendarData();
     };
     window.addEventListener(STRAVA_SYNC_COMPLETED_EVENT, handleStravaSyncComplete);
+    window.addEventListener(POLAR_SYNC_COMPLETED_EVENT, handleStravaSyncComplete);
     return () => {
       window.removeEventListener(
         STRAVA_SYNC_COMPLETED_EVENT,
         handleStravaSyncComplete
       );
+      window.removeEventListener(POLAR_SYNC_COMPLETED_EVENT, handleStravaSyncComplete);
     };
   }, [refreshLoadedCalendarData, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const run = () => { void syncPolarIfStale().catch((error) => console.warn("[Polar] Auto-sync failed:", error)); };
+    run();
+    const timer = window.setInterval(run, 30 * 60_000);
+    return () => window.clearInterval(timer);
+  }, [userId]);
 
   useEffect(() => {
     const pickBestPhoto = (day: string, list: CalendarActivity[]) => {
@@ -875,7 +889,7 @@ export default function CalendarPage() {
                     signedNoteImages={signedNoteImages}
                     signedNoteThumbs={signedNoteThumbs}
                     noteImageOrientation={noteImageOrientation}
-                    onEdit={(activity) => setEditActivity(activity)}
+                    onEdit={(activity) => needsImportedEnrichment(activity) ? setImportedActivity(activity) : setEditActivity(activity)}
                     onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {
                       setNoteImageOrientation((prev) => ({
                         ...prev,
@@ -978,6 +992,18 @@ export default function CalendarPage() {
             setShowQuickLog(false);
             setQuickLogDate(null);
           }}
+          onLogged={async (activityId) => {
+            noteFlow.handleLogged(activityId);
+            await refreshLoadedCalendarData();
+          }}
+        />
+      )}
+
+      {importedActivity && (
+        <AddActivityModal
+          existingActivity={importedActivity}
+          returnTo="/calendar"
+          onClose={() => setImportedActivity(null)}
           onLogged={async (activityId) => {
             noteFlow.handleLogged(activityId);
             await refreshLoadedCalendarData();

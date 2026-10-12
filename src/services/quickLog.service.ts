@@ -111,6 +111,51 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
   return { id: activityId, error: null };
 }
 
+/** Complete an already-imported record without changing its identity or provenance. */
+export async function completeImportedActivity(
+  activityId: string,
+  input: SaveQuickLogInput | null,
+  userId: string
+) {
+  if (input) {
+    const { data, error } = await supabase
+      .from("activities")
+      .update({
+        date: input.date,
+        distance_km: input.distanceValue,
+        duration_min: input.durationValue,
+        effort: input.effortValue,
+        feeling_during: input.feelingDuringValue,
+        feeling_after: input.feelingAfterValue,
+        title: input.title,
+      })
+      .eq("id", activityId)
+      .eq("user_id", userId)
+      .neq("source", "manual")
+      .eq("user_enrichment_status", "pending")
+      .select("id")
+      .maybeSingle();
+    if (error || !data) return { id: null, error: error ?? new Error("Imported activity is no longer pending.") };
+
+    // Keep completion pending if equipment cannot be saved, so the form can be retried.
+    const { error: equipmentError } = await replaceActivityEquipment(activityId, input.equipmentIds);
+    if (equipmentError) return { id: activityId, error: equipmentError };
+  }
+
+  const { data, error } = await supabase
+    .from("activities")
+    .update({ user_enrichment_status: "completed" })
+    .eq("id", activityId)
+    .eq("user_id", userId)
+    .neq("source", "manual")
+    .eq("user_enrichment_status", "pending")
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) return { id: null, error: error ?? new Error("Imported activity is no longer pending.") };
+  return { id: activityId, error: null };
+}
+
 export async function createPresetFromActivity(params: {
   userId: string;
   activityType: string;
