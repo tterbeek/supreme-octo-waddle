@@ -23,10 +23,31 @@ when the command finishes.
 The script intentionally does not run `supabase db push`, `supabase db pull`,
 or any command that targets the linked hosted project.
 
-Do not run `supabase db push` against the linked production project yet. The
-hosted migration history still needs to be deliberately reconciled with this
-baseline; the baseline belongs in the repository for local replay, but must not
-be treated as an unapplied production change automatically.
+Production migration history was checked in the Supabase SQL Editor on
+2026-10-12. At that point it contained only
+`00000000000000_production_baseline`; the baseline is already marked applied,
+and the Polar migration is not. This is a history check, not proof that an
+arbitrary linked project is safe to push to. Before promoting a migration,
+confirm that the CLI is linked to the intended project, then run:
+
+```bash
+npx supabase migration list --linked
+npx supabase db push --linked --dry-run
+```
+
+For the Polar rollout, the dry run must show **only**
+`20261012000000_imported_activity_enrichment.sql`. If it proposes the baseline
+or any unexpected migration, stop and investigate; never apply the baseline to
+production. Once the expected migration is the only pending one, run:
+
+```bash
+npx supabase db push --linked
+npx supabase migration list --linked
+```
+
+The final list should show both migrations on the remote. Use the CLI push so
+the schema change and its migration-history entry stay together. Do not apply
+the SQL separately in the dashboard and then push it again.
 
 Future migrations should be created with timestamps later than the baseline and
 should be validated with `npm run supabase:verify-local` before review.
@@ -47,10 +68,9 @@ exact callback URL). Never put the client secret in a `VITE_` variable.
 The app requests `training_sessions:read` and `sports:read`. Deploy the
 `polar-exchange-token`, `polar-import-activities`, and `polar-connection` Edge
 Functions to the **development project** after applying
-`20261012000000_imported_activity_enrichment.sql` there. Do not run
-`supabase db push` against the linked production project: reconcile the
-baseline migration history first, and promote the additive Polar migration
-separately after dev verification.
+`20261012000000_imported_activity_enrichment.sql` there. For production,
+follow the migration-history check and dry-run procedure above before applying
+the Polar migration.
 
 Sync runs on successful connection and, while the app is open, on Journal or
 Calendar entry and every 30 minutes when stale. A server-side schedule is not
