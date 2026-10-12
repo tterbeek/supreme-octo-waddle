@@ -15,7 +15,7 @@ export default function Support() {
         </h1>
 
         <p className="mb-6 leading-relaxed text-center">
-          For help with MoveNotes or the Strava integration, contact:{" "}
+          For help with MoveNotes, contact:{" "}
           <a
             href="mailto:info@movenotes.app"
             className="text-movenotes-accent underline hover:opacity-80"
@@ -24,25 +24,30 @@ export default function Support() {
           </a>
         </p>
 
+        <p className="mb-6 rounded-xl border border-warm-200 bg-warm-100 p-4 text-sm leading-relaxed">
+          Strava connection and syncing are paused while we seek funding to keep
+          the integration running. You can still log activities manually, and
+          previously imported activities remain available.
+        </p>
+
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
           Common topics
         </h2>
 
         <ul className="list-disc list-inside space-y-1 ml-4 mb-6">
-          <li>Connecting your Strava account</li>
+          <li>Strava integration status</li>
           <li>Disconnecting Strava</li>
-          <li>Importing activities</li>
+          <li>Manual activity logging</li>
           <li>Deleting your account and data</li>
         </ul>
 
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          Strava connection help
+          Strava connection status
         </h2>
 
         <p className="mb-4 leading-relaxed">
-          Go to <strong>Settings</strong>, open <strong>Manage external data connections</strong>,
-          and choose <strong>Connect with Strava</strong>. After authorizing in Strava,
-          you will be redirected back to MoveNotes.
+          New Strava connections and imports are unavailable for now. Existing
+          connections can still be disconnected from Settings.
         </p>
 
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
@@ -51,7 +56,7 @@ export default function Support() {
 
         <p className="mb-4 leading-relaxed">
           To disconnect Strava, go to <strong>Settings</strong>, open
-          <strong> Manage external data connections</strong>, then choose
+          <strong> External connections</strong>, then choose
           <strong> Disconnect</strong>. MoveNotes will stop importing new activities.
         </p>
 

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -32,10 +32,6 @@ import { UnitProvider } from "./contexts/UnitContext";
 import CalendarPage from "./pages/CalendarPage";
 import PhotosPage from "./pages/PhotosPage";
 import CirclePage from "./pages/CirclePage";
-import {
-  STRAVA_SYNC_COMPLETED_EVENT,
-  syncStravaIfStale,
-} from "./services/strava.service";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -48,7 +44,6 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem("movenotes_onboarding_done")
   );
-  const autoSyncUserRef = useRef<string | null>(null);
 
 
   // 🌅 Splash logic
@@ -101,36 +96,6 @@ export default function App() {
       sub?.subscription.unsubscribe();
     };
   }, []);
-
-  useEffect(() => {
-    if (!user?.id) {
-      autoSyncUserRef.current = null;
-      return;
-    }
-    if (autoSyncUserRef.current === user.id) return;
-    autoSyncUserRef.current = user.id;
-
-    let cancelled = false;
-    const runAutoSync = async () => {
-      try {
-        const didSync = await syncStravaIfStale({
-          staleMinutes: 30,
-          perPage: 50,
-          page: 1,
-        });
-        if (!cancelled && didSync) {
-          window.dispatchEvent(new Event(STRAVA_SYNC_COMPLETED_EVENT));
-        }
-      } catch (err: any) {
-        console.warn("[Strava] Auto-sync skipped:", err?.message || err);
-      }
-    };
-
-    void runAutoSync();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
 
   console.log(
     `[Render] showSplash=${showSplash} | authReady=${authReady} | user=${user ? user.email : "none"}`

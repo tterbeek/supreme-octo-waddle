@@ -94,12 +94,12 @@ export default function Privacy() {
         </h2>
 
         <p className="mb-4 leading-relaxed">
-          MoveNotes allows users to connect their Strava account in order to import
-          activity summaries.
+          Strava connection and importing are currently paused. Existing imported
+          activities remain in users' journals.
         </p>
 
         <p className="mb-2 leading-relaxed">
-          When a user connects Strava, MoveNotes may access the following information
+          When the integration is available and a user connects Strava, MoveNotes may access the following information
           via the Strava API:
         </p>
         <ul className="list-disc list-inside space-y-1 ml-4 mb-4">

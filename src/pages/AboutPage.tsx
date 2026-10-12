@@ -96,7 +96,7 @@ export default function AboutPage() {
             Logging an activity
           </h2>
           <p className="leading-relaxed mb-4">
-            There are two natural ways to add an activity.
+            You can add an activity whenever you want to capture a moment.
           </p>
           <p className="leading-relaxed mb-4">
             You can log it manually, using simple presets like running, cycling,
@@ -104,11 +104,9 @@ export default function AboutPage() {
             moment.
           </p>
           <p className="leading-relaxed">
-            Or, if you already track activities with Strava, you can choose to
-            bring them in. Imported activities are reduced to their essentials,
-            keeping the focus on the experience rather than the breakdown. Both
-            approaches lead to the same place: a record that leaves room for
-            reflection.
+            Strava importing is currently paused while we seek funding to keep
+            the integration running. Activities you imported earlier remain in
+            your journal.
           </p>
         </section>
 
@@ -146,8 +144,8 @@ export default function AboutPage() {
         <IconRun size={20} strokeWidth={1.7} />
       </span>
       <p className="text-movenotes-muted">
-        <span className="font-medium text-movenotes-text">Log manually or import from Strava</span> — 
-        whatever gets you to a simpler record of the experience.
+        <span className="font-medium text-movenotes-text">Log activities manually</span> —
+        keep a simple record of the experience.
       </p>
     </li>
 

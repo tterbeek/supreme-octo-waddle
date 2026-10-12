@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   consumeAndValidateStravaState,
   exchangeStravaCode,
+  STRAVA_INTEGRATION_PAUSED,
+  STRAVA_PAUSED_NOTICE,
 } from "../services/strava.service";
 
 type CallbackStatus = "working" | "success" | "error";
@@ -14,6 +16,7 @@ export default function StravaCallbackPage() {
   const [message, setMessage] = useState("Finishing Strava connection...");
 
   useEffect(() => {
+    if (STRAVA_INTEGRATION_PAUSED) return;
     if (hasHandledRef.current) return;
     hasHandledRef.current = true;
 
@@ -61,7 +64,7 @@ export default function StravaCallbackPage() {
   return (
     <div className="p-6 max-w-lg mx-auto">
       <h1 className="text-2xl font-semibold mb-4 text-gray-800">
-        Connect to Strava
+        Strava integration
       </h1>
       <div className="rounded-xl border border-warm-200 bg-warm-100 p-4">
         <p
@@ -69,10 +72,10 @@ export default function StravaCallbackPage() {
             status === "error" ? "text-red-700" : "text-gray-700"
           }`}
         >
-          {message}
+          {STRAVA_INTEGRATION_PAUSED ? STRAVA_PAUSED_NOTICE : message}
         </p>
       </div>
-      {status === "error" && (
+      {(STRAVA_INTEGRATION_PAUSED || status === "error") && (
         <div className="mt-4">
           <Link className="text-sm text-movenotes-primary underline" to="/settings">
             Back to Settings

@@ -5,6 +5,8 @@ import {
   fetchUserStravaConnection,
   importRecentStravaActivities,
   startStravaOAuth,
+  STRAVA_INTEGRATION_PAUSED,
+  STRAVA_PAUSED_NOTICE,
   type UserStravaConnection,
 } from "../services/strava.service";
 
@@ -96,12 +98,21 @@ export default function ConnectionsPage() {
     stravaConnection?.last_synced_at
       ? new Date(stravaConnection.last_synced_at).toLocaleString("en-GB")
       : null;
+  const stravaApplicationInactive = stravaError?.startsWith(
+    "Strava sync is unavailable because the Strava application is inactive."
+  );
 
   return (
     <div className="p-6 max-w-lg mx-auto">
       <h1 className="text-2xl font-semibold mb-6 text-gray-800">Manage connections</h1>
 
       <div className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
+        {STRAVA_INTEGRATION_PAUSED && (
+          <div role="status" className="rounded-lg border border-warm-300 bg-movenotes-surface p-3 text-sm text-gray-700">
+            <p className="font-semibold text-movenotes-text">Strava integration paused</p>
+            <p className="mt-1">{STRAVA_PAUSED_NOTICE}</p>
+          </div>
+        )}
         {loadingStrava ? (
           <p className="text-xs text-gray-500 text-center">Checking connection...</p>
         ) : !stravaConnection ? (
@@ -126,9 +137,9 @@ export default function ConnectionsPage() {
               type="button"
               onClick={handleConnectStrava}
               disabled={
-                connectingStrava || loadingStrava || disconnectingStrava || importingStrava
+                STRAVA_INTEGRATION_PAUSED || connectingStrava || loadingStrava || disconnectingStrava || importingStrava
               }
-              className="inline-flex items-center justify-center disabled:opacity-60"
+              className="inline-flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Connect to Strava"
             >
               {connectingStrava ? (
@@ -149,7 +160,7 @@ export default function ConnectionsPage() {
               <button
                 type="button"
                 onClick={handleImportStrava}
-                disabled={importingStrava || loadingStrava || disconnectingStrava}
+                disabled={STRAVA_INTEGRATION_PAUSED || importingStrava || loadingStrava || disconnectingStrava}
                 className="px-3 py-2 rounded-full bg-movenotes-primary text-primary-text text-sm font-medium disabled:opacity-60 inline-flex items-center gap-1.5"
               >
                 <IconRefresh size={16} stroke={2} />
@@ -173,7 +184,19 @@ export default function ConnectionsPage() {
         )}
 
         {stravaError && (
-          <p className="text-xs text-red-700 mt-2 text-center">{stravaError}</p>
+          <div className="text-xs text-red-700 mt-2 text-center space-y-1">
+            <p>{stravaError}</p>
+            {stravaApplicationInactive && (
+              <a
+                href="https://www.strava.com/settings/api"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                Open Strava API Settings
+              </a>
+            )}
+          </div>
         )}
       </div>
     </div>

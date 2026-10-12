@@ -7,6 +7,12 @@ const STRAVA_OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 const STRAVA_AUTO_SYNC_STALE_MS = 30 * 60 * 1000;
 
 export const STRAVA_SYNC_COMPLETED_EVENT = "movenotes:strava-sync-completed";
+export const STRAVA_INTEGRATION_PAUSED = true;
+export const STRAVA_PAUSED_NOTICE =
+  "Strava connection and syncing are paused while we seek funding to keep the integration running. You can still log activities manually, and previously imported activities remain available.";
+
+const STRAVA_APPLICATION_INACTIVE_MESSAGE =
+  "Strava sync is unavailable because the Strava application is inactive. The Strava account that owns this app needs an active subscription. Subscribe or reactivate the app in Strava API Settings, then try syncing again.";
 
 export type UserStravaConnection = {
   user_id: string;
@@ -74,6 +80,16 @@ const getFunctionErrorMessage = async (
   return fallback;
 };
 
+const normalizeStravaImportError = (message: string) => {
+  const lower = message.toLowerCase();
+  const applicationInactive =
+    (lower.includes("resource") && lower.includes("application") &&
+      lower.includes("status") && lower.includes("inactive")) ||
+    (lower.includes('"code":"inactive"') && lower.includes('"resource":"application"'));
+
+  return applicationInactive ? STRAVA_APPLICATION_INACTIVE_MESSAGE : message;
+};
+
 const getRequiredClientId = () => {
   const clientId = import.meta.env.VITE_STRAVA_CLIENT_ID;
   if (!clientId) {
@@ -110,6 +126,7 @@ const consumeOAuthState = () => {
 };
 
 export const startStravaOAuth = () => {
+  if (STRAVA_INTEGRATION_PAUSED) throw new Error(STRAVA_PAUSED_NOTICE);
   const clientId = getRequiredClientId();
   const redirectUri = getRedirectUri();
   const state = createState();
@@ -145,6 +162,7 @@ export const consumeAndValidateStravaState = (returnedState: string | null) => {
 };
 
 export const exchangeStravaCode = async (code: string) => {
+  if (STRAVA_INTEGRATION_PAUSED) throw new Error(STRAVA_PAUSED_NOTICE);
   const redirectUri = getRedirectUri();
 
   const { data, error } = await supabase.functions.invoke(
@@ -219,6 +237,7 @@ export const disconnectUserStrava = async () => {
 };
 
 export const importRecentStravaActivities = async (perPage = 50, page = 1) => {
+  if (STRAVA_INTEGRATION_PAUSED) throw new Error(STRAVA_PAUSED_NOTICE);
   const { data, error } = await supabase.functions.invoke(
     "strava-import-activities",
     {
@@ -231,7 +250,7 @@ export const importRecentStravaActivities = async (perPage = 50, page = 1) => {
       error,
       "Could not import Strava activities."
     );
-    throw new Error(message);
+    throw new Error(normalizeStravaImportError(message));
   }
 
   return data as {
@@ -265,6 +284,7 @@ export const syncStravaIfStale = async (opts?: {
   perPage?: number;
   page?: number;
 }) => {
+  if (STRAVA_INTEGRATION_PAUSED) return false;
   if (autoSyncPromise) return autoSyncPromise;
 
   autoSyncPromise = (async () => {
