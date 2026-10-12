@@ -11,6 +11,8 @@ import EquipmentDialog from "../../components/EquipmentDialog";
 import ActivityFormFields from "../../components/ActivityFormFields";
 import FeelingPhasesSelector from "../../components/quick-log/FeelingPhasesSelector";
 import DistanceDurationFields from "../../components/quick-log/DistanceDurationFields";
+import type { ImportedActivity } from "../../lib/importedActivity";
+import { ACTIVITY_TYPES } from "../../config/activityTypes";
 
 type QuickLogFormProps = {
   initialType?: string;
@@ -18,6 +20,7 @@ type QuickLogFormProps = {
   returnTo?: string;
   onClose: () => void;
   onLogged: (activityId: string) => void; // ✅ returns activity id
+  existingActivity?: ImportedActivity;
 };
 
 export default function AddActivityForm({
@@ -26,6 +29,7 @@ export default function AddActivityForm({
   returnTo,
   onClose,
   onLogged,
+  existingActivity,
 }: QuickLogFormProps) {
   const navigate = useNavigate();
   const { showTooltip } = useTooltipManager();
@@ -79,8 +83,10 @@ export default function AddActivityForm({
     usePreset: applyPreset,
     useCustom: resetToCustom,
     save,
+    keepImportedData,
+    saveError,
   } = useQuickLogForm({
-    initialType,
+    initialType: existingActivity?.type ?? initialType,
     initialDate,
     returnTo,
     unitSystem,
@@ -90,6 +96,7 @@ export default function AddActivityForm({
     showTooltip,
     navigate,
     ding,
+    existingActivity,
   });
 
   const equipmentSummary = (() => {
@@ -116,13 +123,19 @@ export default function AddActivityForm({
         sheetClassName="max-w-md max-h-[100dvh] flex flex-col overflow-hidden"
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4">
-          <PresetsBar
+          {existingActivity && (
+            <div className="mb-4 rounded-xl border border-warm-200 bg-warm-100 p-3 text-sm text-gray-700">
+              <p className="font-medium">Imported from {existingActivity.source === "polar" ? "Polar" : existingActivity.source}</p>
+              <p>{ACTIVITY_TYPES[activityType]?.label ?? activityType} · Add your own details, or keep the imported workout as-is.</p>
+            </div>
+          )}
+          {!existingActivity && <PresetsBar
             presets={filteredPresets}
             activePreset={activePreset}
             onSelectPreset={applyPreset}
             onSelectCustom={resetToCustom}
             onOpenMore={() => setShowMorePresets(true)}
-          />
+          />}
 
           <ActivityFormFields
             values={{
@@ -201,7 +214,7 @@ export default function AddActivityForm({
         </div>
 
         <div className="shrink-0 border-t border-warm-200/70 bg-warm-100 pt-4 pb-[env(safe-area-inset-bottom)]">
-          <SavePresetFooter
+          {!existingActivity ? <SavePresetFooter
             className="mb-4 space-y-3"
             saveAsPreset={saveAsPreset}
             presetName={presetName}
@@ -222,7 +235,13 @@ export default function AddActivityForm({
               setMetricTooltipAcknowledged(true);
               localStorage.setItem(tooltipSeenKey, "true");
             }}
-          />
+          /> : (
+            <div className="space-y-2 pb-3">
+              <button type="button" onClick={save} className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium">Save details</button>
+              <button type="button" onClick={keepImportedData} className="w-full py-2 text-sm text-movenotes-primary underline">Keep imported details as-is</button>
+            </div>
+          )}
+          {saveError && <p role="alert" className="pb-2 text-sm text-red-700">{saveError}</p>}
         </div>
       </ModalSheet>
 
@@ -237,7 +256,7 @@ export default function AddActivityForm({
       )}
 
       {/* SECOND SHEET: ALL PRESETS */}
-      {showMorePresets && (
+      {!existingActivity && showMorePresets && (
         <ModalSheet onClose={() => setShowMorePresets(false)}>
           <h2 className="text-lg font-semibold mb-4 text-center">All Presets</h2>
           <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pb-4">

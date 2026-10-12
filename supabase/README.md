@@ -35,3 +35,27 @@ Local storage is configured with the application's `actvity-notes` bucket in
 `config.toml`. The local `seed.sql` file adds owner-only storage policies so
 authenticated development users can upload, read, update, and delete their own
 test images. These seed policies are not applied to hosted projects.
+
+## Polar integration (local/dev setup)
+
+The Polar callback URL is `<app origin>/settings/polar/callback`. Register the
+exact URL for each environment in the Polar developer console. The browser
+needs `VITE_POLAR_CLIENT_ID`; the Supabase Edge Functions need
+`POLAR_CLIENT_ID`, `POLAR_CLIENT_SECRET`, and `POLAR_REDIRECT_URI` (the same
+exact callback URL). Never put the client secret in a `VITE_` variable.
+
+The app requests `training_sessions:read` and `sports:read`. Deploy the
+`polar-exchange-token`, `polar-import-activities`, and `polar-connection` Edge
+Functions to the **development project** after applying
+`20261012000000_imported_activity_enrichment.sql` there. Do not run
+`supabase db push` against the linked production project: reconcile the
+baseline migration history first, and promote the additive Polar migration
+separately after dev verification.
+
+Sync runs on successful connection and, while the app is open, on Journal or
+Calendar entry and every 30 minutes when stale. A server-side schedule is not
+configured, so workouts recorded while the app is closed appear when it next
+opens. Imports cover up to the latest 90 days; repeats are ignored by the
+existing `(external_source, external_id)` unique index. Disconnecting removes
+stored Polar tokens but preserves imported activities; revoke app consent in
+Polar Flow separately if desired.

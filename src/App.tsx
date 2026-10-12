@@ -24,6 +24,7 @@ import ManageEquipmentPage from "./pages/ManageEquipmentPage";
 import ManageCirclePage from "./pages/ManageCirclePage";
 import CircleInvitePage from "./pages/CircleInvitePage";
 import StravaCallbackPage from "./pages/StravaCallbackPage";
+import PolarCallbackPage from "./pages/PolarCallbackPage";
 import ConnectionsPage from "./pages/ConnectionsPage";
 import { AdminRoute } from "./components/AdminRoute";
 import { AdminDashboard } from "./pages/AdminDashboard";
@@ -161,6 +162,7 @@ export default function App() {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/support" element={<SupportPage />} />
               <Route path="/settings/strava/callback" element={<StravaCallbackPage />} />
+              <Route path="/settings/polar/callback" element={<PolarCallbackPage />} />
               <Route path="/circle/invite/:token" element={<CircleInvitePage />} />
 
               {/* 🔐 Auth routes */}

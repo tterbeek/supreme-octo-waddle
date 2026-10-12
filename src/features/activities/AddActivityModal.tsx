@@ -1,4 +1,5 @@
 import AddActivityForm from "./AddActivityForm";
+import type { ImportedActivity } from "../../lib/importedActivity";
 
 type AddActivityModalProps = {
   initialType?: string;
@@ -6,6 +7,7 @@ type AddActivityModalProps = {
   returnTo?: string;
   onClose: () => void;
   onLogged: (activityId: string) => void;
+  existingActivity?: ImportedActivity;
 };
 
 export default function AddActivityModal({
@@ -14,6 +16,7 @@ export default function AddActivityModal({
   returnTo,
   onClose,
   onLogged,
+  existingActivity,
 }: AddActivityModalProps) {
   return (
     <AddActivityForm
@@ -22,6 +25,7 @@ export default function AddActivityModal({
       returnTo={returnTo}
       onClose={onClose}
       onLogged={onLogged}
+      existingActivity={existingActivity}
     />
   );
 }
