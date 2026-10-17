@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import { useEffect, useMemo, useState, useRef } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, useRef } from "react";
 import AddActivityModal from "../features/activities/AddActivityModal";
 import AddBottomSheet from "../components/AddBottomSheet";
 import Toast from "../components/Toast";
@@ -38,6 +38,8 @@ import { useCircleAccessState } from "../hooks/useCircleAccessState";
 import { useCircleSharePromptSequence } from "../hooks/useCircleSharePromptSequence";
 import { needsImportedEnrichment, type ImportedActivity } from "../lib/importedActivity";
 
+const ActivityImageSheet = lazy(() => import("../components/ActivityImageSheet"));
+
 export default function Home() {
   const { unitSystem } = useUnitSystem();
 
@@ -45,6 +47,7 @@ export default function Home() {
   // STATE
   // --------------------------------------------------
   const [userId, setUserId] = useState<string | null>(null);
+  const [imageActivityId, setImageActivityId] = useState<string | null>(null);
 
   const {
     signedNoteImages,
@@ -580,6 +583,7 @@ export default function Home() {
                             <RecentActivityCard
                               key={`activity-${a.id}`}
                               activity={a}
+                              onShareImage={userId ? activity => setImageActivityId(activity.id) : undefined}
                               signedNoteImages={signedNoteImages}
                               signedNoteThumbs={signedNoteThumbs}
                               noteImageOrientation={noteImageOrientation}
@@ -696,6 +700,10 @@ export default function Home() {
             setShowQuickLog(true);
           }}
         />
+
+        {imageActivityId && <Suspense fallback={<div role="status" className="fixed bottom-6 inset-x-4 z-50 rounded-xl bg-warm-100 p-4 text-center shadow-lg">Opening image preview…</div>}>
+          <ActivityImageSheet activityId={imageActivityId} onClose={() => setImageActivityId(null)} />
+        </Suspense>}
 
         <JournalEntryModal
           open={journalEntryDraftOpen || Boolean(editingJournalEntry)}

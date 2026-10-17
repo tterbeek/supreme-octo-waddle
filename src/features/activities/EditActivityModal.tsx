@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Trash2, Camera, ChevronDown, CalendarDays } from "lucide-react";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { useActivityEditForm } from "../../hooks/useActivityEditForm";
@@ -8,6 +8,8 @@ import EquipmentDialog from "../../components/EquipmentDialog";
 import DistanceDurationFields from "../../components/quick-log/DistanceDurationFields";
 import FeelingPhasesSelector from "../../components/quick-log/FeelingPhasesSelector";
 import EffortSelector from "../../components/quick-log/EffortSelector";
+
+const ActivityImageSheet = lazy(() => import("../../components/ActivityImageSheet"));
 
 type EditActivityModalProps = {
   activity: any; // existing activity record
@@ -84,6 +86,7 @@ export default function EditActivityModal({
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [sharingImage, setSharingImage] = useState(false);
   const supportsDistanceField =
     defaultFields.includes("distance_km") || optionalFields.includes("distance_km");
   const supportsDurationField =
@@ -364,6 +367,7 @@ export default function EditActivityModal({
 
           {!reflectionOnly && (
             <>
+              <button type="button" disabled={saving || deleting} onClick={event => { event.currentTarget.focus(); setSharingImage(true); }} className="w-full mt-3 py-3 border border-warm-300 text-gray-700 rounded-full text-sm font-medium disabled:opacity-50">Share as image</button>
               {confirmDelete && !deleting && (
                 <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   Delete this activity permanently?
@@ -406,6 +410,10 @@ export default function EditActivityModal({
         </div>
       </div>
     </div>
+
+    {sharingImage && <Suspense fallback={<div role="status" className="fixed bottom-6 inset-x-4 z-50 bg-warm-100 p-4 rounded-xl shadow-lg">Opening image preview…</div>}>
+      <ActivityImageSheet activityId={activity.id} onClose={() => setSharingImage(false)} />
+    </Suspense>}
 
     {showEquipmentDialog && !reflectionOnly && (
       <EquipmentDialog

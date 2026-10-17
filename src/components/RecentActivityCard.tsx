@@ -16,6 +16,7 @@ import {
   IconMoodSmile,
   IconMoodSpark,
   IconShare,
+  IconDotsVertical,
 } from "@tabler/icons-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
@@ -33,6 +34,7 @@ type RecentActivityCardProps = {
   signedNoteThumbs: Record<string, string>;
   noteImageOrientation: Record<string, "portrait" | "landscape">;
   onEdit: (activity: any) => void;
+  onShareImage?: (activity: any) => void;
   onNoteImageLoad: (activityId: string, naturalWidth: number, naturalHeight: number) => void;
   unitSystem: UnitSystem;
   tooltipVisible: boolean;
@@ -67,6 +69,7 @@ export default function RecentActivityCard({
   signedNoteThumbs,
   noteImageOrientation,
   onEdit,
+  onShareImage,
   onNoteImageLoad,
   unitSystem,
   tooltipVisible,
@@ -90,6 +93,16 @@ export default function RecentActivityCard({
   imageLoading = "lazy",
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!actionsRef.current?.contains(event.target as Node)) setActionsOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [actionsOpen]);
   const [shareTooltipWidth, setShareTooltipWidth] = useState<number | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const shareTooltipAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -279,7 +292,17 @@ export default function RecentActivityCard({
           </TooltipBubble>
         )}
 
-        <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
+        {onShareImage && <div ref={actionsRef} className="absolute right-1 top-1" onClick={event => event.stopPropagation()} data-swipe-ignore="true"
+          onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setActionsOpen(false); }}
+          onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); setActionsOpen(false); actionsRef.current?.querySelector("button")?.focus(); } }}>
+          <button type="button" aria-label="Activity actions" aria-expanded={actionsOpen} onClick={() => setActionsOpen(value => !value)} className="p-3 rounded-full text-gray-500 hover:bg-white/50"><IconDotsVertical size={18} /></button>
+          {actionsOpen && <div className="absolute right-0 top-full z-10 w-44 rounded-xl border border-warm-200 bg-warm-100 p-1 shadow-lg">
+            <button type="button" className="w-full text-left px-3 py-3 text-sm rounded-lg hover:bg-white/60" onClick={() => { setActionsOpen(false); onEdit(activity); }}>Edit activity</button>
+            <button type="button" className="w-full text-left px-3 py-3 text-sm rounded-lg hover:bg-white/60" onClick={() => { actionsRef.current?.querySelector("button")?.focus(); setActionsOpen(false); onShareImage(activity); }}>Share as image</button>
+          </div>}
+        </div>}
+
+        <div className="flex items-center justify-center gap-2 md:gap-3 mb-2 px-5">
           <TypeIcon size={24} strokeWidth={1.8} />
           <span className="font-semibold text-gray-900 text-base md:text-lg leading-tight">
             {activity.title || typeConfig.label}

@@ -1,5 +1,14 @@
 # MoveNotes
 
+## Share an activity as an image
+
+Use **Activity actions → Share as image** in the Journal, or the same action in
+the edit sheet. Preview an optional photo, then share or save a branded PNG.
+Personal notes stay private; Circle visibility is unchanged.
+
+This feature is frontend-only: no Supabase migrations, functions or secrets to
+deploy. See [implementation notes and device checks](docs/activity-sharing.md).
+
 ## Publish Weekly Companion to production
 
 Follow the [Companion production rollout](supabase/README.md#companion-production-rollout)
