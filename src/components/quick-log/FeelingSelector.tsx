@@ -28,6 +28,8 @@ export default function FeelingSelector({ value, onChange }: FeelingSelectorProp
             <button
               key={val}
               type="button"
+              aria-label={`Feeling ${val}: ${["Struggling", "Neutral", "Good", "Energized"][val - 1]}`}
+              aria-pressed={active}
               onClick={() => onChange(val)}
               className={`transition transform active:scale-95 ${
                 active ? "scale-110" : "opacity-70"

@@ -27,8 +27,9 @@ export default function PresetForm({
 }: PresetFormProps) {
   return (
     <div>
-      <label className="text-sm text-gray-600">Name</label>
+      <label htmlFor="preset-name" className="text-sm text-gray-600">Name</label>
       <input
+        id="preset-name"
         type="text"
         value={values.name}
         onChange={(e) => onNameChange(e.target.value)}
@@ -40,6 +41,7 @@ export default function PresetForm({
         values={values}
         unitSystem={unitSystem}
         showDate={false}
+        showTitle={false}
         showFeeling={false}
         onTitleChange={() => {}}
         onDistanceChange={onDistanceChange}

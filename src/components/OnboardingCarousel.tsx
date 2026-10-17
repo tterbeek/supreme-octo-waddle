@@ -1,3 +1,5 @@
+import ModalSheet from "./ModalSheet";
+import { FormActions } from "./forms/FormLayout";
 // src/components/OnboardingCarousel.tsx
 import { useState } from "react";
 
@@ -64,7 +66,7 @@ export default function OnboardingCarousel({
   const { title, body, Icon } = screens[index];
 
   return (
-    <div className="fixed inset-0 bg-warm-100 flex flex-col items-center justify-between p-6 z-50">
+    <ModalSheet title={title} onClose={onSkip} presentation="fullscreen">
       {/* Skip button */}
       <button
         className="absolute top-4 right-4 text-sm text-gray-500 underline"
@@ -76,9 +78,7 @@ export default function OnboardingCarousel({
       {/* Main icon */}
       <div className="mt-10 flex flex-col items-center">
         <Icon size={72} className="text-movenotes-primary mb-6" />
-        <h2 className="text-2xl font-semibold text-gray-900 text-center mb-3">
-          {title}
-        </h2>
+
         <p className="text-center text-gray-700 max-w-xs">{body}</p>
       </div>
 
@@ -97,6 +97,7 @@ export default function OnboardingCarousel({
       {/* Nav buttons */}
       <div className="w-full max-w-md flex justify-between items-center mb-6">
         <button
+          aria-label="Previous welcome screen"
           onClick={prev}
           disabled={index === 0}
           className={`p-2 rounded-full ${
@@ -106,17 +107,17 @@ export default function OnboardingCarousel({
           <IconChevronLeft size={20} />
         </button>
 
-        <button
+        <FormActions><button
           onClick={next}
           className="px-6 py-3 bg-movenotes-primary text-primary-text rounded-full text-lg font-medium active:scale-95"
         >
           {index === screens.length - 1 ? "Get Started" : "Next"}
-        </button>
+        </button></FormActions>
 
         <div className="p-2 opacity-0">
           <IconChevronRight size={20} />
         </div>
       </div>
-    </div>
+    </ModalSheet>
   );
 }

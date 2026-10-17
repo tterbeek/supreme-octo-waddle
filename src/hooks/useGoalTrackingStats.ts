@@ -150,7 +150,7 @@ export function useGoalTrackingStats() {
         setStarredGoalIds((prev) => prev.filter((id) => id !== goalId));
       } else {
         if (starredGoalIds.length >= 2) {
-          alert("You can select up to 2 goals to show on the home screen.");
+          setError("You can select up to 2 goals to show on the home screen.");
           return;
         }
 

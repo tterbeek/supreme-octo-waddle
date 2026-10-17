@@ -851,7 +851,7 @@ export default function CalendarPage() {
       </button>
 
       {selectedDate && (
-        <ModalSheet onClose={() => setSelectedDate(null)}>
+        <ModalSheet title="Day entries" onClose={() => setSelectedDate(null)}>
           <div className="text-center mb-4">
             <p className="text-sm uppercase tracking-wide text-movenotes-primary font-semibold mb-1">
               {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-GB", {
@@ -860,13 +860,12 @@ export default function CalendarPage() {
                 month: "short",
               })}
             </p>
-            <h3 className="text-xl font-semibold text-movenotes-text">Day entries</h3>
           </div>
 
           {sortedSelectedEntries.length === 0 ? (
             <p className="text-center text-movenotes-muted">No entries for this day.</p>
           ) : (
-            <div className="max-h-[70vh] overflow-y-auto pb-2 flex flex-col gap-3 -mx-2 px-1">
+            <div className="flex flex-col gap-3">
               {sortedSelectedEntries.map((entry) => {
                 if (entry.entry_kind === "journal_entry") {
                   return (

@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import FormNavigationGuard from "./components/forms/FormNavigationGuard";
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Home from "./pages/Home";
@@ -12,7 +13,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { User } from "@supabase/supabase-js";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
-import Sidebar from "./components/Sidebar";
 import Layout from "./components/Layout";
 import OnboardingWizard from "./components/OnboardingWizard";
 import OnboardingCarousel from "./components/OnboardingCarousel";
@@ -131,7 +131,8 @@ export default function App() {
 
   return (
     <UnitProvider>
-      <BrowserRouter>
+      <>
+        <FormNavigationGuard />
         {showCarousel && user && (
           <OnboardingCarousel
             onComplete={completeCarousel}
@@ -322,8 +323,7 @@ export default function App() {
             </Routes>
           </motion.div>
         </AnimatePresence>
-        <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
-      </BrowserRouter>
+      </>
     </UnitProvider>
   );
 }

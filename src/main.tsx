@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 import "./index.css";
 import App from "./App.tsx";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 const UPDATE_CHECK_THROTTLE_MS = 60_000;
 const RELOAD_THROTTLE_MS = 15_000;
@@ -86,8 +87,9 @@ if (typeof window !== "undefined") {
   });
 }
 
+const router = createBrowserRouter([{ path: "*", element: <App /> }]);
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <RouterProvider router={router} />
   </StrictMode>
 );

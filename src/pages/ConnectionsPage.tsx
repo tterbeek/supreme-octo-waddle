@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import FormPage from "../components/forms/FormPage";
 import { IconLinkOff, IconRefresh } from "@tabler/icons-react";
 import {
   disconnectUserStrava,
@@ -144,8 +145,7 @@ export default function ConnectionsPage() {
   );
 
   return (
-    <div className="p-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-semibold mb-6 text-gray-800">Manage connections</h1>
+    <FormPage title="Manage connections" busy={polarBusy || connectingStrava || disconnectingStrava || importingStrava}>
 
       <section className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
         <h2 className="font-semibold text-movenotes-text">Polar Flow</h2>
@@ -244,7 +244,7 @@ export default function ConnectionsPage() {
         )}
 
         {stravaError && (
-          <div className="text-xs text-red-700 mt-2 text-center space-y-1">
+          <div role="alert" className="mn-error">
             <p>{stravaError}</p>
             {stravaApplicationInactive && (
               <a
@@ -259,6 +259,6 @@ export default function ConnectionsPage() {
           </div>
         )}
       </div>
-    </div>
+    </FormPage>
   );
 }

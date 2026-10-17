@@ -1,9 +1,15 @@
 # MoveNotes
 
+## Form layouts and regression checks
+
+See the [complete form inventory, shared rules and verification limits](docs/form-consistency.md).
+This consistency pass is frontend-only; no Supabase migration or deployment is
+required. Work is kept local until explicitly committed/pushed.
+
 ## Share an activity as an image
 
-Use **Activity actions → Share as image** in the Journal, or the same action in
-the edit sheet. Preview an optional photo, then share or save a branded PNG.
+Use **Activity actions → Share → Share other** in the Journal.
+Preview an optional photo, then share or save a branded PNG.
 Personal notes stay private; Circle visibility is unchanged.
 
 This feature is frontend-only: no Supabase migrations, functions or secrets to

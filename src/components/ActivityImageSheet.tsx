@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DialogSheet from "./DialogSheet";
+import { FormActions } from "./forms/FormLayout";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { loadActivityImagePhoto, loadOwnedActivityImage } from "../services/activityImage.service";
 import { signStorageValues } from "../services/storage.service";
@@ -74,7 +75,7 @@ export default function ActivityImageSheet({ activityId, onClose }: { activityId
     } finally { sharingRef.current = false; setSharing(false); }
   };
 
-  return <DialogSheet title="Share as image" onClose={onClose}>
+  return <DialogSheet title="Share as image" busy={sharing} onClose={onClose}>
     <div className="space-y-4 pb-[env(safe-area-inset-bottom)]">
       <p className="text-sm text-gray-600">Only what’s shown here is included. Personal notes stay private.</p>
       <p className="text-xs text-gray-500">People you send it to can save or forward it.</p>
@@ -103,11 +104,11 @@ export default function ActivityImageSheet({ activityId, onClose }: { activityId
       {shareError && <p role="alert" className="text-sm text-gray-700">{shareError}</p>}
       <div className="space-y-2">
         {nativeShare && <>
-          <button type="button" disabled={!ready || sharing} onClick={() => void share()} className="w-full rounded-full bg-movenotes-primary text-primary-text py-3 font-semibold disabled:opacity-50">{sharing ? "Sharing…" : "Share image"}</button>
+          <FormActions><button type="button" disabled={!ready || sharing} onClick={() => void share()}>{sharing ? "Sharing…" : "Share image"}</button></FormActions>
           <p className="text-xs text-center text-gray-500">Choose WhatsApp or another app.</p>
         </>}
-        <button type="button" disabled={!ready || sharing} onClick={() => { if (ready) saveActivityImage(ready.url); }}
-          className={`w-full rounded-full py-3 font-semibold disabled:opacity-50 ${nativeShare ? "border border-warm-300 text-gray-700" : "bg-movenotes-primary text-primary-text"}`}>Save image</button>
+        {nativeShare ? <button type="button" disabled={!ready || sharing} onClick={() => { if (ready) saveActivityImage(ready.url); }} className="mn-form-cancel">Save image</button>
+          : <FormActions><button type="button" disabled={!ready || sharing} onClick={() => { if (ready) saveActivityImage(ready.url); }}>Save image</button></FormActions>}
         {ready && !nativeShare && <p className="text-xs text-center text-gray-500">Save the image, then attach it in WhatsApp.</p>}
       </div>
     </div>

@@ -1,6 +1,8 @@
+import FormTextarea from "./forms/FormTextarea";
 import { useState } from "react";
 import { IconInfoCircle } from "@tabler/icons-react";
 import CompanionSheet from "./CompanionSheet";
+import { FormActions, FormCancel } from "./forms/FormLayout";
 import { saveCompanionResponse, type CompanionPost } from "../services/companion.service";
 
 export default function WeeklyCompanionCard({ post, onSaved }: { post: CompanionPost; onSaved: (post: CompanionPost) => void }) {
@@ -42,15 +44,14 @@ export default function WeeklyCompanionCard({ post, onSaved }: { post: Companion
       </div>)}</div>
       <p className="mt-4 text-xs text-movenotes-text/60">{post.includes_activity_notes ? "Activity-note use was enabled for this thought." : "Private activity notes were not used."}</p>
     </CompanionSheet>}
-    {sheet === "response" && <CompanionSheet title="Your reflection" onClose={() => { if (!saving) setSheet(null); }}>
+    {sheet === "response" && <CompanionSheet title="Your reflection" busy={saving} dirty={draft !== (post.user_reflection ?? "")} onClose={() => setSheet(null)}>
       <p className="text-sm text-movenotes-text/70 mb-4">What felt true, different, or missing? You can also leave this thought unanswered.</p>
-      <label className="block text-sm">Your words
-        <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={6} maxLength={4000} disabled={saving} className="mt-2 w-full rounded-xl border border-warm-200 bg-white/70 p-3 text-base" />
-      </label>
+      <label htmlFor="companion-response" className="block text-sm">Your words</label>
+      <FormTextarea id="companion-response" value={draft} onChange={(event) => setDraft(event.target.value)} rows={6} maxLength={4000} disabled={saving} className="mt-2 w-full rounded-xl border border-warm-200 bg-white/70 p-3 text-base" />
       {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
       <div className="mt-4 grid gap-2">
-        <button type="button" disabled={saving || !draft.trim()} onClick={() => void save(draft)} className="rounded-full bg-movenotes-primary text-white px-4 py-3 disabled:opacity-50">{saving ? "Saving…" : "Save my reflection"}</button>
-        <button type="button" disabled={saving} onClick={() => setSheet(null)} className="rounded-full border border-warm-200 px-4 py-3">Not now</button>
+        <FormActions><button type="button" disabled={saving || !draft.trim()} onClick={() => void save(draft)} className="rounded-full bg-movenotes-primary text-white px-4 py-3 disabled:opacity-50">{saving ? "Saving…" : "Save my reflection"}</button></FormActions>
+        <FormCancel disabled={saving}>Not now</FormCancel>
         {post.user_reflection && <button type="button" disabled={saving} onClick={() => void save("")} className="text-sm underline py-2">Remove my reflection</button>}
       </div>
     </CompanionSheet>}

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "./ModalSheet";
+import { FormActions } from "./forms/FormLayout";
 import type { Goal } from "../types";
 import {
   ACTIVITY_TYPES,
@@ -32,6 +33,7 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
   };
 
   const [activityType, setActivityType] = useState<string>("run");
+  const [initialActivityType, setInitialActivityType] = useState("run");
   const [metric, setMetric] = useState<Goal["metric"] | "duration">(
     getDefaultMetric("run")
   );
@@ -39,6 +41,7 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
   const [target, setTarget] = useState("");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [userActivityTypes, setUserActivityTypes] = useState<UserActivityTypeRow[]>(
     []
@@ -150,6 +153,7 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
         : orderedActivityTypes[0];
     if (!preferred || preferred.id === activityType) return;
     setActivityType(preferred.id);
+    setInitialActivityType(preferred.id);
     const metricsForNewType = getMetricsForType(preferred.id);
     if (!metricsForNewType.includes(metric)) {
       setMetric(metricsForNewType[0]);
@@ -157,7 +161,8 @@ export default function AddGoalModal({ onClose, onAdded, onDuplicate, existingGo
   }, [orderedActivityTypes, hasUserPickedType, activityType, metric]);
 
 const save = async () => {
-  if (!target) return;
+  if (!target) { setError("Add a target."); return; }
+  setError(null);
 
   // 🔍 Check for duplicate BEFORE saving
   const duplicate = existingGoals.find(
@@ -178,8 +183,9 @@ const save = async () => {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  await supabase.from("goals").insert({
-    user_id: user!.id,
+  if (!user) { setSaving(false); setError("Please sign in again."); return; }
+  const { error: saveError } = await supabase.from("goals").insert({
+    user_id: user.id,
     activity_type: activityType,
     metric,
     period,
@@ -189,22 +195,23 @@ const save = async () => {
   });
 
   setSaving(false);
+  if (saveError) { setError(saveError.message); return; }
   onAdded();
   onClose();
 };
 
 
   return (
-    <ModalSheet onClose={onClose}>
-      <h2 className="text-lg font-semibold mb-4 text-center">Set direction</h2>
+    <ModalSheet title="Set direction" onClose={onClose} busy={saving} dirty={Boolean(target || name || activityType !== initialActivityType || period !== "week" || metric !== getDefaultMetric(initialActivityType))}>
 
       {/* Activity type selector */}
-      <div className="flex gap-3 overflow-x-auto pb-3 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pb-3 mb-3" role="group" aria-label="Activity type">
         {orderedActivityTypes.map((t) => {
           const Icon = t.Icon;
           return (
             <button
               key={t.id}
+              aria-pressed={activityType === t.id}
               onClick={() => {
                 setHasUserPickedType(true);
                 setActivityType(t.id);
@@ -247,6 +254,7 @@ const save = async () => {
 
       <label className="text-sm text-gray-600">Period</label>
       <select
+        aria-label="Period"
         className="w-full border rounded p-2 mb-3"
         value={period}
         onChange={(e) => setPeriod(e.target.value as Goal["period"])}
@@ -265,6 +273,7 @@ const save = async () => {
           : "(count)"}
       </label>
       <input
+        aria-label="Target"
         className="w-full border rounded p-2 mb-3"
         value={metric === "distance" ? targetDisplay : target}
         onChange={(e) => handleTargetChange(e.target.value)}
@@ -275,6 +284,7 @@ const save = async () => {
         Name (optional)
       </label>
       <input
+        aria-label="Name (optional)"
         className="w-full border rounded p-2 mb-5"
         placeholder={autoName()}
         value={name}
@@ -282,13 +292,14 @@ const save = async () => {
         type="text"
       />
 
-      <button
+      {error && <p role="alert" className="mn-error">{error}</p>}
+      <FormActions><button
         onClick={save}
         disabled={saving}
         className="w-full py-3 rounded-full bg-amber-300 border border-amber-400 text-primary-text font-medium"
       >
         {saving ? "Saving…" : "Set direction"}
-      </button>
+      </button></FormActions>
     </ModalSheet>
   );
 }

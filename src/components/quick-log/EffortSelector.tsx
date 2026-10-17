@@ -27,8 +27,8 @@ export default function EffortSelector({ value, onChange }: EffortSelectorProps)
         </p>
       </div>
 
-      <div className="rounded-[1.75rem] bg-[#F7F2EA] px-5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-        <div className="flex items-center justify-between gap-2">
+      <div className="rounded-[1.75rem] bg-[#F7F2EA] px-2 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+        <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(40px, 1fr))" }}>
           {[1, 2, 3, 4, 5].map((val) => {
             const active = value != null && val <= value;
             return (
@@ -38,16 +38,16 @@ export default function EffortSelector({ value, onChange }: EffortSelectorProps)
                 aria-label={`Effort ${val}: ${EFFORT_LABELS[val]}`}
                 aria-pressed={value === val}
                 onClick={() => onChange(val)}
-                className={`flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95 ${
+                className={`flex min-h-11 w-full items-center justify-center rounded-full transition active:scale-95 ${
                   value === val ? "scale-105" : ""
                 }`}
               >
                 <Zap
+                  style={{ width: 28, height: 28 }}
                   strokeWidth={2.1}
                   className={`h-7 w-7 transition-colors duration-150 ${
                     active ? ACCENT_CLASS : "text-[#C9CFD8]"
                   }`}
-                  style={{ transitionDelay: `${(val - 1) * 32}ms` }}
                   aria-hidden="true"
                 />
               </button>

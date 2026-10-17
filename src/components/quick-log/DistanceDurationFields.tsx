@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 
 type DistanceDurationFieldsProps = {
   defaultFields: string[];
@@ -39,6 +39,7 @@ function InlineUnitInput({
   unit,
   onChange,
 }: InlineUnitInputProps) {
+  const id = useId();
   const measureRef = useRef<HTMLSpanElement | null>(null);
   const [valueWidth, setValueWidth] = useState(0);
 
@@ -47,8 +48,11 @@ function InlineUnitInput({
   }, [value]);
 
   return (
-    <div className="relative">
+    <div className="space-y-1.5">
+      <label htmlFor={id}>{unit === "min" ? "Duration (min)" : `Distance (${unit})`}</label>
+      <div className="relative">
       <input
+        id={id}
         type={type}
         inputMode={inputMode}
         step={step}
@@ -76,6 +80,7 @@ function InlineUnitInput({
           </span>
         </>
       ) : null}
+      </div>
     </div>
   );
 }

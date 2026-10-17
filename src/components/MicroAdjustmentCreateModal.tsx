@@ -1,6 +1,8 @@
+import FormTextarea from "./forms/FormTextarea";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "./ModalSheet";
+import { FormActions } from "./forms/FormLayout";
 
 type Suggestion = {
   id: string;
@@ -288,10 +290,7 @@ export default function MicroAdjustmentCreateModal({
   };
 
   return (
-    <ModalSheet onClose={onClose}>
-      <h2 className="text-lg font-semibold text-center text-gray-800 mb-4">
-        Tiny tweak
-      </h2>
+    <ModalSheet title={isAdjustMode ? "Adjust tiny tweak" : "Tiny tweak"} onClose={onClose} busy={saving} dirty={customText !== (isAdjustMode ? activeTweak?.text ?? "" : "")}>
 
       <div className="mb-4">
         <p className="text-sm text-gray-600 mb-2">Suggestions</p>
@@ -338,7 +337,7 @@ export default function MicroAdjustmentCreateModal({
             ? "Adjust it if you like"
             : "Or write your own"}
         </label>
-        <textarea
+        <FormTextarea
           id="tiny-tweak-text"
           className="w-full border rounded p-2 mt-2 min-h-[90px]"
           placeholder="What would help right now?"
@@ -361,15 +360,7 @@ export default function MicroAdjustmentCreateModal({
         </button>
       )}
 
-      <div className="grid grid-cols-2 gap-3 mt-5">
-        <button
-          type="button"
-          className="w-full text-center text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded-full py-3"
-          onClick={onClose}
-          disabled={saving}
-        >
-          Cancel
-        </button>
+      <FormActions>
         <button
           type="button"
           onClick={handleSave}
@@ -378,10 +369,10 @@ export default function MicroAdjustmentCreateModal({
         >
           {saving ? "Saving..." : "Save"}
         </button>
-      </div>
+      </FormActions>
 
       {saveError && (
-        <p className="text-sm text-red-600 text-center mt-3">{saveError}</p>
+        <p role="alert" className="mn-error">{saveError}</p>
       )}
     </ModalSheet>
   );

@@ -1,3 +1,6 @@
+import ModalSheet from "./ModalSheet";
+import { FormActions } from "./forms/FormLayout";
+import { formLeaves } from "../lib/formLifecycle";
 import { useEffect, useState } from "react";
 import { IconChevronLeft } from "@tabler/icons-react";
 import ActivityPreferencesPage from "../pages/ActivityPreferencesPage";
@@ -197,6 +200,7 @@ export default function OnboardingWizard({
   const isFirst = stepIndex === 0;
 
   function handleNext() {
+    if (formLeaves.current()?.busy) return;
     if (isLast) {
       onComplete();
       return;
@@ -205,16 +209,17 @@ export default function OnboardingWizard({
   }
 
   function handlePrev() {
+    if (formLeaves.current()?.busy) return;
     if (isFirst) return;
     setStepIndex((prev) => Math.max(prev - 1, 0));
   }
 
   return (
-    <div className="fixed inset-0 bg-warm-100 flex flex-col items-center p-6 z-50 overflow-y-auto">
+    <ModalSheet title={step.title} onClose={onSkip} presentation="fullscreen">
       <button
         type="button"
         className="absolute top-4 right-4 text-sm text-gray-500 underline"
-        onClick={onSkip}
+        onClick={() => { if (!formLeaves.current()?.busy) onSkip(); }}
       >
         Skip
       </button>
@@ -224,9 +229,7 @@ export default function OnboardingWizard({
           <p className="text-xs uppercase tracking-widest text-gray-400">
             Welcome step {stepIndex + 1} of {steps.length}
           </p>
-          <h2 className="text-2xl font-semibold text-gray-900 mt-2">
-            {step.title}
-          </h2>
+
           <p className="text-sm text-gray-600 mt-2 max-w-xl mx-auto">
             {step.description}
           </p>
@@ -261,16 +264,16 @@ export default function OnboardingWizard({
           <IconChevronLeft size={20} />
         </button>
 
-        <button
+        <FormActions><button
           type="button"
           onClick={handleNext}
           className="px-8 py-3 rounded-full bg-movenotes-primary text-primary-text text-lg font-semibold justify-self-center active:scale-95"
         >
           {isLast ? "Start logging" : "Next"}
-        </button>
+        </button></FormActions>
 
         <div />
       </div>
-    </div>
+    </ModalSheet>
   );
 }

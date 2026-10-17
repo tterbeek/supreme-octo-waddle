@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import CompanionSheet from "./CompanionSheet";
+import { FormActions } from "./forms/FormLayout";
 import { getCurrentUser } from "../services/auth.service";
 import {
   defaultCompanionPreferences, fetchCompanionPreferences, saveCompanionPreferences, fetchCompanionAccess,
@@ -41,7 +42,7 @@ export default function CompanionSettings({ onClose }: { onClose: () => void }) 
     finally { setSaving(false); }
   };
 
-  return <CompanionSheet title="Weekly Companion" onClose={onClose}>
+  return <CompanionSheet title="Weekly Companion" busy={saving} onClose={onClose}>
     <span className="inline-block mb-3 rounded-full border border-movenotes-primary/30 px-2 py-0.5 text-xs text-movenotes-primary">Premium</span>
     <p className="text-sm text-movenotes-text/70 mb-5">A private thought in your Journal each week. Reflect on it if you wish, or leave it unanswered.</p>
     {!loading && !allowed && <p className="text-sm text-movenotes-text/60 mb-4">Premium feature · Currently available to selected accounts.</p>}
@@ -58,6 +59,6 @@ export default function CompanionSettings({ onClose }: { onClose: () => void }) 
     <p className="mt-4 text-xs leading-relaxed text-movenotes-text/60">Turning Companion off hides its posts and keeps your responses. Turning note use off removes earlier thoughts that used those notes; your own responses are kept. Your original Journal entries stay as they are.</p>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
     <p role="status" className="mt-3 text-xs text-movenotes-text/60">{loading ? "Loading…" : saving ? "Saving…" : ""}</p>
-    <button type="button" className="mt-3 w-full rounded-full bg-movenotes-primary text-white px-4 py-3 disabled:opacity-50" onClick={onClose} disabled={saving}>Done</button>
+    <FormActions><button type="button" onClick={onClose} disabled={saving}>Done</button></FormActions>
   </CompanionSheet>;
 }

@@ -15,15 +15,16 @@ export default function PresetsBar({
   onSelectCustom,
   onOpenMore,
 }: PresetsBarProps) {
-  const maxVisible = 15;
+  const maxVisible = 3;
   const visiblePresets = presets.slice(0, maxVisible);
   const hasMore = presets.length > maxVisible;
 
   return (
-    <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+    <div className="flex flex-wrap gap-2 mb-4">
       <button
         onClick={onSelectCustom}
-        className={`px-3 py-1 rounded-full text-sm border transition whitespace-nowrap ${
+        aria-pressed={activePreset === null}
+        className={`max-w-full px-3 py-2 rounded-full text-sm border transition ${
           activePreset === null
             ? "bg-amber-50 border-amber-300 text-gray-800"
             : "border-gray-300 text-gray-600"
@@ -35,8 +36,9 @@ export default function PresetsBar({
       {visiblePresets.map((p) => (
         <button
           key={p.id}
+          aria-pressed={activePreset?.id === p.id}
           onClick={() => onSelectPreset(p)}
-          className={`px-3 py-1 rounded-full text-sm border transition whitespace-nowrap ${
+          className={`max-w-full px-3 py-2 rounded-full text-sm border transition ${
             activePreset?.id === p.id
               ? "bg-amber-300 border-amber-400 text-primary-text"
               : "border-gray-300 text-gray-600"
@@ -49,7 +51,7 @@ export default function PresetsBar({
       {hasMore && (
         <button
           onClick={onOpenMore}
-          className="px-3 py-1 rounded-full text-sm border border-gray-300 text-gray-600 whitespace-nowrap"
+          className="px-3 py-2 rounded-full text-sm border border-gray-300 text-gray-600"
         >
           More…
         </button>

@@ -17,6 +17,7 @@ import {
   IconMoodSpark,
   IconShare,
   IconDotsVertical,
+  IconTrash,
 } from "@tabler/icons-react";
 import SwipeActions from "./SwipeActions";
 import TooltipBubble from "./TooltipBubble";
@@ -26,6 +27,8 @@ import { formatDistance, formatDurationMinutes, type UnitSystem } from "../lib/u
 import { getActivityPhotos } from "../lib/photos";
 import { needsImportedEnrichment } from "../lib/importedActivity";
 import ActivitySourceMark from "./ActivitySourceMark";
+import DialogSheet from "./DialogSheet";
+import DeleteActivityDialog from "./DeleteActivityDialog";
 
 type RecentActivityCardProps = {
   imageLoading?: "lazy" | "eager";
@@ -35,6 +38,7 @@ type RecentActivityCardProps = {
   noteImageOrientation: Record<string, "portrait" | "landscape">;
   onEdit: (activity: any) => void;
   onShareImage?: (activity: any) => void;
+  onDeleted?: () => void;
   onNoteImageLoad: (activityId: string, naturalWidth: number, naturalHeight: number) => void;
   unitSystem: UnitSystem;
   tooltipVisible: boolean;
@@ -70,11 +74,11 @@ export default function RecentActivityCard({
   noteImageOrientation,
   onEdit,
   onShareImage,
+  onDeleted,
   onNoteImageLoad,
   unitSystem,
   tooltipVisible,
   tooltipContent,
-  tooltipAnchor = "card",
   onTooltipClose,
   onOpenGallery,
   onAddReflection,
@@ -94,6 +98,7 @@ export default function RecentActivityCard({
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [actionDialog, setActionDialog] = useState<"share" | "delete" | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!actionsOpen) return;
@@ -103,9 +108,6 @@ export default function RecentActivityCard({
     document.addEventListener("pointerdown", closeOutside);
     return () => document.removeEventListener("pointerdown", closeOutside);
   }, [actionsOpen]);
-  const [shareTooltipWidth, setShareTooltipWidth] = useState<number | null>(null);
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const shareTooltipAnchorRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const cachedImageHandledRef = useRef<string | null>(null);
   const onNoteImageLoadRef = useRef(onNoteImageLoad);
@@ -174,8 +176,6 @@ export default function RecentActivityCard({
     !showQuickEffortPrompt &&
     !showQuickFeelingPrompt;
   const showShareWithCircle = canShareWithCircle && Boolean(onShareWithCircle);
-  const shareTooltipClassName = "max-w-none p-4 text-left";
-  const shareTooltipWrapperClassName = "right-0 left-auto translate-x-0";
 
   const renderFeelingIcon = (
     feeling: FeelingDuring | FeelingAfter | null,
@@ -216,27 +216,6 @@ export default function RecentActivityCard({
     onNoteImageLoadRef.current = onNoteImageLoad;
   }, [onNoteImageLoad]);
 
-  useEffect(() => {
-    if (!tooltipVisible || tooltipAnchor !== "share") return;
-
-    const updateShareTooltipWidth = () => {
-      const cardEl = cardRef.current;
-      const shareAnchorEl = shareTooltipAnchorRef.current;
-      if (!cardEl || !shareAnchorEl) return;
-
-      const cardRect = cardEl.getBoundingClientRect();
-      const shareRect = shareAnchorEl.getBoundingClientRect();
-      const nextWidth = Math.max(0, Math.round(shareRect.right - cardRect.left));
-      setShareTooltipWidth(nextWidth);
-    };
-
-    updateShareTooltipWidth();
-    window.addEventListener("resize", updateShareTooltipWidth);
-    return () => {
-      window.removeEventListener("resize", updateShareTooltipWidth);
-    };
-  }, [tooltipAnchor, tooltipVisible]);
-
   const countIcon = (() => {
     if (photoCount <= 1) return null;
     if (photoCount === 2) return IconBoxMultiple2;
@@ -272,7 +251,6 @@ export default function RecentActivityCard({
   return (
     <SwipeActions onEdit={() => onEdit(activity)} disabled={disableSwipe}>
       <div
-        ref={cardRef}
         className="
           relative rounded-xl p-5 bg-warm-100 border border-warm-200 shadow-sm text-center
           w-full mx-auto
@@ -286,20 +264,34 @@ export default function RecentActivityCard({
           onEdit(activity);
         }}
       >
-        {tooltipVisible && tooltipAnchor === "card" && (
+        {tooltipVisible && (
           <TooltipBubble position="top" onClose={onTooltipClose}>
             {tooltipContent ?? "Create a preset to make logging this activity faster next time."}
           </TooltipBubble>
         )}
 
-        {onShareImage && <div ref={actionsRef} className="absolute right-1 top-1" onClick={event => event.stopPropagation()} data-swipe-ignore="true"
+        {(onShareImage || onDeleted) && <div ref={actionsRef} className="absolute right-1 top-1" onClick={event => event.stopPropagation()} data-swipe-ignore="true"
           onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setActionsOpen(false); }}
           onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); setActionsOpen(false); actionsRef.current?.querySelector("button")?.focus(); } }}>
           <button type="button" aria-label="Activity actions" aria-expanded={actionsOpen} onClick={() => setActionsOpen(value => !value)} className="p-3 rounded-full text-gray-500 hover:bg-white/50"><IconDotsVertical size={18} /></button>
           {actionsOpen && <div className="absolute right-0 top-full z-10 w-44 rounded-xl border border-warm-200 bg-warm-100 p-1 shadow-lg">
-            <button type="button" className="w-full text-left px-3 py-3 text-sm rounded-lg hover:bg-white/60" onClick={() => { setActionsOpen(false); onEdit(activity); }}>Edit activity</button>
-            <button type="button" className="w-full text-left px-3 py-3 text-sm rounded-lg hover:bg-white/60" onClick={() => { actionsRef.current?.querySelector("button")?.focus(); setActionsOpen(false); onShareImage(activity); }}>Share as image</button>
+            {onShareImage && <button type="button" className="w-full flex items-center gap-2 text-left px-3 py-3 text-sm rounded-lg hover:bg-white/60" onClick={() => { actionsRef.current?.querySelector("button")?.focus(); setActionsOpen(false); setActionDialog("share"); }}><IconShare size={16} strokeWidth={1.9} aria-hidden="true" />Share</button>}
+            {onDeleted && <button type="button" className="w-full flex items-center gap-2 text-left px-3 py-3 text-sm rounded-lg hover:bg-white/60" onClick={() => { actionsRef.current?.querySelector("button")?.focus(); setActionsOpen(false); setActionDialog("delete"); }}><IconTrash size={16} strokeWidth={1.9} aria-hidden="true" />Delete activity</button>}
           </div>}
+        </div>}
+
+        {actionDialog && <div onClick={event => event.stopPropagation()} data-swipe-ignore="true">
+          {actionDialog === "delete" && <DeleteActivityDialog activityId={activity.id} onClose={() => setActionDialog(null)} onDeleted={() => onDeleted?.()} />}
+          {actionDialog === "share" && <DialogSheet title="Share activity" presentation="dialog" onClose={() => setActionDialog(null)} busy={sharingWithCircle}>
+            <div className="space-y-3">
+              <button type="button" disabled={!showShareWithCircle || sharingWithCircle || sharedWithCircle} className="w-full rounded-xl border border-warm-300 p-4 text-left disabled:opacity-50" onClick={() => { setActionDialog(null); onShareWithCircle?.(activity); }}>
+                {sharedWithCircle ? "Already shared with Circle" : "Share with Circle"}
+              </button>
+              {!showShareWithCircle && <p className="text-sm text-gray-500">Circle sharing disabled. You don’t have any Circle connections.</p>}
+              <button type="button" className="w-full rounded-xl border border-warm-300 p-4 text-left" onClick={() => { setActionDialog(null); onShareImage?.(activity); }}>Share other<span className="block text-sm text-gray-500 mt-1">Create an image to save or share with other apps.</span></button>
+              <p className="text-sm text-gray-500">Personal notes stay private.</p>
+            </div>
+          </DialogSheet>}
         </div>}
 
         <div className="flex items-center justify-center gap-2 md:gap-3 mb-2 px-5">
@@ -307,40 +299,6 @@ export default function RecentActivityCard({
           <span className="font-semibold text-gray-900 text-base md:text-lg leading-tight">
             {activity.title || typeConfig.label}
           </span>
-          {showShareWithCircle && (
-            <div ref={shareTooltipAnchorRef} className="relative inline-flex items-center">
-              {tooltipVisible && tooltipAnchor === "share" && (
-                <TooltipBubble
-                  position="bottom"
-                  className={shareTooltipClassName}
-                  wrapperClassName={shareTooltipWrapperClassName}
-                  style={
-                    shareTooltipWidth != null
-                      ? { width: `${shareTooltipWidth}px` }
-                      : undefined
-                  }
-                  onClose={onTooltipClose}
-                >
-                  {tooltipContent ?? "Create a preset to make logging this activity faster next time."}
-                </TooltipBubble>
-              )}
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onShareWithCircle?.(activity);
-                }}
-                disabled={sharingWithCircle}
-                aria-label={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
-                title={sharedWithCircle ? "Unshare from Circle" : "Share with Circle"}
-                className={`disabled:opacity-60 ${
-                  sharedWithCircle ? "text-movenotes-primary" : "text-gray-300"
-                } ${sharingWithCircle ? "animate-pulse" : ""}`}
-              >
-                <IconShare size={16} strokeWidth={1.9} />
-              </button>
-            </div>
-          )}
         </div>
 
         {stravaSportLabel && <div className="text-xs text-gray-500 mb-1">{stravaSportLabel}</div>}

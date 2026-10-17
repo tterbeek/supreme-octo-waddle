@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import FormPage from "../components/forms/FormPage";
 import { Link, useNavigate } from "react-router-dom";
 import {
   consumeAndValidateStravaState,
@@ -62,10 +63,7 @@ export default function StravaCallbackPage() {
   }, [navigate]);
 
   return (
-    <div className="p-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-semibold mb-4 text-gray-800">
-        Strava integration
-      </h1>
+    <FormPage title="Strava integration" backTo="/settings/connections">
       <div className="rounded-xl border border-warm-200 bg-warm-100 p-4">
         <p
           className={`text-sm ${
@@ -82,6 +80,6 @@ export default function StravaCallbackPage() {
           </Link>
         </div>
       )}
-    </div>
+    </FormPage>
   );
 }

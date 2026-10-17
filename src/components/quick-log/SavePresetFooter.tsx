@@ -12,6 +12,7 @@ type SavePresetFooterProps = {
   onSave: () => void;
   onCloseMetricTooltip: () => void;
   className?: string;
+  hideSave?: boolean;
 };
 
 export default function SavePresetFooter({
@@ -25,6 +26,7 @@ export default function SavePresetFooter({
   onSave,
   onCloseMetricTooltip,
   className = "mt-6 mb-5 space-y-3",
+  hideSave = false,
 }: SavePresetFooterProps) {
   return (
     <>
@@ -43,10 +45,11 @@ export default function SavePresetFooter({
 
         {saveAsPreset && (
           <div>
-            <label className="block text-xs text-gray-500 mb-1">
+            <label htmlFor="quick-preset-name" className="block text-xs text-gray-500 mb-1">
               Preset name
             </label>
             <input
+              id="quick-preset-name"
               type="text"
               className="w-full rounded border px-3 py-2 text-sm"
               placeholder="e.g. Morning 5k loop"
@@ -60,7 +63,7 @@ export default function SavePresetFooter({
         )}
       </div>
 
-      <div className="relative">
+      {!hideSave && <div className="relative">
         <button
           onClick={onSave}
           className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
@@ -76,7 +79,7 @@ export default function SavePresetFooter({
             {metricTooltip}
           </TooltipBubble>
         )}
-      </div>
+      </div>}
     </>
   );
 }

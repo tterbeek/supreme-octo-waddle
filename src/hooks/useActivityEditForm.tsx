@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useState } from "react";
 import {
   resolveActivityFields,
   type ActivityPreference,
@@ -89,14 +89,10 @@ export function useActivityEditForm({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [animateIn, setAnimateIn] = useState(false);
-  const [dragY, setDragY] = useState(0);
+  const [ready, setReady] = useState(false);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const startY = useRef<number | null>(null);
-  const draggingFromHandle = useRef(false);
-  const openedAtRef = useRef<number>(Date.now());
   const existingPhotos = getActivityPhotos(activity);
   const existingPhotoTotal = existingPhotos.length;
   const existingPhotoCount = removeExistingPhotos ? 0 : existingPhotoTotal;
@@ -128,12 +124,8 @@ export function useActivityEditForm({
   };
 
   useEffect(() => {
-    openedAtRef.current = Date.now();
-    setAnimateIn(true);
-  }, []);
-
-  useEffect(() => {
     let cancelled = false;
+    setReady(false);
     setShowOptionalDistance(activity.distance_km != null);
     setShowOptionalDuration(activity.duration_min != null);
     setEquipment([]);
@@ -174,7 +166,7 @@ export function useActivityEditForm({
       setSelectedEquipmentIds(activityEquipment.map((item) => item.id));
     };
 
-    loadPreference();
+    void loadPreference().catch(() => { if (!cancelled) setUploadError("Couldn't load equipment preferences."); }).finally(() => { if (!cancelled) setReady(true); });
 
     return () => {
       cancelled = true;
@@ -418,9 +410,8 @@ export function useActivityEditForm({
     setSaving(false);
     setUploading(false);
 
+    onClose();
     onUpdated();
-    setAnimateIn(false);
-    setTimeout(onClose, 300);
   };
 
   const handleDelete = async () => {
@@ -461,47 +452,8 @@ export function useActivityEditForm({
     }
 
     setDeleting(false);
-    onDeleted();
-    setAnimateIn(false);
-    setTimeout(onClose, 300);
-  };
-
-  const handleOverlayClick = () => {
-    const elapsed = Date.now() - openedAtRef.current;
-    if (elapsed < 200) {
-      return;
-    }
     onClose();
-  };
-
-  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
-    draggingFromHandle.current = true;
-    startY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
-    if (!draggingFromHandle.current) return;
-    if (startY.current == null) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - startY.current;
-    if (diff > 0) {
-      e.preventDefault();
-      setDragY(diff);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (!draggingFromHandle.current) return;
-    const threshold = 80;
-    if (dragY > threshold) {
-      setAnimateIn(false);
-      setTimeout(() => {
-        onClose();
-      }, 200);
-    }
-    setDragY(0);
-    draggingFromHandle.current = false;
-    startY.current = null;
+    onDeleted();
   };
 
   const addEquipment = async (name: string, notes: string) => {
@@ -572,16 +524,11 @@ export function useActivityEditForm({
     setUploadProgress,
     saving,
     deleting,
-    animateIn,
-    dragY,
+    ready,
     handleDistanceChange,
     distanceDisplay,
     handleSave,
     handleDelete,
-    handleOverlayClick,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
     addEquipment,
   };
 }

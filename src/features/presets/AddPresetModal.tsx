@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ModalSheet from "../../components/ModalSheet";
+import { FormActions } from "../../components/forms/FormLayout";
 import { ACTIVITY_TYPES, supportsEffort } from "../../config/activityTypes";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { kmToMiles, milesToKm, roundDurationMinutes } from "../../lib/units";
@@ -174,10 +175,7 @@ export default function AddPresetModal({
   })();
 
   return (
-    <ModalSheet onClose={onClose} enableDragToClose>
-      <h2 className="text-lg font-semibold text-gray-800 mb-4 capitalize text-center">
-        Add {typeConfig.label} preset
-      </h2>
+    <ModalSheet title={`Add ${typeConfig.label} preset`} onClose={onClose} busy={saving} draft={{ name, distanceKm, duration, effort, selectedEquipmentIds }}>
 
       <PresetForm
         values={{
@@ -204,15 +202,15 @@ export default function AddPresetModal({
         onEquipmentClick={() => setShowEquipmentDialog(true)}
       />
 
-      {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+      {error && <p role="alert" className="mn-error">{error}</p>}
 
-      <button
+      <FormActions><button
         onClick={save}
         disabled={saving}
         className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
       >
         {saving ? "Saving..." : "Save preset"}
-      </button>
+      </button></FormActions>
 
       {showEquipmentDialog && (
         <EquipmentDialog

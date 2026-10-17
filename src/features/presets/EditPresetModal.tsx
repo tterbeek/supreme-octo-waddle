@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import ModalSheet from "../../components/ModalSheet";
+import { FormActions } from "../../components/forms/FormLayout";
 import { ACTIVITY_TYPES, supportsEffort } from "../../config/activityTypes";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { kmToMiles, milesToKm, roundDurationMinutes } from "../../lib/units";
@@ -53,6 +54,7 @@ export default function EditPresetModal({
   const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     setName(preset.name ?? "");
@@ -103,6 +105,7 @@ export default function EditPresetModal({
           .filter(Boolean);
         setSelectedEquipmentIds(ids);
       }
+      setReady(true);
     };
     loadEquipment();
   }, [preset]);
@@ -195,10 +198,7 @@ export default function EditPresetModal({
   };
 
   return (
-    <ModalSheet onClose={onClose} enableDragToClose>
-      <h2 className="text-lg font-semibold text-gray-800 mb-4 capitalize text-center">
-        Edit preset
-      </h2>
+    <ModalSheet title="Edit preset" onClose={onClose} ready={ready} busy={saving || deleting} draft={{ name, distanceKm, duration, effort, selectedEquipmentIds }}>
 
       <PresetForm
         values={{
@@ -225,15 +225,15 @@ export default function EditPresetModal({
         onEquipmentClick={() => setShowEquipmentDialog(true)}
       />
 
-      {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+      {error && <p role="alert" className="mn-error">{error}</p>}
 
-      <button
+      <FormActions><button
         onClick={save}
-        disabled={saving || deleting}
+        disabled={saving || deleting || !ready}
         className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5"
       >
         {saving ? "Saving..." : "Save changes"}
-      </button>
+      </button></FormActions>
 
       {confirmDelete && !deleting && (
         <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

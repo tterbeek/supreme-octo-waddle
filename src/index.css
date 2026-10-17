@@ -2,6 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Shared form language. Scoped so non-form Journal cards are unchanged. */
+@layer components {
+  .mn-overlay { @apply fixed inset-x-0 flex justify-center bg-black/40; top: var(--overlay-top, 0px); height: var(--overlay-height, 100dvh); padding-top: max(12px, env(safe-area-inset-top)); }
+  .mn-overlay-sheet { @apply items-end sm:items-center sm:p-4; }
+  .mn-overlay-dialog { @apply items-center p-4; }
+  .mn-overlay-drawer { @apply items-stretch justify-start; padding-top: 0; }
+  .mn-overlay-fullscreen { @apply items-stretch; padding-top: 0; }
+  .mn-form-panel { @apply w-full flex flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl bg-warm-100 text-movenotes-text shadow-lg; max-height: min(94dvh, calc(var(--overlay-height, 100dvh) - 12px)); }
+  .mn-overlay-fullscreen .mn-form-panel { @apply max-w-none rounded-none; max-height: 100%; }
+  .mn-overlay-dialog .mn-form-panel { @apply rounded-2xl; }
+  .mn-overlay-drawer .mn-form-panel { @apply max-w-xs rounded-none; max-height: 100%; }
+  .mn-form-header { @apply flex shrink-0 items-start justify-between gap-3 border-b border-warm-200/70 px-5 py-3; padding-top: max(12px, env(safe-area-inset-top)); }
+  .mn-form-header h2 { @apply text-lg font-semibold leading-snug py-2 break-words min-w-0; }
+  .mn-close { @apply flex shrink-0 min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-black/5 disabled:opacity-40; }
+  .mn-form-body { @apply min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-4; scrollbar-gutter: stable; overflow-x: hidden; }
+  .mn-form-body[hidden], .mn-form-footer[hidden] { display: none; }
+  .mn-form-footer { @apply shrink-0 border-t border-warm-200/70 px-5 pt-3; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .mn-form-footer:empty { display: none; }
+  .mn-form-actions { @apply w-full; }
+  .mn-primary, .mn-form-actions > button { @apply min-h-11 rounded-full bg-movenotes-primary text-primary-text px-5 py-2.5 text-base font-semibold disabled:opacity-50; }
+  .mn-form-actions > button { @apply w-full m-0; }
+  .mn-form-cancel { @apply min-h-11 px-3 py-2 text-sm underline underline-offset-2 disabled:opacity-50; }
+  .mn-form-body label, .mn-page-form label { @apply text-sm font-medium text-gray-700; }
+  .mn-form-body button, .mn-page-form button { min-width: 0; overflow-wrap: anywhere; }
+  .mn-form-body :is(input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select), .mn-page-form :is(input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select) { @apply min-h-11 min-w-0 max-w-full rounded-lg border border-warm-200 bg-white/70 px-3 py-2.5 text-base text-gray-800 placeholder:text-gray-400; }
+  .mn-form-body :is(input, textarea, select):focus-visible, .mn-page-form :is(input, textarea, select):focus-visible { @apply outline-none ring-2 ring-movenotes-primary/40 border-movenotes-primary; }
+  .mn-form-body input:is([type=checkbox],[type=radio]), .mn-page-form input:is([type=checkbox],[type=radio]) { @apply h-5 w-5 accent-movenotes-primary; }
+  .mn-field { @apply space-y-1.5; }
+  .mn-field > :is(input, textarea, select) { @apply w-full; }
+  .mn-help { @apply text-xs leading-relaxed text-gray-500; }
+  .mn-error { @apply text-sm text-red-700 rounded-lg border border-red-200 bg-red-50 px-3 py-2; }
+  .mn-page-form { @apply w-full max-w-2xl mx-auto px-4 py-5 space-y-5; }
+  .mn-page-form-header { @apply flex items-center gap-3; }
+  .mn-page-form-header h1 { @apply text-xl font-semibold; }
+}
+
 body {
   @apply bg-[#F3EDE4]; /* ☀️ a warm cream tone */
 }

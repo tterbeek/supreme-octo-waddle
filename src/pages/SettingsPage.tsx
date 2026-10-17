@@ -8,6 +8,9 @@ import {
   Users,
 } from "lucide-react";
 import ModalSheet from "../components/ModalSheet";
+import FormPage from "../components/forms/FormPage";
+import { FormActions } from "../components/forms/FormLayout";
+import { allowFormNavigation } from "../lib/formLifecycle";
 import CompanionSettings from "../components/CompanionSettings";
 import { fetchCompanionAccess } from "../services/companion.service";
 import { supabase } from "../supabaseClient";
@@ -80,6 +83,7 @@ function ActionRow({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={label}
       className="block w-full disabled:cursor-not-allowed disabled:opacity-60"
     >
       <RowShell destructive={destructive} className={`min-h-[56px] ${className ?? ""}`}>
@@ -137,6 +141,7 @@ function InlineSettingRow({
       onClick={onClick}
       disabled={disabled}
       className="block w-full disabled:cursor-not-allowed disabled:opacity-60"
+      aria-label={label}
     >
       <RowShell className="min-h-[52px]">{content}</RowShell>
     </button>
@@ -161,6 +166,8 @@ function UnitOption({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={label}
+      aria-pressed={selected}
       className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors duration-150 ${
         selected
           ? "border-[#C9D5CE] bg-[#EEF3F0]"
@@ -185,7 +192,10 @@ function UnitOption({
 export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteAccountSheet, setShowDeleteAccountSheet] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [savingUnit, setSavingUnit] = useState(false);
+  const [unitError, setUnitError] = useState<string | null>(null);
   const [showUnitsSheet, setShowUnitsSheet] = useState(false);
   const [showCompanionSheet, setShowCompanionSheet] = useState(false);
   const [companionAllowed, setCompanionAllowed] = useState(false);
@@ -211,9 +221,9 @@ export default function SettingsPage() {
     }
 
     const previous = unitSystem;
+    setUnitError(null);
     setUnitSystem(unit);
     setSavingUnit(true);
-    setShowUnitsSheet(false);
 
     try {
       const {
@@ -226,9 +236,11 @@ export default function SettingsPage() {
         unit_system: unit,
       });
       if (error) throw error;
+      setShowUnitsSheet(false);
     } catch (err: any) {
       console.error("[Settings] Failed to update unit preference:", err?.message || err);
       setUnitSystem(previous);
+      setUnitError("Couldn't save the unit preference. Please try again.");
     } finally {
       setSavingUnit(false);
     }
@@ -252,7 +264,7 @@ export default function SettingsPage() {
       if (error) throw error;
 
       if (!data || data.length === 0) {
-        alert("No activities to export yet.");
+        setExportMessage("No activities to export yet.");
         setExporting(false);
         return;
       }
@@ -277,7 +289,7 @@ export default function SettingsPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Export error:", err);
-      alert("Could not export your data.");
+      setExportMessage("Could not export your data.");
     }
 
     setExporting(false);
@@ -289,11 +301,6 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = confirm(
-      "Request deletion via email? We’ll open your mail app to confirm."
-    );
-    if (!confirmed) return;
-
     setDeleting(true);
     const {
       data: { user },
@@ -304,8 +311,9 @@ export default function SettingsPage() {
     )}&body=${encodeURIComponent(
       `Please delete my MoveNotes account associated with ${email || "this email"}.`
     )}`;
-    window.location.href = mailto;
+    allowFormNavigation(() => { window.location.href = mailto; });
     setDeleting(false);
+    setShowDeleteAccountSheet(false);
   };
 
   const handleRestartOnboarding = () => {
@@ -317,10 +325,8 @@ export default function SettingsPage() {
 
   return (
     <>
-      <div className="mx-auto w-full max-w-[24rem] px-0 pb-6 pt-[18px]">
-        <h1 className="text-[28px] font-semibold leading-none text-[#1F2A24]">
-          Settings
-        </h1>
+      <FormPage title="Settings" backTo="/">
+        {exportMessage && <p role="status" className="mn-help">{exportMessage}</p>}
 
         <div className="mt-5 space-y-5">
           <div className="space-y-1.5">
@@ -369,7 +375,7 @@ export default function SettingsPage() {
             />
             <ActionRow
               label={deleting ? "Opening mail..." : "Delete account"}
-              onClick={handleDeleteAccount}
+              onClick={() => setShowDeleteAccountSheet(true)}
               disabled={deleting}
               destructive
             />
@@ -379,13 +385,17 @@ export default function SettingsPage() {
             <ActionRow label="Log out" onClick={handleLogout} />
           </div>
         </div>
-      </div>
+      </FormPage>
 
       {showCompanionSheet && <CompanionSettings onClose={() => setShowCompanionSheet(false)} />}
+      {showDeleteAccountSheet && <ModalSheet title="Request account deletion" presentation="dialog" busy={deleting} onClose={() => setShowDeleteAccountSheet(false)}>
+        <p>We’ll open your mail app so you can request deletion by email. Nothing is deleted here.</p>
+        <FormActions><button type="button" onClick={() => void handleDeleteAccount()} disabled={deleting}>{deleting ? "Opening mail…" : "Open mail app"}</button></FormActions>
+      </ModalSheet>}
       {showUnitsSheet ? (
-        <ModalSheet onClose={() => setShowUnitsSheet(false)} sheetClassName="max-w-md">
+        <ModalSheet title="Units" busy={savingUnit} onClose={() => setShowUnitsSheet(false)} sheetClassName="max-w-md">
           <div className="px-1 pb-2">
-            <h2 className="text-[22px] font-semibold text-[#1F2A24]">Units</h2>
+            {unitError && <p role="alert" className="mn-error">{unitError}</p>}
             <p className="mt-2 text-[15px] text-[#6B746E]">
               Choose how distance is shown throughout MoveNotes.
             </p>

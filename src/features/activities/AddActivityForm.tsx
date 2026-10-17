@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalSheet from "../../components/ModalSheet";
+import { FormActions } from "../../components/forms/FormLayout";
+import TooltipBubble from "../../components/TooltipBubble";
 import PresetsBar from "../../components/quick-log/PresetsBar";
 import SavePresetFooter from "../../components/quick-log/SavePresetFooter";
 import { useTooltipManager } from "../../hooks/useTooltipManager";
@@ -85,6 +87,8 @@ export default function AddActivityForm({
     save,
     keepImportedData,
     saveError,
+    ready,
+    saving,
   } = useQuickLogForm({
     initialType: existingActivity?.type ?? initialType,
     initialDate,
@@ -118,11 +122,13 @@ export default function AddActivityForm({
     <>
       {/* MAIN QUICKLOG SHEET */}
       <ModalSheet
+        title={existingActivity ? "Add activity details" : `Log ${ACTIVITY_TYPES[activityType]?.label ?? "activity"}`}
         onClose={onClose}
-        enableDragToClose
-        sheetClassName="max-w-md max-h-[100dvh] flex flex-col overflow-hidden"
+        ready={ready}
+        busy={saving}
+        draft={{ title, date, displayDistance, duration, feelingDuring, feelingAfter, effort, selectedEquipmentIds, saveAsPreset, presetName: saveAsPreset ? presetName : null }}
       >
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4">
+        <div className="space-y-4">
           {existingActivity && (
             <div className="mb-4 rounded-xl border border-warm-200 bg-warm-100 p-3 text-sm text-gray-700">
               <p className="font-medium">Imported from {existingActivity.source === "polar" ? "Polar" : existingActivity.source}</p>
@@ -213,7 +219,7 @@ export default function AddActivityForm({
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-warm-200/70 bg-warm-100 pt-4 pb-[env(safe-area-inset-bottom)]">
+        <div>
           {!existingActivity ? <SavePresetFooter
             className="mb-4 space-y-3"
             saveAsPreset={saveAsPreset}
@@ -230,6 +236,7 @@ export default function AddActivityForm({
             onPresetNameChange={setPresetName}
             onPresetNameTouched={() => setPresetNameTouched(true)}
             onSave={save}
+            hideSave
             onCloseMetricTooltip={() => {
               setShowMetricTooltip(false);
               setMetricTooltipAcknowledged(true);
@@ -237,11 +244,12 @@ export default function AddActivityForm({
             }}
           /> : (
             <div className="space-y-2 pb-3">
-              <button type="button" onClick={save} className="bg-amber-300 border border-amber-400 text-primary-text w-full py-3 rounded-full text-lg font-medium">Save details</button>
               <button type="button" onClick={keepImportedData} className="w-full py-2 text-sm text-movenotes-primary underline">Keep imported details as-is</button>
             </div>
           )}
-          {saveError && <p role="alert" className="pb-2 text-sm text-red-700">{saveError}</p>}
+          {saveError && <p role="alert" className="mn-error">{saveError}</p>}
+          {showMetricTooltip && <TooltipBubble position="top" onClose={() => { setShowMetricTooltip(false); setMetricTooltipAcknowledged(true); localStorage.setItem(tooltipSeenKey, "true"); }}>{metricTooltip}</TooltipBubble>}
+          <FormActions><button type="button" onClick={save} disabled={saving || !ready}>{saving ? "Saving…" : existingActivity ? "Save details" : "Save activity"}</button></FormActions>
         </div>
       </ModalSheet>
 
@@ -257,9 +265,8 @@ export default function AddActivityForm({
 
       {/* SECOND SHEET: ALL PRESETS */}
       {!existingActivity && showMorePresets && (
-        <ModalSheet onClose={() => setShowMorePresets(false)}>
-          <h2 className="text-lg font-semibold mb-4 text-center">All Presets</h2>
-          <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pb-4">
+        <ModalSheet title="All presets" onClose={() => setShowMorePresets(false)}>
+          <div className="flex flex-col gap-2">
             {/* Custom goes FIRST */}
             <button
               onClick={() => {

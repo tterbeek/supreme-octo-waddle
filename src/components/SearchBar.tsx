@@ -47,10 +47,12 @@ export default function SearchBar({
   const content = (
     <div className={`${positionClass} gap-2 ${className}`}>
       {searchOpen ? (
-        <div className="relative w-full min-w-[220px] transition-all duration-200">
+        <div className="relative w-full min-w-0 transition-all duration-200">
           <input
+            aria-label="Search journal"
+            onKeyDown={event => { if (event.key === "Escape") { setSearchTerm(""); setSearchOpen(false); } }}
             type="text"
-            className="w-full rounded-full border border-warm-200 bg-warm-100 px-4 py-2 text-sm shadow-sm pr-8 focus:outline-none focus:ring-1 focus:ring-movenotes-primary/60 focus:border-movenotes-primary/60"
+            className="w-full min-h-11 rounded-full border border-warm-200 bg-warm-100 px-4 py-2 text-base shadow-sm pr-12 focus:outline-none focus:ring-1 focus:ring-movenotes-primary/60 focus:border-movenotes-primary/60"
             placeholder="Search…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

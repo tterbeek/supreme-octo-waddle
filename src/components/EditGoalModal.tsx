@@ -1,6 +1,7 @@
 // src/components/EditGoalModal.tsx
 import { useState } from "react";
 import ModalSheet from "./ModalSheet";
+import { FormActions } from "./forms/FormLayout";
 import { supabase } from "../supabaseClient";
 import type { Goal } from "../types";
 import { Target, CalendarDays, Ruler, Hash } from "lucide-react";
@@ -27,6 +28,8 @@ export default function EditGoalModal({
     (goal.metric as Goal["metric"] | "duration") || "count"
   );
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const safeActivityType = goal.activity_type || "any";
   const typeConfig = ACTIVITY_TYPES[safeActivityType] ?? ACTIVITY_TYPES["any"];
   const { unitSystem } = useUnitSystem();
@@ -67,7 +70,7 @@ export default function EditGoalModal({
 
     const newTarget = Number(target);
     const targetChanged = newTarget !== goal.target;
-    await supabase
+    const { error: saveError } = await supabase
       .from("goals")
       .update({
         metric,
@@ -78,19 +81,22 @@ export default function EditGoalModal({
       .eq("id", goal.id);
 
     setSaving(false);
+    if (saveError) { setError(saveError.message); return; }
     onUpdated();
     onClose();
   };
 
   const del = async () => {
-    await supabase.from("goals").delete().eq("id", goal.id);
+    setDeleting(true);
+    const { error: deleteError } = await supabase.from("goals").delete().eq("id", goal.id);
+    setDeleting(false);
+    if (deleteError) { setError(deleteError.message); return; }
     onDeleted(goal.id);
     onClose();
   };
 
   return (
-    <ModalSheet onClose={onClose}>
-      <h2 className="text-lg font-semibold text-center mb-4">Edit Goal</h2>
+    <ModalSheet title="Edit direction" onClose={onClose} busy={saving || deleting} dirty={target !== String(goal.target) || name !== (goal.name || "")}>
 
 {/* Display type / period with icons */}
 <div className="flex flex-col gap-3 mb-4 text-gray-700">
@@ -173,6 +179,7 @@ export default function EditGoalModal({
           : "(count)"}
       </label>
       <input
+        aria-label="Target"
         type="number"
         className="w-full border rounded p-2 mb-3"
         value={metric === "distance" ? targetDisplay : target}
@@ -181,19 +188,21 @@ export default function EditGoalModal({
 
       <label className="text-sm text-gray-600">Name</label>
       <input
+        aria-label="Name"
         type="text"
         className="w-full border rounded p-2 mb-5"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
 
-      <button
+      {error && <p role="alert" className="mn-error">{error}</p>}
+      <FormActions><button
         onClick={save}
         disabled={saving}
         className="w-full py-3 rounded-full bg-amber-300 border border-amber-400 text-primary-text font-medium"
       >
         {saving ? "Saving…" : "Save Changes"}
-      </button>
+      </button></FormActions>
 
       <button
         onClick={del}

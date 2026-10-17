@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import ModalSheet from "./ModalSheet";
 import type { Equipment } from "../types";
 import EquipmentFormSheet from "./EquipmentFormSheet";
+import { FormActions } from "./forms/FormLayout";
 
 type EquipmentDialogProps = {
   equipment: Equipment[];
@@ -59,12 +60,11 @@ export default function EquipmentDialog({
   };
 
   return (
-    <ModalSheet onClose={handleCancel} enableDragToClose>
-      <h2 className="text-lg font-semibold text-center mb-4">Equipment</h2>
+    <ModalSheet title="Equipment" onClose={handleCancel} dirty={JSON.stringify([...localSelected].sort()) !== JSON.stringify([...selectedEquipmentIds].sort())}>
 
       <div className="mb-5">
         <div className="text-sm text-gray-600 mb-2">Existing equipment</div>
-        <div className="max-h-[40vh] overflow-y-auto flex flex-col gap-2 pr-1">
+        <div className="flex flex-col gap-2">
           {equipment.length === 0 && (
             <p className="text-sm text-gray-500">
               No equipment yet. Add your first item below.
@@ -76,6 +76,7 @@ export default function EquipmentDialog({
               <button
                 key={item.id}
                 type="button"
+                aria-pressed={checked}
                 onClick={() => toggleSelection(item.id)}
                 className={`flex items-center justify-between w-full border rounded-xl px-3 py-2 transition text-left ${
                   checked
@@ -113,7 +114,7 @@ export default function EquipmentDialog({
         )}
       </div>
 
-      <div className="mt-6 flex gap-3">
+      <FormActions>
         <button
           type="button"
           onClick={handleDone}
@@ -121,14 +122,7 @@ export default function EquipmentDialog({
         >
           Done
         </button>
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-full font-medium"
-        >
-          Cancel
-        </button>
-      </div>
+      </FormActions>
 
       {showAddForm && (
         <EquipmentFormSheet

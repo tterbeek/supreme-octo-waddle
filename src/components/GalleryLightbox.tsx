@@ -1,11 +1,14 @@
 import {
   useCallback,
   useEffect,
+  useId,
+  useLayoutEffect,
   useRef,
   useState,
   type SyntheticEvent,
 } from "react";
-import { IconArrowLeft, IconMinus, IconPlus } from "@tabler/icons-react";
+import { IconX, IconMinus, IconPlus } from "@tabler/icons-react";
+import { lockPageScroll, overlayStack } from "../lib/formLifecycle";
 import { createPortal } from "react-dom";
 import type { GalleryItem } from "../lib/photos";
 import { formatActivityMeta, getActivityNoteText } from "../lib/photos";
@@ -31,6 +34,7 @@ export default function GalleryLightbox({
   signedThumbs,
   showDots = true,
 }: GalleryLightboxProps) {
+  const overlayId = useId();
   const [chromeVisible, setChromeVisible] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [fullReady, setFullReady] = useState<Record<string, boolean>>({});
@@ -41,7 +45,6 @@ export default function GalleryLightbox({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const imageStageRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const viewportContentRef = useRef<string | null>(null);
   const [imageSizes, setImageSizes] = useState<Record<string, { w: number; h: number }>>(
     {}
   );
@@ -122,37 +125,19 @@ export default function GalleryLightbox({
     resetZoom();
   }, [activeIndex, open, resetZoom]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const previous = document.activeElement as HTMLElement | null;
+    const unlock = lockPageScroll();
+    overlayStack.add(overlayId, 1000);
+    containerRef.current?.querySelector<HTMLElement>("button")?.focus();
     return () => {
-      document.body.style.overflow = previous;
+      overlayStack.remove(overlayId); unlock();
+      queueMicrotask(() => { if (previous?.isConnected && !previous.closest("[inert]")) previous.focus({ preventScroll: true }); });
     };
-  }, [open]);
+  }, [open, overlayId]);
 
-  useEffect(() => {
-    if (!open || typeof document === "undefined") return;
-    const viewportMeta = document.querySelector('meta[name="viewport"]');
-    if (!viewportMeta) return;
-
-    if (viewportContentRef.current == null) {
-      viewportContentRef.current = viewportMeta.getAttribute("content");
-    }
-
-    viewportMeta.setAttribute(
-      "content",
-      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-    );
-
-    return () => {
-      const previous =
-        viewportContentRef.current || "width=device-width, initial-scale=1.0";
-      viewportMeta.setAttribute("content", previous);
-    };
-  }, [open]);
-
-  useEffect(() => {
+ useEffect(() => {
     if (!open || typeof document === "undefined") return;
     const target = imageStageRef.current;
     if (!target) return;
@@ -221,7 +206,13 @@ export default function GalleryLightbox({
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (overlayStack.top() !== overlayId) return;
       if (isClosing) return;
+      if (event.key === "Tab") {
+        const buttons = [...containerRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []];
+        if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1)?.focus(); }
+        else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0]?.focus(); }
+      }
       if (event.key === "Escape") {
         event.preventDefault();
         requestClose();
@@ -491,8 +482,9 @@ export default function GalleryLightbox({
   const content = hasItems ? (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[80] bg-black text-white"
+      className="fixed inset-0 z-[2000] bg-black text-white"
       role="dialog"
+      aria-label="Activity photos"
       aria-modal="true"
       onClick={handleOverlayClick}
       style={{ touchAction: "manipulation" }}
@@ -500,11 +492,11 @@ export default function GalleryLightbox({
       <button
         type="button"
         onClick={handleBackClose}
-        className="absolute top-4 left-4 z-[1] rounded-full bg-black/55 p-2 text-white/95 backdrop-blur"
-        aria-label="Back"
+        className="absolute top-4 left-4 z-[1] min-h-11 min-w-11 rounded-full bg-black/55 p-2 text-white/95 backdrop-blur"
+        aria-label="Close photos"
         data-gallery-ui
       >
-        <IconArrowLeft size={20} strokeWidth={2} />
+        <IconX size={20} strokeWidth={2} />
       </button>
 
       <div

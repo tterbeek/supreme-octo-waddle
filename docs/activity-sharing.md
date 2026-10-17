@@ -1,7 +1,8 @@
 # Activity image sharing
 
-In the Journal, open **Activity actions → Share as image**, or use **Share as image**
-in the activity edit sheet. The export uses saved details (not unsaved edits).
+In the Journal, open **Activity actions → Share → Share other**.
+Choose **Share with Circle** instead to use the existing private Circle-sharing flow.
+The export uses saved activity details.
 Manual and imported activities use the same flow; Circle visibility is irrelevant.
 
 The sheet defaults to **No photo**. Choose at most one attachment, review the

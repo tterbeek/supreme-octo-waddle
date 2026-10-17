@@ -163,8 +163,7 @@ export default function AddBottomSheet({
   if (!open) return null;
 
   return (
-    <ModalSheet onClose={onClose}>
-      <h2 className="text-lg font-semibold text-center text-gray-800 mb-4">Add</h2>
+    <ModalSheet title="Add to your journal" onClose={onClose}>
 
       <button
         type="button"
@@ -183,7 +182,7 @@ export default function AddBottomSheet({
       {loading ? (
         <div className="text-sm text-gray-500 text-center">Loading…</div>
       ) : (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 min-[400px]:grid-cols-3 gap-3">
           {enabledActivities.map((activityType) => {
             const Icon = activityType.Icon;
             return (

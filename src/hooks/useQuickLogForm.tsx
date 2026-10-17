@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { allowFormNavigation } from "../lib/formLifecycle";
 import { ACTIVITY_TYPES, supportsEffort } from "../config/activityTypes";
 import {
   resolveActivityFields,
@@ -88,6 +89,9 @@ export function useQuickLogForm({
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   const displayDistance =
@@ -117,6 +121,8 @@ export function useQuickLogForm({
   };
 
   useEffect(() => {
+    let active = true;
+    setReady(false);
     setShowOptionalDistance(existingActivity?.distance_km != null);
     setShowOptionalDuration(existingActivity?.duration_min != null);
     setPreference(undefined);
@@ -162,7 +168,8 @@ export function useQuickLogForm({
       setEquipment(equipmentList);
     };
 
-    load();
+    void load().catch(() => { if (active) setSaveError("Couldn't load activity preferences. Please try again."); }).finally(() => { if (active) setReady(true); });
+    return () => { active = false; };
   }, [activityType, existingActivity]);
 
   useEffect(() => {
@@ -223,7 +230,7 @@ export function useQuickLogForm({
     return created;
   };
 
-  const save = async () => {
+  const performSave = async () => {
     setSaveError(null);
     const needsDistance = defaultFields.includes("distance_km");
     const needsDuration = defaultFields.includes("duration_min");
@@ -337,16 +344,14 @@ export function useQuickLogForm({
       showTooltip("after_first_log");
     }
     ding.play();
-    onLogged(newActivityId);
-
-    const targetPath = returnTo || "/";
-    setTimeout(() => {
+    allowFormNavigation(() => {
       onClose();
-      navigate(targetPath);
-    }, 400);
+      onLogged(newActivityId);
+      navigate(returnTo || "/");
+    });
   };
 
-  const keepImportedData = async () => {
+  const performKeepImportedData = async () => {
     setSaveError(null);
     if (!existingActivity) return;
     const currentUserId = await ensureUserId();
@@ -356,11 +361,19 @@ export function useQuickLogForm({
       setSaveError(error?.message || "Could not complete imported activity.");
       return;
     }
-    onLogged(id);
-    setTimeout(() => {
+    allowFormNavigation(() => {
       onClose();
+      onLogged(id);
       navigate(returnTo || "/");
-    }, 400);
+    });
+  };
+
+  const runSave = async (action: () => Promise<void>) => {
+    if (savingRef.current || !ready) return;
+    savingRef.current = true; setSaving(true);
+    try { await action(); }
+    catch (error) { setSaveError(error instanceof Error ? error.message : "Couldn't save the activity."); }
+    finally { savingRef.current = false; setSaving(false); }
   };
 
   return {
@@ -414,8 +427,10 @@ export function useQuickLogForm({
     addEquipment,
     usePreset,
     useCustom,
-    save,
-    keepImportedData,
+    save: () => runSave(performSave),
+    keepImportedData: () => runSave(performKeepImportedData),
     saveError,
+    ready,
+    saving,
   };
 }

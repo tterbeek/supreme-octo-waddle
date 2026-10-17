@@ -1,7 +1,7 @@
+import ModalSheet from "./ModalSheet";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  IconX,
   IconSettings,
   IconShare,
   IconInfoCircle,
@@ -70,37 +70,7 @@ export default function Sidebar({
 
   return (
     <>
-      <div
-        className={`fixed inset-0 z-50 transition ${
-          open ? "pointer-events-auto" : "pointer-events-none"
-        }`}
-      >
-        <div
-          className={`absolute inset-0 bg-black/40 transition-opacity ${
-            open ? "opacity-100" : "opacity-0"
-          }`}
-          onClick={onClose}
-        />
-
-        <div
-          className={`absolute top-0 left-0 h-full w-72 bg-movenotes-surface shadow-xl p-6 transition-transform ${
-            open ? "translate-x-0" : "-translate-x-full"
-          }`}
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-warm-100 transition"
-              aria-label="Close sidebar"
-            >
-              <IconX size={18} strokeWidth={1.7} />
-            </button>
-            <div className="text-lg font-semibold text-movenotes-text">
-              Menu
-            </div>
-          </div>
-
+      {open && <ModalSheet title="Menu" presentation="drawer" onClose={onClose}>
           <div className="space-y-2">
             <Link
               to="/settings"
@@ -129,8 +99,7 @@ export default function Sidebar({
               <span className="text-sm">Share MoveNotes</span>
             </button>
           </div>
-        </div>
-      </div>
+      </ModalSheet>}
       {localToast && (
         <Toast message={localToast} onClose={() => setLocalToast(null)} />
       )}

@@ -1,5 +1,6 @@
-import { lazy, Suspense, useState } from "react";
-import { Trash2, Camera, ChevronDown, CalendarDays } from "lucide-react";
+import FormTextarea from "../../components/forms/FormTextarea";
+import { useState } from "react";
+import { Camera, ChevronDown, CalendarDays } from "lucide-react";
 import { useUnitSystem } from "../../contexts/UnitContext";
 import { useActivityEditForm } from "../../hooks/useActivityEditForm";
 import { MAX_ACTIVITY_PHOTOS } from "../../lib/photos";
@@ -8,8 +9,9 @@ import EquipmentDialog from "../../components/EquipmentDialog";
 import DistanceDurationFields from "../../components/quick-log/DistanceDurationFields";
 import FeelingPhasesSelector from "../../components/quick-log/FeelingPhasesSelector";
 import EffortSelector from "../../components/quick-log/EffortSelector";
+import ModalSheet from "../../components/ModalSheet";
+import { FormActions } from "../../components/forms/FormLayout";
 
-const ActivityImageSheet = lazy(() => import("../../components/ActivityImageSheet"));
 
 type EditActivityModalProps = {
   activity: any; // existing activity record
@@ -25,7 +27,6 @@ export default function EditActivityModal({
   onClose,
   onUpdated,
   onDeleted,
-  zIndexClass = "z-50",
   reflectionOnly = false,
 }: EditActivityModalProps) {
   const { unitSystem } = useUnitSystem();
@@ -64,17 +65,11 @@ export default function EditActivityModal({
     uploadProgress,
     saving,
     deleting,
-    animateIn,
-    dragY,
+    ready,
     distanceDisplay,
     handleDistanceChange,
     activityType,
     handleSave,
-    handleDelete,
-    handleOverlayClick,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
     addEquipment,
   } = useActivityEditForm({
     activity,
@@ -85,8 +80,6 @@ export default function EditActivityModal({
   });
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [sharingImage, setSharingImage] = useState(false);
   const supportsDistanceField =
     defaultFields.includes("distance_km") || optionalFields.includes("distance_km");
   const supportsDurationField =
@@ -115,37 +108,16 @@ export default function EditActivityModal({
 
   return (
     <>
-      <div
-        className={`fixed inset-0 bg-black/40 flex items-end justify-center overscroll-none ${zIndexClass}`}
-        onClick={handleOverlayClick}
-      >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          style={{
-            transform: `translateY(${dragY}px)`,
-            touchAction: "auto",
-          }}
-          className={`w-full max-w-md sm:max-w-2xl max-h-[100dvh] overflow-hidden bg-warm-100 rounded-t-2xl p-6 transition-transform duration-300 flex flex-col
-      ${animateIn ? "translate-y-0" : "translate-y-full"} animate-fadeIn 
-      shadow-lg will-change-transform sm:rounded-2xl`}
-        >
-        <div
-          className="w-10 h-1.5 bg-warm-200 rounded-full mx-auto mb-4 touch-none"
-          onTouchStart={handleTouchStart}
-        />
-
-        <h2 className="text-lg font-semibold text-center mb-4">
-          {reflectionOnly ? "Add reflection" : "Edit Activity"}
-        </h2>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-5 pb-4">
+      <ModalSheet title={reflectionOnly ? "Add reflection" : "Edit activity"} onClose={onClose} busy={saving || deleting || uploading} ready={ready}
+        draft={{ title, date, distanceDisplay, duration, feelingDuring, feelingAfter, effort, selectedEquipmentIds, note, selectedFiles, removeExistingPhotos }}>
+        <div className="space-y-5">
           {!reflectionOnly && (
-            <div className="flex items-end gap-2">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
               <div className="min-w-0 flex-1">
-                <label className="sr-only">Title</label>
+                <label htmlFor="edit-activity-title">Title</label>
                 <input
+                  id="edit-activity-title"
+                  aria-label="Title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -154,15 +126,17 @@ export default function EditActivityModal({
                 />
               </div>
 
-              <div className="shrink-0 rounded-full border border-warm-200/70 bg-white/70 px-2 py-2">
-                <label className="sr-only">Date</label>
+              <div className="min-w-0">
+                <label htmlFor="edit-activity-date">Date</label>
                 <div className="flex items-center gap-1 text-sm text-gray-500">
                   <CalendarDays className="h-4 w-4 text-gray-400" />
                   <input
+                    id="edit-activity-date"
+                    aria-label="Date"
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="compact-date-input w-[5.25rem] bg-transparent text-right text-sm text-gray-500 outline-none [color-scheme:light]"
+                    className="w-full min-w-0 [color-scheme:light]"
                   />
                 </div>
               </div>
@@ -185,6 +159,8 @@ export default function EditActivityModal({
             <div className="pb-2">
               <button
                 type="button"
+                aria-label="Activity details"
+                aria-expanded={detailsOpen}
                 className="w-full flex items-center justify-between text-gray-800"
                 onClick={() => {
                   const next = !detailsOpen;
@@ -211,11 +187,7 @@ export default function EditActivityModal({
                   }`}
                 />
               </button>
-              <div
-                className={`overflow-hidden transition-all duration-200 ${
-                  detailsOpen ? "max-h-[900px] opacity-100 pt-3" : "max-h-0 opacity-0"
-                }`}
-              >
+              <div hidden={!detailsOpen} inert={!detailsOpen} className="pt-3">
                 <div className="space-y-3">
                   <DistanceDurationFields
                     defaultFields={defaultFields}
@@ -250,8 +222,10 @@ export default function EditActivityModal({
 
           {/* Notes */}
           <div className="space-y-2">
-            <label className="text-sm text-gray-700">Note</label>
-            <textarea
+            <label htmlFor="edit-activity-note">Note</label>
+            <FormTextarea
+              id="edit-activity-note"
+              aria-label="Note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={5}
@@ -339,9 +313,9 @@ export default function EditActivityModal({
           )}
         </div>
 
-        <div className="shrink-0 border-t border-warm-200/70 bg-warm-100 pt-4 pb-[env(safe-area-inset-bottom)]">
+        <div>
           {uploadError && (
-            <p className="text-sm text-red-600 mb-2">{uploadError}</p>
+            <p role="alert" className="mn-error">{uploadError}</p>
           )}
           {(uploading || saving) && (
             <div className="mb-4">
@@ -357,63 +331,16 @@ export default function EditActivityModal({
             </div>
           )}
 
-          <button
+          <FormActions><button
             onClick={handleSave}
-            disabled={saving || deleting}
+            disabled={saving || deleting || !ready}
             className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50"
           >
             {saving ? "Saving..." : reflectionOnly ? "Save reflection" : "Save Changes"}
-          </button>
+          </button></FormActions>
 
-          {!reflectionOnly && (
-            <>
-              <button type="button" disabled={saving || deleting} onClick={event => { event.currentTarget.focus(); setSharingImage(true); }} className="w-full mt-3 py-3 border border-warm-300 text-gray-700 rounded-full text-sm font-medium disabled:opacity-50">Share as image</button>
-              {confirmDelete && !deleting && (
-                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  Delete this activity permanently?
-                </div>
-              )}
-              <button
-                onClick={() => {
-                  if (deleting) return;
-                  if (!confirmDelete) {
-                    setConfirmDelete(true);
-                    return;
-                  }
-                  void handleDelete();
-                }}
-                disabled={saving || deleting}
-                className="w-full mt-3 py-3 border border-movenotes-accent text-movenotes-accent rounded-full text-sm font-medium hover:bg-movenotes-accent/10 transition disabled:opacity-50"
-              >
-                {deleting ? (
-                  "Deleting..."
-                ) : confirmDelete ? (
-                  "Confirm Delete"
-                ) : (
-                  <>
-                    <Trash2 className="inline w-4 h-4 mr-1 -mt-0.5" />
-                    Delete Activity
-                  </>
-                )}
-              </button>
-              {confirmDelete && !deleting && (
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(false)}
-                  className="w-full mt-2 py-3 border border-warm-200 text-gray-700 rounded-full text-sm font-medium hover:bg-white/60 transition"
-                >
-                  Cancel
-                </button>
-              )}
-            </>
-          )}
         </div>
-      </div>
-    </div>
-
-    {sharingImage && <Suspense fallback={<div role="status" className="fixed bottom-6 inset-x-4 z-50 bg-warm-100 p-4 rounded-xl shadow-lg">Opening image preview…</div>}>
-      <ActivityImageSheet activityId={activity.id} onClose={() => setSharingImage(false)} />
-    </Suspense>}
+      </ModalSheet>
 
     {showEquipmentDialog && !reflectionOnly && (
       <EquipmentDialog

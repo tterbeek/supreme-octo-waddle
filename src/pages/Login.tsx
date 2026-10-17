@@ -1,5 +1,8 @@
+import FormPage from "../components/forms/FormPage";
+import { FormActions } from "../components/forms/FormLayout";
+import { allowFormNavigation } from "../lib/formLifecycle";
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import PublicTopNav from "../components/PublicTopNav";
 
@@ -8,6 +11,7 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
   const [otp, setOtp] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const nextParam = new URLSearchParams(location.search).get("next");
@@ -22,10 +26,11 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
   // 1️⃣ Send OTP code to user's email
   const handleSendOtp = async () => {
     if (!isValidEmail(email)) {
-      alert("Please enter a valid email address.");
+      setError("Please enter a valid email address.");
       return;
     }
 
+    setError(null);
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -37,10 +42,10 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
       console.error("[Login] Error sending OTP:", error.message);
 
       if (error.message.includes("Signups not allowed")) {
-        alert("Email not found — redirecting to signup.");
+        setError("Email not found — redirecting to signup.");
         navigate(signupHref, { state: { email } });
       } else {
-        alert(error.message);
+        setError(error.message);
       }
     } else {
       setCodeSent(true);
@@ -50,6 +55,7 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
   // 2️⃣ Verify the OTP entered by the user
   const handleVerifyOtp = async () => {
     console.log("[Login] Verifying OTP for:", email);
+    setError(null);
     setLoading(true);
 
     const { data: sessionData, error } = await supabase.auth.verifyOtp({
@@ -62,36 +68,31 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
 
     if (error) {
       console.error("[Login] OTP verification error:", error);
-      alert(error.message);
+      setError(error.message);
       return;
     }
 
     const session = sessionData.session;
     console.log("[Login] Logged in successfully:", session?.user?.email);
     onLogin?.(session);
-    navigate(redirectTo);
+    allowFormNavigation(() => navigate(redirectTo));
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-movenotes-bg text-movenotes-text relative">
+    <div className="flex flex-col items-center justify-start pt-24 pb-12 min-h-dvh bg-movenotes-bg text-movenotes-text relative">
       <PublicTopNav />
-      <div className="w-full max-w-md p-6 bg-movenotes-surface shadow-sm rounded-2xl">
-<h1 className="text-2xl text-center mb-6 tracking-tight">
-  <span className="font-nunito text-movenotes-primary mr-1">
-    Log in to
-  </span>
-  <span className="font-nunito font-bold text-movenotes-primary">
-    Move
-  </span>
-  <span className="font-playfair italic text-movenotes-accent">
-    Notes
-  </span>
-</h1>
+      <FormPage title="Log in" backTo="/" dirty={Boolean(email || otp)} busy={loading}>
+        {error && <p role="alert" className="mn-error">{error}</p>}
+
 
 
         {!codeSent ? (
           <>
+            <label htmlFor="login-email">Email address</label>
             <input
+              id="login-email"
+              aria-label="Email address"
+              autoComplete="email"
               type="email"
               placeholder="Your email"
               value={email}
@@ -99,23 +100,23 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
               className="w-full border border-movenotes-border bg-movenotes-bg text-movenotes-text rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-movenotes-primary"
             />
 
-            <button
+            <FormActions><button
               onClick={handleSendOtp}
               disabled={loading}
               className="w-full bg-movenotes-primary text-primary-text py-2 rounded-lg transition-all hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "Sending..." : "Send Login Code"}
-            </button>
+            </button></FormActions>
 
             {/* Not a member link */}
             <p className="mt-6 text-sm text-center text-movenotes-muted">
               Not a member?{" "}
-              <a
-                href={signupHref}
+              <Link
+                to={signupHref}
                 className="text-movenotes-accent underline hover:opacity-80"
               >
                 Sign up here
-              </a>
+              </Link>
             </p>
 
             {/* Privacy & Terms links */}
@@ -146,23 +147,28 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
             <p className="mb-2 text-sm text-movenotes-muted text-center">
               Enter the 8-digit code sent to your email:
             </p>
+            <label htmlFor="login-code">Email verification code</label>
             <input
+              id="login-code"
+              aria-label="Email verification code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               type="text"
               placeholder="Enter code"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               className="w-full border border-movenotes-border bg-movenotes-bg text-movenotes-text rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-movenotes-primary"
             />
-            <button
+            <FormActions><button
               onClick={handleVerifyOtp}
               disabled={loading}
               className="w-full bg-movenotes-primary text-primary-text py-2 rounded-lg transition-all hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "Verifying..." : "Verify Code"}
-            </button>
+            </button></FormActions>
           </>
         )}
-      </div>
+      </FormPage>
     </div>
   );
 }

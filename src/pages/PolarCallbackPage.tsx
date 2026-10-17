@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { consumePolarState, exchangePolarCode, importPolarActivities } from "../services/polar.service";
+import FormPage from "../components/forms/FormPage";
 
 export default function PolarCallbackPage() {
   const navigate = useNavigate();
@@ -20,9 +21,8 @@ export default function PolarCallbackPage() {
       navigate("/settings/connections", { replace: true });
     })().catch((error) => setMessage(error instanceof Error ? error.message : "Could not connect Polar."));
   }, [navigate]);
-  return <div className="p-6 max-w-lg mx-auto">
-    <h1 className="text-2xl font-semibold mb-4">Polar integration</h1>
-    <p className="rounded-xl border border-warm-200 bg-warm-100 p-4 text-sm">{message}</p>
+  return <FormPage title="Polar integration" backTo="/settings/connections">
+    <p role="status" className="rounded-xl border border-warm-200 bg-warm-100 p-4 text-sm">{message}</p>
     <Link className="mt-4 block text-sm text-movenotes-primary underline" to="/settings/connections">Back to connections</Link>
-  </div>;
+  </FormPage>;
 }

@@ -584,6 +584,7 @@ export default function Home() {
                               key={`activity-${a.id}`}
                               activity={a}
                               onShareImage={userId ? activity => setImageActivityId(activity.id) : undefined}
+                              onDeleted={userId ? () => { setToastMessage("Activity deleted"); void refreshActivities(); } : undefined}
                               signedNoteImages={signedNoteImages}
                               signedNoteThumbs={signedNoteThumbs}
                               noteImageOrientation={noteImageOrientation}

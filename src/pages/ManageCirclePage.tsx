@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconShare } from "@tabler/icons-react";
 import Toast from "../components/Toast";
+import FormPage from "../components/forms/FormPage";
 import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
 import { getCurrentUser } from "../services/auth.service";
 import {
@@ -17,6 +18,7 @@ import {
 
 const shortUserId = (value: string) => value.slice(0, 8);
 export default function ManageCirclePage() {
+  const avatarInput = useRef<HTMLInputElement>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +29,7 @@ export default function ManageCirclePage() {
   const [creatingInviteLink, setCreatingInviteLink] = useState(false);
   const [inviteToast, setInviteToast] = useState<string | null>(null);
   const [socialDisplayName, setSocialDisplayName] = useState("");
+  const [savedDisplayName, setSavedDisplayName] = useState("");
   const [profileImagePath, setProfileImagePath] = useState<string | null>(null);
   const [profileThumbPath, setProfileThumbPath] = useState<string | null>(null);
   const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(null);
@@ -121,6 +124,7 @@ export default function ManageCirclePage() {
         await loadConnections(user.id);
         if (profile) {
           setSocialDisplayName(profile.social_display_name || "");
+          setSavedDisplayName(profile.social_display_name || "");
           setProfileImagePath(profile.social_profile_image_path || null);
           setProfileThumbPath(profile.social_profile_thumb_path || null);
           setLoginEmail(profile.login_email || user.email || null);
@@ -234,6 +238,8 @@ export default function ManageCirclePage() {
         socialProfileThumbPath: profileThumbPath,
       });
       setNotice("Mini profile saved.");
+      setSavedDisplayName(socialDisplayName.trim());
+      setSocialDisplayName(socialDisplayName.trim());
     } catch (err: any) {
       setError(err?.message || "Could not save mini profile.");
     } finally {
@@ -263,6 +269,8 @@ export default function ManageCirclePage() {
         socialProfileThumbPath: uploaded.thumbPath || null,
       });
       setNotice("Profile picture saved.");
+      setSavedDisplayName(socialDisplayName.trim());
+      setSocialDisplayName(socialDisplayName.trim());
     } catch (err: any) {
       setError(err?.message || "Could not upload profile picture.");
     } finally {
@@ -294,11 +302,10 @@ export default function ManageCirclePage() {
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-semibold mb-6 text-gray-800">Manage social circle</h1>
+    <FormPage title="Manage social circle" ready={!loading} dirty={socialDisplayName !== savedDisplayName} busy={savingProfile || uploadingAvatar || creatingInviteLink || Boolean(mutatingId)}>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div role="alert" className="mn-error">
           {error}
         </div>
       )}
@@ -328,9 +335,12 @@ export default function ManageCirclePage() {
             </div>
           )}
 
-          <label className="px-3 py-2 rounded-full border border-warm-300 text-sm text-gray-700 cursor-pointer">
+          <button type="button" onClick={() => avatarInput.current?.click()} disabled={uploadingAvatar} className="px-3 py-2 rounded-full border border-warm-300 text-sm text-gray-700 cursor-pointer">
             {uploadingAvatar ? "Uploading..." : "Upload picture"}
+          </button>
             <input
+              ref={avatarInput}
+              aria-label="Profile picture"
               type="file"
               accept="image/*"
               className="hidden"
@@ -341,11 +351,11 @@ export default function ManageCirclePage() {
               }}
               disabled={uploadingAvatar}
             />
-          </label>
         </div>
 
-        <label className="text-xs text-gray-600">Friendly name</label>
+        <label htmlFor="circle-name" className="text-xs text-gray-600">Friendly name</label>
         <input
+          id="circle-name"
           type="text"
           value={socialDisplayName}
           onChange={(e) => setSocialDisplayName(e.target.value)}
@@ -432,6 +442,6 @@ export default function ManageCirclePage() {
           onClose={() => setInviteToast(null)}
         />
       )}
-    </div>
+    </FormPage>
   );
 }

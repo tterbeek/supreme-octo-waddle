@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import FormPage from "../components/forms/FormPage";
+import { FormActions } from "../components/forms/FormLayout";
+import { allowFormNavigation } from "../lib/formLifecycle";
 import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
 import {
   CIRCLE_ACCESS_UPDATED_EVENT,
@@ -73,7 +76,7 @@ export default function CircleInvitePage() {
       const result = await acceptCircleInvite(token, userId);
       if (result === "connected" || result === "already_connected") {
         window.dispatchEvent(new Event(CIRCLE_ACCESS_UPDATED_EVENT));
-        navigate("/settings/circle", { replace: true });
+        allowFormNavigation(() => navigate("/settings/circle", { replace: true }));
         return;
       } else if (result === "cannot_accept_own") {
         setMessage("You cannot accept your own invite.");
@@ -96,12 +99,7 @@ export default function CircleInvitePage() {
   };
 
   return (
-    <div className="min-h-screen bg-movenotes-bg p-4 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/25" />
-      <div className="relative w-full max-w-md rounded-2xl border border-warm-200 bg-movenotes-surface p-5 shadow-xl">
-        <h1 className="text-xl font-semibold text-gray-800 mb-2">
-          Social circle invitation
-        </h1>
+    <FormPage title="Social circle invitation" backTo="/settings/circle" busy={accepting}>
 
         {loading ? (
           <p className="text-sm text-gray-500">Loading invitation…</p>
@@ -140,14 +138,14 @@ export default function CircleInvitePage() {
             )}
 
             <div className="flex items-center gap-2">
-              <button
+              <FormActions><button
                 type="button"
                 onClick={handleAccept}
                 disabled={accepting || !userId}
                 className="px-3 py-2 rounded-full bg-movenotes-primary text-primary-text text-sm font-medium disabled:opacity-60"
               >
                 {accepting ? "Accepting..." : "Accept invitation"}
-              </button>
+              </button></FormActions>
               <button
                 type="button"
                 onClick={() => navigate("/settings/circle")}
@@ -160,7 +158,6 @@ export default function CircleInvitePage() {
         ) : (
           <p className="text-sm text-gray-600">Invite not found.</p>
         )}
-      </div>
-    </div>
+    </FormPage>
   );
 }

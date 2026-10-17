@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { IconGripVertical } from "@tabler/icons-react";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "../components/ModalSheet";
+import FormPage from "../components/forms/FormPage";
 import {
   ACTIVITY_TYPES,
   supportsMetricOverride,
@@ -336,12 +337,9 @@ export default function ActivityPreferencesPage({
 
   return (
     <>
-      <div className={`px-6 pb-6 ${embedded ? "pt-1" : "pt-3"} max-w-3xl mx-auto`}>
+      <FormPage title="Activity preferences" embedded={embedded} busy={Boolean(savingToggle || savingMetric || reordering)}>
         {!embedded && (
           <>
-            <h1 className="text-lg font-bold mb-2 text-gray-600 text-center">
-              Activity preferences
-            </h1>
             <p className="text-sm text-gray-600 mb-6">
               {isMobile
                 ? "Choose which activities matter to you, and in what order they appear."
@@ -351,7 +349,7 @@ export default function ActivityPreferencesPage({
         )}
 
         {error && (
-          <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+          <div role="alert" className="mn-error">
             {error}
           </div>
         )}
@@ -529,10 +527,19 @@ export default function ActivityPreferencesPage({
                               setDragOverId(null);
                             }}
                             aria-label={`Reorder ${config.label}`}
+                            onKeyDown={event => {
+                              if (!canDrag || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+                              event.preventDefault(); event.stopPropagation();
+                              const next = [...enabledActivities];
+                              const from = next.findIndex(item => item.activity_type === row.activity_type);
+                              const to = Math.max(0, Math.min(next.length - 1, from + (event.key === "ArrowUp" ? -1 : 1)));
+                              const [item] = next.splice(from, 1); next.splice(to, 0, item);
+                              void commitEnabledOrder(next.map(item => item.activity_type), activityTypes);
+                            }}
                           >
                             <IconGripVertical size={16} strokeWidth={1.6} />
                           </button>
-                          <div className="flex flex-wrap items-center gap-3">
+                          <button type="button" aria-label={`${config.label} metric preference`} disabled={!canOpenMetric} onClick={event => { event.stopPropagation(); if (canOpenMetric) setActiveMetricType(row.activity_type); }} className="flex flex-wrap items-center gap-3 text-left min-h-11">
                             <div className="flex items-center gap-3">
                               <Icon size={22} strokeWidth={1.8} />
                               <div>
@@ -544,12 +551,13 @@ export default function ActivityPreferencesPage({
                                 </div>
                               </div>
                             </div>
-                          </div>
+                          </button>
                         </div>
 
                         <button
                           type="button"
                           role="switch"
+                          aria-label={`${config.label} enabled`}
                           aria-checked={row.is_enabled}
                         onClick={(event) => {
                           event.stopPropagation();
@@ -609,6 +617,7 @@ export default function ActivityPreferencesPage({
                         <button
                           type="button"
                           role="switch"
+                          aria-label={`${config.label} enabled`}
                           aria-checked={row.is_enabled}
                           onClick={() => toggleActivityType(row)}
                           disabled={savingToggle === row.activity_type}
@@ -630,9 +639,10 @@ export default function ActivityPreferencesPage({
             </section>
           </>
         )}
-      </div>
+      </FormPage>
       {showMetricModal && activeMetricConfig && (
-        <ModalSheet onClose={() => setActiveMetricType(null)}>
+        <ModalSheet title={`${activeMetricConfig.label} metric preference`} busy={savingMetric === activeMetricType} onClose={() => setActiveMetricType(null)}>
+          {error && <p role="alert" className="mn-error">{error}</p>}
           <div className="flex items-center gap-3 mb-4">
             <activeMetricConfig.Icon size={22} strokeWidth={1.8} />
             <div>

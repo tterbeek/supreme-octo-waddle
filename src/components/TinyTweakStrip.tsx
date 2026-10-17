@@ -1,7 +1,9 @@
+import FormTextarea from "./forms/FormTextarea";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 import MicroAdjustmentCreateModal from "./MicroAdjustmentCreateModal";
 import ModalSheet from "./ModalSheet";
+import { FormActions } from "./forms/FormLayout";
 import TooltipBubble from "./TooltipBubble";
 
 type TinyTweakStripProps = {
@@ -432,7 +434,10 @@ export default function TinyTweakStrip({
 
       {reflectionModalOpen && showReflectionPrompt && endFlowTweak && (
         <ModalSheet
-          onClose={() => setReflectionModalOpen(false)}
+          title="Tiny tweak reflection"
+          dirty={reflectionText.length > 0}
+          busy={savingReflection}
+          onClose={() => { setReflectionText(""); setReflectionModalOpen(false); }}
           sheetClassName="max-w-md md:max-w-2xl"
         >
           <div className="text-[11px] uppercase tracking-[0.2em] text-movenotes-muted text-center">
@@ -444,7 +449,8 @@ export default function TinyTweakStrip({
           <p className="text-xs text-movenotes-muted mt-2 text-center">
             This will be saved as a Tiny Tweak note in your journal.
           </p>
-          <textarea
+          <FormTextarea
+            aria-label="Tiny tweak reflection"
             value={reflectionText}
             onChange={(e) => {
               setReflectionText(e.target.value);
@@ -454,15 +460,7 @@ export default function TinyTweakStrip({
             rows={5}
             className="w-full border border-movenotes-border rounded-lg p-3 bg-movenotes-bg text-movenotes-text resize-none focus:ring-2 focus:ring-movenotes-primary outline-none mt-4"
           />
-          <div className="grid grid-cols-2 gap-3 mt-5">
-            <button
-              type="button"
-              className="w-full text-center text-sm text-gray-600 hover:text-gray-800 border border-gray-200 rounded-full py-3"
-              onClick={() => setReflectionModalOpen(false)}
-              disabled={savingReflection}
-            >
-              Cancel
-            </button>
+          <FormActions>
             <button
               type="button"
               onClick={async () => {
@@ -506,9 +504,9 @@ export default function TinyTweakStrip({
             >
               {savingReflection ? "Saving..." : "Save reflection"}
             </button>
-          </div>
+          </FormActions>
           {reflectionError && (
-            <p className="text-sm text-red-600 text-center mt-3">{reflectionError}</p>
+            <p role="alert" className="mn-error">{reflectionError}</p>
           )}
         </ModalSheet>
       )}

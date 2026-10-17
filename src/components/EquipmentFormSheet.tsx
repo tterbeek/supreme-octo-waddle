@@ -1,5 +1,7 @@
+import FormTextarea from "./forms/FormTextarea";
 import { useEffect, useState } from "react";
 import ModalSheet from "./ModalSheet";
+import { FormActions, FormField } from "./forms/FormLayout";
 
 type SubmitResult = {
   ok: boolean;
@@ -61,34 +63,26 @@ export default function EquipmentFormSheet({
   };
 
   return (
-    <ModalSheet onClose={onClose} enableDragToClose>
-      <h3 className="text-lg font-semibold text-center mb-4">{title}</h3>
+    <ModalSheet title={title} onClose={onClose} busy={saving} dirty={name !== initialName || notes !== initialNotes} presentation="dialog">
       <div className="space-y-3">
-        <div>
-          <label className="text-sm text-gray-700">Name (required)</label>
-          <input
+        <FormField label="Name (required)" help="Give it a name you'll recognize later.">{field => <input
+            {...field}
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full border rounded-md p-2 mt-1"
             placeholder="e.g. Asics Gel Nimbus"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Give it a name you'll recognize later.
-          </p>
-        </div>
-        <div>
-          <label className="text-sm text-gray-700">Notes (optional)</label>
-          <textarea
+          />}</FormField>
+        <FormField label="Notes (optional)">{field => <FormTextarea
+            {...field}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             className="w-full border rounded-md p-2 mt-1 resize-none"
             placeholder="Anything you want to remember about this."
-          />
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex gap-2">
+          />}</FormField>
+        {error && <p role="alert" className="mn-error">{error}</p>}
+        <FormActions>
           <button
             type="button"
             onClick={handleSubmit}
@@ -97,14 +91,7 @@ export default function EquipmentFormSheet({
           >
             {saving ? savingLabel : primaryLabel}
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-full border border-gray-300 text-sm"
-          >
-            Cancel
-          </button>
-        </div>
+        </FormActions>
       </div>
     </ModalSheet>
   );

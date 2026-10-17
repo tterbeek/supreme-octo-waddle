@@ -46,7 +46,7 @@ export default function GoalDirectionSheet({
   };
 
   return (
-    <ModalSheet onClose={onClose}>
+    <ModalSheet title={`${getActivityLabel(group.activity_type)} · ${periodLabel}`} onClose={onClose}>
       <div className="flex items-start gap-3 mb-3">
         {Icon && <Icon size={18} strokeWidth={1.8} />}
         <div>

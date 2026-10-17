@@ -1,6 +1,8 @@
+import FormTextarea from "./forms/FormTextarea";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import ModalSheet from "./ModalSheet";
+import { FormActions } from "./forms/FormLayout";
 import {
   createJournalEntry,
   deleteJournalEntry,
@@ -37,17 +39,6 @@ export default function JournalEntryModal({
     setDeleting(false);
     setError(null);
   }, [entry?.entry_text, entry?.id, entry?.text, open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const timer = window.setTimeout(() => {
-      textareaRef.current?.focus();
-      const valueLength = textareaRef.current?.value.length ?? 0;
-      textareaRef.current?.setSelectionRange(valueLength, valueLength);
-    }, 60);
-
-    return () => window.clearTimeout(timer);
-  }, [open]);
 
   const trimmedNote = useMemo(() => note.trim(), [note]);
   const canSave = trimmedNote.length > 0 && !saving && !deleting;
@@ -94,17 +85,18 @@ export default function JournalEntryModal({
 
   return (
     <ModalSheet
+      title={isEditMode ? "Edit journal entry" : "Journal entry"}
       onClose={onClose}
-      sheetClassName="max-w-md sm:max-w-2xl max-h-[96vh] overflow-y-auto sm:rounded-2xl sm:mt-20"
+      busy={saving || deleting}
+      dirty={note !== (entry?.text ?? entry?.entry_text ?? "")}
+      sheetClassName="max-w-md sm:max-w-2xl"
     >
-      <h2 className="text-lg font-semibold text-center mb-4">
-        {isEditMode ? "Edit journal entry" : "Journal entry"}
-      </h2>
 
       <div className="space-y-4">
         <div>
-          <label className="text-sm text-gray-700">Notes</label>
-          <textarea
+          <label htmlFor="journal-note" className="text-sm text-gray-700">Notes</label>
+          <FormTextarea
+            id="journal-note"
             ref={textareaRef}
             value={note}
             onChange={(event) => setNote(event.target.value)}
@@ -115,20 +107,20 @@ export default function JournalEntryModal({
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div role="alert" className="mn-error">
             {error}
           </div>
         )}
       </div>
 
-      <button
+      <FormActions><button
         type="button"
         onClick={handleSave}
         disabled={!canSave}
         className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50 mt-5"
       >
         {saving ? "Saving..." : "Save"}
-      </button>
+      </button></FormActions>
 
       {isEditMode && (
         <button

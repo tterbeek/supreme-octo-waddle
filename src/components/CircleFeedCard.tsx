@@ -355,11 +355,15 @@ export default function CircleFeedCard({
         {canReact && pickerOpen && (
           <div
             ref={reactionPickerRef}
+            role="group"
+            aria-label="Share your reaction"
+            onKeyDown={event => { if (event.key === "Escape") { setPickerOpen(false); reactionToggleButtonRef.current?.focus(); } }}
             className="w-full rounded-xl border border-warm-200 bg-warm-100 p-3"
           >
             <p className="text-sm font-medium text-gray-800 mb-2 text-center">
               Share your reaction
             </p>
+            <button type="button" onClick={() => { setPickerOpen(false); reactionToggleButtonRef.current?.focus(); }} className="text-xs underline min-h-11">Close reactions</button>
             <div className="space-y-2">
               {CIRCLE_REACTION_OPTIONS.map((option) => {
                 const isSelected = item.current_user_reaction === option.type;

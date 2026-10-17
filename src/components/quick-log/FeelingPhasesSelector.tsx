@@ -54,7 +54,7 @@ function FeelingRow<T extends string>({
   const selectedIndex = value == null ? -1 : options.findIndex((option) => option.value === value);
 
   return (
-    <div className="grid gap-1.5 md:grid-cols-[6.5rem_minmax(0,1fr)] md:gap-2 md:items-start">
+    <div role="group" aria-label={`Feeling ${label.toLowerCase()}`} className="grid gap-1.5 md:grid-cols-[6.5rem_minmax(0,1fr)] md:gap-2 md:items-start">
       <div className="pt-1.5">
         <div className="text-left text-sm text-gray-600">
           {label} <span className="text-[11px] text-gray-400/90">{hint}</span>
@@ -63,15 +63,17 @@ function FeelingRow<T extends string>({
 
       <div>
         <div className="grid grid-cols-4 gap-3">
-          {options.map(({ value: optionValue, Icon }) => {
+          {options.map(({ value: optionValue, label: optionLabel, Icon }) => {
             const active = value === optionValue;
 
             return (
               <button
                 key={optionValue}
                 type="button"
+                aria-label={`${label}: ${optionLabel}`}
+                aria-pressed={active}
                 onClick={() => onChange(optionValue)}
-                className={`rounded-2xl border px-2 py-3 text-center transition duration-150 active:scale-[0.98] ${
+                className={`min-w-0 rounded-2xl border px-1 py-3 text-center transition duration-150 active:scale-[0.98] ${
                   active
                     ? "scale-[1.06] border-[#EEDFD2] bg-[#FBF4EE] shadow-[0_0_0_1px_rgba(238,223,210,0.45)]"
                     : "border-[#F1ECE5] bg-[#FCFAF7]"
@@ -79,6 +81,7 @@ function FeelingRow<T extends string>({
               >
                 <div className="flex justify-center">
                   <Icon
+                    style={{ maxWidth: "100%", width: 32, height: 32 }}
                     className={`h-8 w-8 transition-all duration-150 ${
                       active ? `${ACCENT_CLASS} scale-[1.08]` : "text-[#9EA8B5]"
                     }`}

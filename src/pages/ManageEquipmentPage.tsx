@@ -1,3 +1,4 @@
+import FormTextarea from "../components/forms/FormTextarea";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import type { Equipment } from "../types";
@@ -8,6 +9,8 @@ import { kmToMiles } from "../lib/units";
 import { formatDurationMinutes } from "../lib/units";
 import EquipmentFormSheet from "../components/EquipmentFormSheet";
 import ModalSheet from "../components/ModalSheet";
+import { FormActions } from "../components/forms/FormLayout";
+import FormPage from "../components/forms/FormPage";
 import {
   createEquipment,
   fetchAllEquipment,
@@ -188,6 +191,7 @@ export default function ManageEquipmentPage({
   const [showAddForm, setShowAddForm] = useState(false);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [savingStop, setSavingStop] = useState(false);
+  const [stopError, setStopError] = useState<string | null>(null);
   const [savingChanges, setSavingChanges] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -380,6 +384,7 @@ export default function ManageEquipmentPage({
   const handleStopUsing = async () => {
     if (!selectedEquipment) return;
     setSavingStop(true);
+    setStopError(null);
     const { equipment: updated } = await setEquipmentActive(selectedEquipment.id, false);
     if (updated) {
       setEquipment((prev) =>
@@ -387,18 +392,14 @@ export default function ManageEquipmentPage({
       );
       setShowStopConfirm(false);
     }
+    else setStopError("Couldn't update this equipment. Please try again.");
     setSavingStop(false);
   };
 
   return (
-    <div className={`mb-4 ${embedded ? "px-6 pb-8" : ""}`}>
+    <FormPage title="Manage equipment" embedded={embedded}>
       {!embedded && (
         <>
-          <div className="relative flex items-center justify-center">
-            <h1 className="text-lg font-bold text-gray-600 text-center">
-              Manage equipment
-            </h1>
-          </div>
           <p className="text-sm text-gray-500 text-center mt-1 mb-4">
             Things you move with
           </p>
@@ -406,7 +407,7 @@ export default function ManageEquipmentPage({
       )}
 
       {error && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+        <div role="alert" className="mn-error">
           {error}
         </div>
       )}
@@ -431,6 +432,7 @@ export default function ManageEquipmentPage({
                 key={item.id}
                 type="button"
                 onClick={() => setSelectedId(item.id)}
+                aria-label={`Edit ${item.name}`}
                 className="border border-warm-200 rounded-lg p-4 mb-3 bg-warm-100 shadow-sm text-left w-full"
               >
                 <div className="text-base font-semibold text-gray-800">
@@ -484,15 +486,16 @@ export default function ManageEquipmentPage({
 
       {selectedEquipment && (
         <ModalSheet
+          title="Edit equipment"
           onClose={() => setSelectedId(null)}
-          enableDragToClose
-          sheetClassName="max-w-md max-h-[calc(90vh+50px)] overflow-y-auto"
+          busy={savingChanges}
+          dirty={editName !== selectedEquipment.name || editNotes !== (selectedEquipment.notes ?? "")}
         >
-          <h2 className="text-lg font-semibold text-center mb-4">Edit equipment</h2>
           <div className="space-y-4">
             <div>
               <label className="text-sm text-gray-700">Name</label>
               <input
+                aria-label="Name"
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
@@ -501,7 +504,8 @@ export default function ManageEquipmentPage({
             </div>
             <div>
               <label className="text-sm text-gray-700">Notes (optional)</label>
-              <textarea
+              <FormTextarea
+                aria-label="Notes (optional)"
                 value={editNotes}
                 onChange={(e) => setEditNotes(e.target.value)}
                 rows={2}
@@ -592,16 +596,16 @@ export default function ManageEquipmentPage({
             )}
           </div>
 
-          {saveError && <p className="text-sm text-red-600 mt-3">{saveError}</p>}
+          {saveError && <p role="alert" className="mn-error">{saveError}</p>}
 
-          <button
+          <FormActions><button
             type="button"
             onClick={handleSaveChanges}
             disabled={savingChanges}
             className="bg-movenotes-primary text-primary-text w-full py-3 rounded-full text-lg font-medium transition transform hover:-translate-y-0.5 disabled:opacity-50 mt-5"
           >
             {savingChanges ? "Saving..." : "Save changes"}
-          </button>
+          </button></FormActions>
 
           {selectedEquipment.is_active && (
             <button
@@ -616,14 +620,11 @@ export default function ManageEquipmentPage({
       )}
 
       {showStopConfirm && (
-        <ModalSheet onClose={() => setShowStopConfirm(false)} enableDragToClose>
-          <h3 className="text-lg font-semibold text-center mb-2">
-            Stop using this equipment
-          </h3>
+        <ModalSheet title="Stop using this equipment" busy={savingStop} onClose={() => setShowStopConfirm(false)} presentation="dialog">
           <p className="text-sm text-gray-600 text-center mb-6">
             This won&apos;t affect past activities.
           </p>
-          <div className="flex gap-2">
+          {stopError && <p role="alert" className="mn-error">{stopError}</p>}
             <button
               type="button"
               onClick={handleStopUsing}
@@ -632,16 +633,9 @@ export default function ManageEquipmentPage({
             >
               {savingStop ? "Stopping..." : "Stop using this equipment"}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowStopConfirm(false)}
-              className="px-4 py-2 rounded-full border border-gray-300 text-sm"
-            >
-              Cancel
-            </button>
-          </div>
+          <FormActions><button type="button" onClick={() => setShowStopConfirm(false)} disabled={savingStop}>Keep using it</button></FormActions>
         </ModalSheet>
       )}
-    </div>
+    </FormPage>
   );
 }

@@ -17,10 +17,7 @@ export default function DirectionAddModal({
   if (!open) return null;
 
   return (
-    <ModalSheet onClose={onClose}>
-      <h2 className="text-lg font-semibold text-center text-gray-800 mb-4">
-        Add something new
-      </h2>
+    <ModalSheet title="Add something new" onClose={onClose}>
 
       <div className="grid grid-cols-2 gap-3">
         <button
