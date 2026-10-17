@@ -10,6 +10,8 @@ import SearchBar from "../components/SearchBar";
 import LogCTA from "../components/LogCTA";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import TinyTweakStrip from "../components/TinyTweakStrip";
+import WeeklyCompanionCard from "../components/WeeklyCompanionCard";
+import { useWeeklyCompanion } from "../hooks/useWeeklyCompanion";
 import JournalEntryCard from "../components/JournalEntryCard";
 import JournalEntryModal from "../components/JournalEntryModal";
 import { useTooltipManager } from "../hooks/useTooltipManager";
@@ -89,11 +91,13 @@ export default function Home() {
     filteredActivities,
     refresh: refreshFeed,
     initialFeedLoaded,
+    hasMoreFeed,
     searchOpen,
     setSearchOpen,
     searchTerm,
     setSearchTerm,
   } = useHomeFeed(userId);
+  const companion = useWeeklyCompanion(userId);
   useEffect(() => {
     const logoEl = document.getElementById("layout-header-logo");
     if (!logoEl) return;
@@ -435,7 +439,17 @@ export default function Home() {
       return "";
     };
 
-    filteredActivities.forEach((a) => {
+    const search = searchTerm.trim().toLowerCase();
+    const oldestLoadedDay = activities.map(getEntryDayKey).filter(Boolean).sort()[0];
+    const companionRows = companion.posts
+      .filter((post) => !hasMoreFeed || (oldestLoadedDay ? post.created_at.slice(0, 10) >= oldestLoadedDay : post.id === companion.posts[0]?.id))
+      .filter((post) => !search || `${post.thought ?? ""} ${post.user_reflection ?? ""}`.toLowerCase().includes(search))
+      .map((post) => ({ ...post, entry_kind: "companion", day: post.created_at.slice(0, 10), within_day_ts: post.created_at }));
+    const feedRows = [...filteredActivities, ...companionRows].sort((a, b) =>
+      getEntryDayKey(b).localeCompare(getEntryDayKey(a)) ||
+      String(b.within_day_ts ?? "").localeCompare(String(a.within_day_ts ?? ""))
+    );
+    feedRows.forEach((a) => {
       const dayKey = getEntryDayKey(a);
       if (!dayKey) return;
       const monthKey = dayKey.slice(0, 7); // YYYY-MM
@@ -467,7 +481,7 @@ export default function Home() {
     });
 
     return months;
-  }, [filteredActivities]);
+  }, [filteredActivities, activities, hasMoreFeed, companion.posts, searchTerm]);
   let activityRenderIndex = 0;
 
   return (
@@ -490,6 +504,12 @@ export default function Home() {
         />
 
         <div className="flex flex-col gap-8">
+          {companion.enabled && !searchTerm && (companion.message || (companion.preparing && companion.posts.length === 0)) && (
+            <div role="status" className="text-sm text-movenotes-text/60 px-3">
+              {companion.message || "Preparing your weekly thought…"}
+              {companion.message && <button type="button" onClick={() => void companion.retry()} disabled={companion.preparing} className="ml-2 underline disabled:opacity-50">Try again</button>}
+            </div>
+          )}
           {showFirstLogPrompt && (
             <LogCTA
               showFirstLogPrompt={showFirstLogPrompt}
@@ -529,8 +549,11 @@ export default function Home() {
                         <div>{day.weekday}</div>
                         <div className="text-base text-movenotes-text">{day.dayNumber}</div>
                       </div>
-                      <div className="flex-1 flex flex-col gap-3">
+                      <div className="min-w-0 flex-1 flex flex-col gap-3">
                         {day.items.map((a) => {
+                          if (a.entry_kind === "companion") {
+                            return <WeeklyCompanionCard key={`companion-${a.id}`} post={a} onSaved={companion.updatePost} />;
+                          }
                           if (a.entry_kind === "journal_entry") {
                             return (
                               <JournalEntryCard

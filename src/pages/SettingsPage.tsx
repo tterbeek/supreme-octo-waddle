@@ -1,4 +1,4 @@
-import { useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   Check,
@@ -8,6 +8,8 @@ import {
   Users,
 } from "lucide-react";
 import ModalSheet from "../components/ModalSheet";
+import CompanionSettings from "../components/CompanionSettings";
+import { fetchCompanionAccess } from "../services/companion.service";
 import { supabase } from "../supabaseClient";
 import { useUnitSystem } from "../contexts/UnitContext";
 
@@ -21,6 +23,7 @@ type BaseRowProps = {
 
 type ActionRowProps = {
   label: string;
+  badge?: string;
   onClick: () => void;
   disabled?: boolean;
   destructive?: boolean;
@@ -65,6 +68,7 @@ function RowIcon({ icon: Icon }: { icon?: ComponentType<{ className?: string }> 
 
 function ActionRow({
   label,
+  badge,
   onClick,
   disabled = false,
   destructive = false,
@@ -82,6 +86,7 @@ function ActionRow({
         <div className="flex w-full items-center gap-3">
           <RowIcon icon={icon} />
           <span className="flex-1 text-[16px] font-medium">{label}</span>
+          {badge && <span className="rounded-full border border-current/20 px-2 py-0.5 text-[11px] font-medium">{badge}</span>}
         </div>
       </RowShell>
     </button>
@@ -182,6 +187,14 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [savingUnit, setSavingUnit] = useState(false);
   const [showUnitsSheet, setShowUnitsSheet] = useState(false);
+  const [showCompanionSheet, setShowCompanionSheet] = useState(false);
+  const [companionAllowed, setCompanionAllowed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchCompanionAccess().then((allowed) => { if (!cancelled) setCompanionAllowed(allowed); })
+      .catch(() => { if (!cancelled) setCompanionAllowed(false); });
+    return () => { cancelled = true; };
+  }, []);
   const { unitSystem, setUnitSystem } = useUnitSystem();
 
   const unitLabel =
@@ -320,6 +333,7 @@ export default function SettingsPage() {
               to="/settings/activity-preferences"
             />
             <NavigationRow label="Presets" to="/presets" />
+            <ActionRow label="Weekly Companion" badge="Premium" disabled={!companionAllowed} onClick={() => setShowCompanionSheet(true)} />
           </div>
 
           <div className="space-y-1.5">
@@ -367,6 +381,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {showCompanionSheet && <CompanionSettings onClose={() => setShowCompanionSheet(false)} />}
       {showUnitsSheet ? (
         <ModalSheet onClose={() => setShowUnitsSheet(false)} sheetClassName="max-w-md">
           <div className="px-1 pb-2">

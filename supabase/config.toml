@@ -4,6 +4,10 @@
 # working directory name when running `supabase init`.
 project_id = "my-activity-app"
 
+# The handler validates the user's bearer token with auth.getUser itself.
+[functions.weekly-companion]
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.

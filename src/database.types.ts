@@ -39,6 +39,22 @@ export type Database = {
   }
   public: {
     Tables: {
+      companion_preferences: {
+        Row: { user_id: string; enabled: boolean; allow_activity_notes: boolean; time_zone: string }
+        Insert: { user_id: string; enabled?: boolean; allow_activity_notes?: boolean; time_zone?: string }
+        Update: { enabled?: boolean; allow_activity_notes?: boolean; time_zone?: string }
+        Relationships: []
+      }
+      companion_posts: {
+        Row: {
+          id: string; user_id: string; week_start: string; week_end: string; time_zone: string;
+          status: string; thought: string | null; sources: Json; includes_activity_notes: boolean;
+          user_reflection: string | null; created_at: string; generated_at: string | null;
+        }
+        Insert: never
+        Update: { user_reflection?: string | null }
+        Relationships: []
+      }
       activities: {
         Row: {
           created_at: string | null
@@ -1232,6 +1248,7 @@ export type Database = {
         }[]
       }
       has_circle_access: { Args: { p_user_id: string }; Returns: boolean }
+      has_companion_access: { Args: Record<string, never>; Returns: boolean }
       has_circle_new_reactions: {
         Args: { p_user_id: string }
         Returns: boolean

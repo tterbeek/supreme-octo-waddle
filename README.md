@@ -1,4 +1,32 @@
-# React + TypeScript + Vite
+# MoveNotes
+
+## Publish Weekly Companion to production
+
+Follow the [Companion production rollout](supabase/README.md#companion-production-rollout)
+for the commands and expected migration list. Run these steps from the repository
+root, in this order:
+
+1. Run the tests, build and isolated local schema check.
+2. Link the CLI to the production Supabase project and dry-run the migration push.
+3. Apply the two pending Companion migrations, which also install the SQL helpers
+   and Premium access rules.
+4. Add `OPENAI_API_KEY` in the production project's Edge Function secrets and
+   deploy only the `weekly-companion` Edge Function.
+5. Commit the reviewed changes directly on `main`, then push `main` to trigger
+   Vercel. Complete the Supabase steps **before** this push.
+6. Sign in as the confirmed account `me@thijsterbeek.com`, enable Companion in
+   Settings, and check the weekly thought and optional response. Other accounts
+   should see a greyed-out **Premium** row.
+
+There is no new Vercel environment variable for Companion. The OpenAI key stays
+in Supabase secrets. GitHub/Vercel deployment does not apply the SQL migrations
+or deploy the Edge Function for you.
+
+Companion uses GPT-6 Luna (`gpt-6-luna`). Set `COMPANION_MODEL=gpt-6-luna`
+in the function's local environment and production Supabase secrets if replacing
+an older model setting.
+
+## Frontend tooling
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
