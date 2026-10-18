@@ -34,6 +34,29 @@ describe("completed weekly context", () => {
     expect(JSON.stringify(sources).length).toBeLessThan(60000);
     expect(sources[0].detail).toContain("limited to");
   });
+  it("includes only the person's Companion reflection as a distinct source, even without activity-note permission", () => {
+    const sources = buildCompanionSources({ goals: [], tweak: null, lastReflection: null, activities: [activity], allowNotes: false,
+      companionReflections: [{ week_start: "2026-10-05", user_reflection: "I actually wanted a little more challenge." }],
+    });
+    expect(sources.find(source => source.kind === "companion_reflection")).toEqual({
+      kind: "companion_reflection", label: "Your Companion reflection · week of 2026-10-05", detail: "I actually wanted a little more challenge.",
+    });
+    expect(JSON.stringify(sources)).not.toContain(activity.notes);
+    expect(sources.filter(source => source.kind === "tweak_reflection")).toHaveLength(0);
+  });
+  it("bounds Companion reflections to three 1000-character excerpts and omits removed/blank responses", () => {
+    const sources = buildCompanionSources({ goals: [], tweak: null, lastReflection: null, activities: [], allowNotes: false,
+      companionReflections: [{ week_start: "2026-10-12", user_reflection: null }, { week_start: "2026-10-05", user_reflection: "  " },
+        ...Array.from({ length: 5 }, (_, i) => ({ week_start: `2026-09-${20 - i}`, user_reflection: "x".repeat(4000) }))],
+    });
+    const reflections = sources.filter(source => source.kind === "companion_reflection");
+    expect(reflections).toHaveLength(3);
+    expect(reflections.every(source => source.detail.length < 1020 && source.detail.endsWith("[excerpt]"))).toBe(true);
+  });
+  it("works unchanged without prior Companion reflections", () => {
+    const base = { goals: [], tweak: null, lastReflection: null, activities: [], allowNotes: false };
+    expect(buildCompanionSources(base)).toEqual(buildCompanionSources({ ...base, companionReflections: [] }));
+  });
 });
 
 describe("provider output", () => {

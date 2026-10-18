@@ -121,7 +121,10 @@ is a separate switch, also off by default. Enabling Companion sends current
 Directions, the current Tiny Tweak, the last Tiny Tweak reflection, and previous
 week's activity details to OpenAI. Activity notes are queried and included only
 with their own permission. Email, account identifiers, photos, locations,
-Circle data, and the user's response to the Companion post are not sent.
+and Circle data are not sent. Up to three recent non-empty Companion reflections
+from the past 90 days are included as your own perspective (excerpts up to 1,000
+characters each), separately from AI feedback. Previous generated thoughts are
+never reused as factual context. Included reflections appear in **What it used**.
 
 The first Journal visit after a week completes prepares one post for the
 previous Monday–Sunday in the timezone saved with the preferences. Generation

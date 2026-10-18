@@ -1,5 +1,5 @@
 export type CompanionSource = {
-  kind: "direction" | "tweak" | "tweak_reflection" | "activity" | "totals";
+  kind: "direction" | "tweak" | "tweak_reflection" | "companion_reflection" | "activity" | "totals";
   label: string;
   detail: string;
 };
@@ -38,6 +38,7 @@ Write only the thought for the week: 40–80 words of plain text, in the user's 
 Start directly with one specific, gently phrased observation or perspective grounded in the supplied records.
 Do NOT begin with, or include, a weekly overview, list of activities, counts, distances, durations, target progress or a recap of Directions and Tiny Tweaks. Those details already live in Insights and What it used.
 Use current Directions, the current Tiny Tweak, the last Tiny Tweak reflection and the completed week's activities (and activity notes only when supplied) as context, not as a checklist to repeat.
+Use supplied Companion reflections as the person's own perspective on earlier thoughts, not as AI feedback or verified movement history. Do not infer the earlier AI thought or assume its claims were true. Original authorized activity records remain authoritative for activity facts; preserve uncertainty where reflections and records differ.
 Distinguish what the person actually wrote from your tentative interpretation. Do not claim a tweak caused an outcome or that metrics prove success. Never invent feelings, personal circumstances, reasons or memories.
 If context is sparse, offer a modest thought about noticing what fits without pretending to know what happened. Missing or unlogged activity is not failure and needs no explanation.
 Keep responding optional. No commands, catch-up plans, streaks, praise based on volume, pressure, diagnosis, medical advice or training prescriptions. No new goals or tweaks. No headings, bullets, marketing language or mention of internal data processing.
@@ -66,6 +67,7 @@ export function buildCompanionSources(input: {
   activities: CompanionActivity[];
   allowNotes: boolean;
   activityLimitReached?: boolean;
+  companionReflections?: { week_start: string; user_reflection: string | null }[];
 }): CompanionSource[] {
   const sources: CompanionSource[] = [];
   for (const goal of input.goals.slice(0, 30)) sources.push({
@@ -74,6 +76,9 @@ export function buildCompanionSources(input: {
   });
   if (input.tweak?.trim()) sources.push({ kind: "tweak", label: "Current Tiny Tweak", detail: clip(input.tweak, 2000) });
   if (input.lastReflection?.trim()) sources.push({ kind: "tweak_reflection", label: "Your last Tiny Tweak reflection", detail: clip(input.lastReflection, 2000) });
+  for (const reflection of (input.companionReflections ?? []).filter(item => item.user_reflection?.trim()).slice(0, 3)) {
+    sources.push({ kind: "companion_reflection", label: `Your Companion reflection · week of ${reflection.week_start}`, detail: clip(reflection.user_reflection, 1000) });
+  }
   const activities = input.activities.slice(0, 200);
   const minutes = activities.reduce((sum, activity) => sum + (Number(activity.duration_min) || 0), 0);
   const distance = activities.reduce((sum, activity) => sum + (Number(activity.distance_km) || 0), 0);

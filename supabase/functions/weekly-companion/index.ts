@@ -71,14 +71,23 @@ Deno.serve(async (req) => {
       admin.from("journal_entries").select("text").eq("user_id", user.id).eq("entry_type", "tiny_tweak_reflection").order("created_at", { ascending: false }).limit(1),
       admin.from("activities").select(`type, date, title, duration_min, distance_km, feeling_during, feeling_after${prefs.allow_activity_notes ? ", notes" : ""}`)
         .eq("user_id", user.id).gte("date", week.start).lte("date", week.end).order("date", { ascending: false }).limit(201),
+      // Only the authenticated user's own words, never previous generated claims.
+      // RLS also excludes disabled/inaccessible posts; deleted posts stay excluded.
+      client.from("companion_posts").select("week_start, user_reflection")
+        .eq("user_id", user.id).in("status", ["ready", "redacted"])
+        .not("user_reflection", "is", null).neq("user_reflection", "")
+        .gte("week_start", new Date(Date.now() - 90 * 86400_000).toISOString().slice(0, 10))
+        .lte("week_start", week.start)
+        .order("week_start", { ascending: false }).limit(3),
     ]);
     for (const result of results) if (result.error) throw result.error;
-    const [goals, tweaks, reviews, activities] = results;
+    const [goals, tweaks, reviews, activities, companionReflections] = results;
     const sources = buildCompanionSources({
       goals: goals.data ?? [], tweak: tweaks.data?.[0]?.text ?? null,
       lastReflection: reviews.data?.[0]?.text ?? null,
       activities: (activities.data ?? []) as unknown as Parameters<typeof buildCompanionSources>[0]["activities"],
       allowNotes: prefs.allow_activity_notes, activityLimitReached: (activities.data?.length ?? 0) > 200,
+      companionReflections: companionReflections.data ?? [],
     });
     const feedbackGuidance = await loadFeedbackGuidance(() => client.rpc("recent_companion_feedback", { p_content_type: "weekly_thought" }));
     // Recheck consent immediately before sending any context to the provider.

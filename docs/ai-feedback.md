@@ -28,6 +28,20 @@ generation, rather than used to circumvent note-consent changes.
 
 ## Timing and generation
 
+Your saved **Companion reflections** also inform future thoughts, but remain
+separate from feedback guidance. The authenticated, owner-scoped post query
+reads up to three non-empty responses to ready/redacted posts from weeks within
+the past 90 days, newest week first and no later than the week being generated.
+Deleted/dismissed posts are excluded. Each response is bounded to a 1,000-character
+excerpt and included as a labelled `companion_reflection` source in **What it used**.
+No earlier AI output is selected. These are the user's own perspectives, not
+verified corrections to activity history or instructions to override safeguards.
+They do not depend on activity-note permission (like Tiny Tweak reflections);
+the existing Companion opt-in covers their use. Included reflections are disclosed
+under **What it used**, without extra explanation in Settings or the reflection
+sheet. Removing/editing a reflection affects subsequent
+generation reads, not already-saved thoughts. No new settings or migration.
+
 Feedback itself adds **no new schedule, extra model call, or automatic regeneration**.
 The existing Journal hook requests a weekly thought on entry, on returning to
 the visible tab, and after Companion settings changes. The server returns the
