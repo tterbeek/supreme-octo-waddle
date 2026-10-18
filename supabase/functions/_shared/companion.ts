@@ -29,6 +29,10 @@ export type CompanionActivity = {
 };
 export type CompanionGoal = { activity_type: string; metric: string; period: string; target: number; name: string | null };
 
+export function canRunWeeklyNow(user: { email?: string | null; email_confirmed_at?: string | null }) {
+  return user.email?.toLowerCase() === "me@thijsterbeek.com" && Boolean(user.email_confirmed_at);
+}
+
 export const COMPANION_INSTRUCTIONS = `You write a private weekly Companion post for MoveNotes, a low-pressure movement journal.
 Write only the thought for the week: 40–80 words of plain text, in the user's language when evident, ending with at most one optional reflective question.
 Start directly with one specific, gently phrased observation or perspective grounded in the supplied records.

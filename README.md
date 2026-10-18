@@ -1,5 +1,24 @@
 # MoveNotes
 
+## Weekly thought feedback
+
+Weekly thoughts offer **Yes / Not really**, an optional 300-character comment,
+and **Edit / Remove feedback**. Ratings save immediately; comments save only
+with **Save feedback**. This stays separate from journal reflections and never
+regenerates the current thought. The next generated thought can use up to three
+recent comments, not bare ratings. See [feedback behavior and checks](docs/ai-feedback.md).
+
+The AI card also has a three-dot **Delete** action. The confirmed owner account
+`me@thijsterbeek.com` can use **Admin → Run weekly now** to explicitly rerun the
+most recent completed week. It asks before making a paid call and keeps your
+written reflection when replacing a thought.
+
+Rollout requires `20261018000000_companion_feedback.sql` and
+`20261018010000_companion_manual_and_delete.sql`, and the corrective
+`20261018020000_companion_manual_context_fix.sql`, redeploying the existing
+`weekly-companion` function, and publishing the frontend in that order. No new
+secrets, settings, or Edge Functions are needed.
+
 ## Form layouts and regression checks
 
 See the [complete form inventory, shared rules and verification limits](docs/form-consistency.md).

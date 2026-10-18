@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { buildCompanionSources, previousCompletedWeek, readCompanionOutput, type CompanionActivity } from "./companion";
+import { buildCompanionSources, canRunWeeklyNow, previousCompletedWeek, readCompanionOutput, type CompanionActivity } from "./companion";
+
+describe("manual weekly eligibility", () => {
+  it("requires the authenticated confirmed owner email, never profile metadata or arbitrary accounts", () => {
+    expect(canRunWeeklyNow({ email: "me@thijsterbeek.com", email_confirmed_at: "2026-01-01" })).toBe(true);
+    expect(canRunWeeklyNow({ email: "ME@THIJSTERBEEK.COM", email_confirmed_at: "2026-01-01" })).toBe(true);
+    expect(canRunWeeklyNow({ email: "other@example.test", email_confirmed_at: "2026-01-01" })).toBe(false);
+    expect(canRunWeeklyNow({ email: "me@thijsterbeek.com" })).toBe(false);
+    expect(canRunWeeklyNow({})).toBe(false);
+  });
+});
 
 describe("completed weekly context", () => {
   it("keeps Sunday in the current week and switches at the user's Monday midnight", () => {

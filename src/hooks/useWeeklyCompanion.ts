@@ -62,5 +62,8 @@ export function useWeeklyCompanion(userId: string | null) {
   const updatePost = useCallback((post: CompanionPost) => {
     setPosts((current) => current.map((item) => item.id === post.id ? post : item));
   }, []);
-  return { posts, enabled, preparing, message, retry: load, updatePost };
+  const removePost = useCallback((postId: string) => {
+    setPosts(current => current.filter(post => post.id !== postId));
+  }, []);
+  return { posts, enabled, preparing, message, retry: load, updatePost, removePost };
 }

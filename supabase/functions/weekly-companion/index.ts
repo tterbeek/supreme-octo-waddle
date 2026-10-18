@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  buildCompanionSources, COMPANION_INSTRUCTIONS, previousCompletedWeek, readCompanionOutput,
+  buildCompanionSources, canRunWeeklyNow, COMPANION_INSTRUCTIONS, previousCompletedWeek, readCompanionOutput,
 } from "../_shared/companion.ts";
+import { FEEDBACK_GUIDANCE_INSTRUCTIONS, loadFeedbackGuidance } from "../_shared/companionFeedback.ts";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -23,12 +24,23 @@ Deno.serve(async (req) => {
   const client = createClient(url, anon, { global: { headers: { Authorization: authorization } } });
   const { data: { user }, error: authError } = await client.auth.getUser();
   if (authError || !user) return json(401, { error: "Not authenticated." });
+  const input = await req.json().catch(() => ({}));
+  const manual = input?.manual === true;
+  if (manual && !canRunWeeklyNow(user)) return json(403, { error: "Manual weekly runs are restricted to the owner account." });
   const { data: allowed, error: accessError } = await client.rpc("has_companion_access");
   if (accessError) return json(503, { error: "Couldn't check Companion access just now." });
   if (allowed !== true) return json(403, { error: "Weekly Companion is a Premium feature with limited early access." });
   const admin = createClient(url, serviceKey);
   let claim: string | null = null;
   let weekStart: string | null = null;
+  const releaseClaim = async (status: "pending" | "failed") => {
+    if (!claim) return;
+    // Never hide/overwrite a previous ready thought or restore deleted/redacted data.
+    await admin.from("companion_posts").update({ status, generation_token: null })
+      .eq("user_id", user.id).eq("generation_token", claim).eq("status", "generating");
+    await admin.from("companion_posts").update({ generation_token: null })
+      .eq("user_id", user.id).eq("generation_token", claim);
+  };
   try {
     const { data: prefs, error: prefsError } = await admin.from("companion_preferences")
       .select("enabled, allow_activity_notes, time_zone").eq("user_id", user.id).maybeSingle();
@@ -41,11 +53,12 @@ Deno.serve(async (req) => {
     const { data: existing, error: existingError } = await admin.from("companion_posts")
       .select("status").eq("user_id", user.id).eq("week_start", week.start).maybeSingle();
     if (existingError) throw existingError;
-    if (existing?.status === "ready") return json(200, { status: "ready" });
+    if (!manual && existing?.status === "ready") return json(200, { status: "ready" });
+    if (!manual && existing?.status === "dismissed") return json(200, { status: "dismissed" });
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) return json(503, { error: "Weekly Companion is not configured yet." });
     const model = Deno.env.get("COMPANION_MODEL") || "gpt-6-luna";
-    const { data: token, error: claimError } = await admin.rpc("claim_weekly_companion", {
+    const { data: token, error: claimError } = await admin.rpc(manual ? "claim_manual_weekly_companion" : "claim_weekly_companion", {
       p_user_id: user.id, p_week_start: week.start, p_time_zone: prefs.time_zone, p_notes: prefs.allow_activity_notes,
     });
     if (claimError) throw claimError;
@@ -67,22 +80,22 @@ Deno.serve(async (req) => {
       activities: (activities.data ?? []) as unknown as Parameters<typeof buildCompanionSources>[0]["activities"],
       allowNotes: prefs.allow_activity_notes, activityLimitReached: (activities.data?.length ?? 0) > 200,
     });
+    const feedbackGuidance = await loadFeedbackGuidance(() => client.rpc("recent_companion_feedback", { p_content_type: "weekly_thought" }));
     // Recheck consent immediately before sending any context to the provider.
     const { data: consent, error: consentError } = await admin.from("companion_preferences")
       .select("enabled, allow_activity_notes").eq("user_id", user.id).single();
     if (consentError) throw consentError;
     if (!consent.enabled || consent.allow_activity_notes !== prefs.allow_activity_notes) {
-      await admin.from("companion_posts").update({ status: "pending", generation_token: null })
-        .eq("user_id", user.id).eq("generation_token", claim);
+      await releaseClaim("pending");
       return json(200, { status: "preferences_changed" });
     }
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST", signal: AbortSignal.timeout(45_000),
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model, store: false, max_output_tokens: 500, instructions: COMPANION_INSTRUCTIONS,
+        model, store: false, max_output_tokens: 500, instructions: `${COMPANION_INSTRUCTIONS}\n\n${FEEDBACK_GUIDANCE_INSTRUCTIONS}`,
         ...(model === "gpt-6-luna" ? { reasoning: { effort: "none" } } : {}),
-        input: JSON.stringify({ completed_week: week, activity_notes_allowed: prefs.allow_activity_notes, records: sources }),
+        input: JSON.stringify({ completed_week: week, activity_notes_allowed: prefs.allow_activity_notes, records: sources, feedback_guidance: feedbackGuidance }),
       }),
     });
     if (!response.ok) throw new Error(`AI request failed (${response.status}).`);
@@ -95,9 +108,7 @@ Deno.serve(async (req) => {
     return json(200, { status: saved ? "ready" : "preferences_changed" });
   } catch {
     // Do not log private source records, model responses, tokens or provider errors.
-    if (claim && weekStart) await admin.from("companion_posts")
-      .update({ status: "failed", generation_token: null })
-      .eq("user_id", user.id).eq("week_start", weekStart).eq("generation_token", claim);
+    if (claim && weekStart) await releaseClaim("failed");
     return json(503, { error: "Couldn't prepare your weekly thought just now. Please try again later." });
   }
 });

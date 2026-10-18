@@ -70,6 +70,8 @@ native `<form>` elements. Shared field-only wrappers are listed with their owner
 | Tiny Tweak create/adjust/end | `MicroAdjustmentCreateModal` | Journal strip, Insights +, onboarding; suggestions + custom text guarded; ending remains a saved operation, not unsaved draft cancellation |
 | Tiny Tweak review | `TinyTweakStrip` reflection sheet | Ended tweak prompt in Journal; independent journal-note save; discard clears only the local review text |
 | Companion reflection | `WeeklyCompanionCard` | Companion feed card; own words guarded separately from the AI post; Save footer; Not now/remove in body |
+| Companion AI feedback | `CompanionFeedback` | Weekly thought Yes/Not really / Edit; shared `CompanionSheet`, growing textarea, explicit Save feedback footer; Close/remove in body; rating saved independently, unsaved comment guarded; separate from journal reflection |
+| Companion delete / admin rerun | `WeeklyCompanionCard`, `AdminWeeklyCompanion` | AI card three-dot Delete, owner-only `/admin` Run weekly now; shared confirmation sheets, one primary footer action, Cancel in body, busy close protection, inline retry errors |
 | Companion provenance | Same card, sources sheet | What it used / AI marker; read-only, shared title/Close/scroll/focus rules |
 | Companion preferences | `CompanionSettings` | Settings Premium row; instant-save toggles, consent/privacy explanations retained, busy close protection, Done footer; entitlement checks unchanged |
 | Image sharing preview | `ActivityImageSheet` | Journal activity actions; actual PNG preview, no record draft; Share or Save is primary footer, secondary Save stays in body |

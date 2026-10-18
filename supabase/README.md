@@ -98,11 +98,14 @@ this through database policies, generation/publish checks and the Edge Function;
 editable profile metadata cannot grant access. The allowed account can opt in
 using the normal settings switches; eligibility does not automatically opt it in.
 
-Apply the weekly Companion and Premium-access migrations to the **local** database before
+Apply the weekly Companion, Premium-access, feedback and manual/delete migrations to the **local** database before
 testing this feature (use `npx supabase migration up --local` with the local
 stack running; do not reset a development database containing useful test data).
 The migration adds private preferences and weekly posts, owner-only access,
-server-only generation claims, and a client-writable response field.
+server-only generation claims, a client-writable response field, and private
+output-specific feedback. Rating-only feedback is not used for personalization;
+up to three recent comments can guide the next weekly thought, separately from
+factual sources and journal reflections. See [feedback details](../docs/ai-feedback.md).
 
 In the existing ignored `supabase/functions/.env`, add the server-side
 `OPENAI_API_KEY` and optional `COMPANION_MODEL` (default `gpt-6-luna`). The
@@ -195,6 +198,9 @@ the only pending migrations should be these, in order:
 ```text
 20261017000000_weekly_companion.sql
 20261017010000_companion_premium_access.sql
+20261018000000_companion_feedback.sql
+20261018010000_companion_manual_and_delete.sql
+20261018020000_companion_manual_context_fix.sql
 ```
 
 If one is already applied, only the remaining migration should be pending.
@@ -210,7 +216,7 @@ npx supabase db push --linked
 npx supabase migration list --linked
 ```
 
-Both Companion versions should now appear as applied remotely. Use the CLI
+All five Companion versions should now appear as applied remotely. Use the CLI
 push so migration history stays consistent; do not also paste the SQL into
 the dashboard. These migrations add Companion tables, policies and SQL helper
 functions. The second restricts access to the confirmed account
@@ -245,7 +251,7 @@ access before any AI call.
 ### 5. Publish the frontend through GitHub and Vercel
 
 Review and commit the intended Companion changes directly on `main`, including
-both migrations, the function and shared helper, `config.toml`, frontend files,
+all five migrations, the function and shared helpers, `config.toml`, frontend files,
 tests and documentation. Keep local `.env` files out of the commit. Then:
 
 ```bash

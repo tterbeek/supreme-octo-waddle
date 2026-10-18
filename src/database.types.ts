@@ -45,6 +45,16 @@ export type Database = {
         Update: { enabled?: boolean; allow_activity_notes?: boolean; time_zone?: string }
         Relationships: []
       }
+      companion_feedback: {
+        Row: {
+          user_id: string; post_id: string; output_generated_at: string;
+          content_type: "weekly_thought"; rating: "yes" | "not_really";
+          comment: string | null; updated_at: string;
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       companion_posts: {
         Row: {
           id: string; user_id: string; week_start: string; week_end: string; time_zone: string;
@@ -1249,6 +1259,15 @@ export type Database = {
       }
       has_circle_access: { Args: { p_user_id: string }; Returns: boolean }
       has_companion_access: { Args: Record<string, never>; Returns: boolean }
+      delete_companion_post: { Args: { p_post_id: string; p_generated_at: string | null }; Returns: undefined }
+      save_companion_feedback: {
+        Args: { p_post_id: string; p_output_generated_at: string; p_rating: string; p_comment?: string | null; p_save_comment?: boolean }
+        Returns: Database["public"]["Tables"]["companion_feedback"]["Row"]
+      }
+      recent_companion_feedback: {
+        Args: { p_content_type?: string }
+        Returns: { comment: string }[]
+      }
       has_circle_new_reactions: {
         Args: { p_user_id: string }
         Returns: boolean

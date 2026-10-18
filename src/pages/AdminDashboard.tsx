@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import AdminWeeklyCompanion from "../components/AdminWeeklyCompanion";
 import {
   LineChart,
   Line,
@@ -178,6 +179,7 @@ export function AdminDashboard() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-6">
       <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
+      <AdminWeeklyCompanion />
 
       {loading && <p className="text-gray-500">Loading analytics…</p>}
       {error && (

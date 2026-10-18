@@ -555,7 +555,7 @@ export default function Home() {
                       <div className="min-w-0 flex-1 flex flex-col gap-3">
                         {day.items.map((a) => {
                           if (a.entry_kind === "companion") {
-                            return <WeeklyCompanionCard key={`companion-${a.id}`} post={a} onSaved={companion.updatePost} />;
+                            return <WeeklyCompanionCard key={`companion-${a.id}`} post={a} onSaved={companion.updatePost} onDeleted={() => companion.removePost(a.id)} />;
                           }
                           if (a.entry_kind === "journal_entry") {
                             return (

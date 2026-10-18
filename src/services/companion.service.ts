@@ -36,14 +36,19 @@ export async function fetchCompanionPosts(userId: string): Promise<CompanionPost
   return (data ?? []) as unknown as CompanionPost[];
 }
 
-export async function ensureWeeklyCompanion(): Promise<{ status: string; message?: string }> {
-  const { data, error } = await supabase.functions.invoke("weekly-companion", { body: {} });
+export async function ensureWeeklyCompanion(options?: { manual: boolean }): Promise<{ status: string; message?: string }> {
+  const { data, error } = await supabase.functions.invoke("weekly-companion", { body: options?.manual ? { manual: true } : {} });
   if (error) {
     const response = error.context as Response | undefined;
     const payload = response instanceof Response ? await response.clone().json().catch(() => null) as { error?: string } | null : null;
     throw new Error(payload?.error || "Couldn't prepare your weekly thought just now.");
   }
   return data;
+}
+
+export async function deleteCompanionPost(postId: string, generatedAt: string | null) {
+  const { error } = await supabase.rpc("delete_companion_post", { p_post_id: postId, p_generated_at: generatedAt });
+  if (error) throw error;
 }
 
 export async function saveCompanionResponse(postId: string, text: string): Promise<CompanionPost> {

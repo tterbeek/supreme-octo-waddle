@@ -24,6 +24,7 @@ import MicroAdjustmentCreateModal from "../../src/components/MicroAdjustmentCrea
 import TinyTweakStrip from "../../src/components/TinyTweakStrip";
 import WeeklyCompanionCard from "../../src/components/WeeklyCompanionCard";
 import CompanionSettings from "../../src/components/CompanionSettings";
+import AdminWeeklyCompanion from "../../src/components/AdminWeeklyCompanion";
 import SettingsPage from "../../src/pages/SettingsPage";
 import ActivityPreferencesPage from "../../src/pages/ActivityPreferencesPage";
 import ManageCirclePage from "../../src/pages/ManageCirclePage";
@@ -42,7 +43,7 @@ import GalleryLightbox from "../../src/components/GalleryLightbox";
 import ActivityImageSheet from "../../src/components/ActivityImageSheet";
 import "../../src/index.css";
 
-const qa = (window as any).formQA = { fail: false, delay: 0, writes: [], saved: 0, closed: 0, case: "", network: [], select: (_name: string) => {} };
+const qa = (window as any).formQA = { fail: false, delay: 0, writes: [], invocations: [], saved: 0, closed: 0, case: "", network: [], select: (_name: string) => {} };
 const originalFetch = window.fetch;
 window.fetch = (input, init) => {
   const url = String(input instanceof Request ? input.url : input);
@@ -55,17 +56,18 @@ const equipment: any[] = Array.from({ length: 45 }, (_, i) => ({ id: `equipment-
 const presets: any[] = Array.from({ length: 18 }, (_, i) => ({ id: `preset-${i}`, user_id: user.id, name: `Gentle walk ${i + 1}`, type: "walk", distance_km: 4, duration_min: 45, effort: 2, equipment_ids: [], preset_equipment: [] }));
 const goal: any = { id: "goal", user_id: user.id, activity_type: "walk", metric: "distance", target: 10, period: "week", name: "Room to move", updated_at: "2026-10-17" };
 const tweak = { id: "tweak", text: "Leave room for a short walk", started_at: "2026-10-01", ended_at: "2026-10-10", end_flow_state: "prompt_reflection" };
-const post: any = { id: "post", week_start: "2026-10-05", week_end: "2026-10-11", status: "ready", thought: "Perhaps the small moments were enough this week. What felt worth making room for?", user_reflection: "", sources: [{ kind: "direction", label: "Direction", detail: "A fictional direction" }], includes_activity_notes: false };
+const post: any = { id: "post", generated_at: "2026-10-12T07:00:00.123456+00:00", week_start: "2026-10-05", week_end: "2026-10-11", status: "ready", thought: "Perhaps the small moments were enough this week. What felt worth making room for?", user_reflection: "", sources: [{ kind: "direction", label: "Direction", detail: "A fictional direction" }], includes_activity_notes: false };
 const rows: Record<string, any[]> = {
   activities: [activity], equipment, presets, goals: [goal], activity_equipment: [], preset_equipment: [], activity_photos: [], activity_preferences: [],
   user_activity_types: ["walk", "run", "ride", "yoga"].map((activity_type, i) => ({ user_id: user.id, activity_type, is_enabled: true, sort_order: i * 10 })),
   user_preferences: [{ user_id: user.id, social_display_name: "Fictional mover", login_email: user.email, unit_system: "metric" }],
   companion_preferences: [{ user_id: user.id, enabled: false, allow_activity_notes: false, time_zone: "Europe/Brussels" }],
   journal_entries: [], micro_adjustments: [], user_strava_connections: [], circle_connections: [],
+  companion_feedback: [],
 };
 const wait = () => new Promise(resolve => setTimeout(resolve, qa.delay));
 const auth: any = supabase.auth;
-auth.getUser = async () => ({ data: { user }, error: null });
+auth.getUser = async () => ({ data: { user: qa.case === "admin-weekly" ? { ...user, email: "me@thijsterbeek.com" } : user }, error: null });
 auth.getSession = async () => ({ data: { session: { user, access_token: "fictional-not-a-token" } }, error: null });
 auth.onAuthStateChange = () => ({ data: { subscription: { unsubscribe() {} } } });
 auth.signInWithOtp = async () => { await wait(); return { error: qa.fail ? { message: "Simulated auth error" } : null }; };
@@ -76,6 +78,11 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     if (op !== "read") { qa.writes.push({ table, op, payload, filters }); await wait(); }
     if (op !== "read" && qa.fail) return { data: null, error: { message: "Simulated save error" }, count: 0 };
     let data = rows[table] || [];
+    if (table === "companion_feedback") {
+      data = data.filter(row => filters.every(([key, value]) => row[key] === value));
+      if (op === "delete") rows[table] = rows[table].filter(row => !data.includes(row));
+      return { data: single ? data[0] || null : data, error: null };
+    }
     if (table === "micro_adjustments" && filters.some(([key, value]) => key === "status" && value === "ended")) data = [tweak];
     if (table === "activities" && selection === "id") data = [];
     if (op !== "read") data = [{ ...(data[0] || {}), ...(Array.isArray(payload) ? payload[0] : payload), id: data[0]?.id || "fictional-saved" }];
@@ -90,15 +97,28 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
   q.then = (resolve: any, reject: any) => result().then(resolve, reject);
   return q;
 };
-(supabase as any).rpc = async (name: string, args: unknown) => {
-  if (name.startsWith("set_") || name.startsWith("accept_") || name.startsWith("create_")) { qa.writes.push({ table: name, payload: args }); await wait(); if (qa.fail) return { data: null, error: { message: "Simulated save error" } }; }
+(supabase as any).rpc = async (name: string, args: any) => {
+  if (name === "save_companion_feedback") {
+    qa.writes.push({ table: name, payload: args }); await wait();
+    if (qa.fail) return { data: null, error: { message: "Simulated save error" } };
+    const previous = rows.companion_feedback.find(row => row.post_id === args.p_post_id && row.output_generated_at === args.p_output_generated_at);
+    const value = { post_id: args.p_post_id, output_generated_at: args.p_output_generated_at, rating: args.p_rating,
+      comment: args.p_save_comment ? args.p_comment : previous?.comment ?? null, updated_at: new Date().toISOString() };
+    rows.companion_feedback = [value];
+    return { data: value, error: null };
+  }
+  if (name.startsWith("set_") || name.startsWith("accept_") || name.startsWith("create_") || name === "delete_companion_post") { qa.writes.push({ table: name, payload: args }); await wait(); if (qa.fail) return { data: null, error: { message: "Simulated save error" } }; }
   const data = name === "has_companion_access" ? true
     : name === "get_circle_invite_preview" ? [{ invite_status: "valid", friendly_name: "Fictional friend", account_email: "friend@example.invalid" }]
     : name.includes("micro_adjustment_suggestions") ? [1, 2, 3].map(id => ({ id: String(id), text: `Make room for a little movement ${id}`, category: "gentle" }))
     : name === "accept_circle_invite" ? "connected" : [];
   return { data, error: null };
 };
-Object.defineProperty(supabase, "functions", { value: { invoke: async () => ({ data: { connected: false, fetched: 0, inserted: 0, skipped: 0 }, error: null }) } });
+Object.defineProperty(supabase, "functions", { value: { invoke: async (name: string, options: unknown) => {
+  qa.invocations.push({ name, options }); await wait();
+  if (name === "weekly-companion") return { data: { status: "ready" }, error: qa.fail ? { message: "Simulated generation error" } : null };
+  return { data: { connected: false, fetched: 0, inserted: 0, skipped: 0 }, error: null };
+} } });
 (supabase.storage as any).from = () => ({ createSignedUrls: async () => ({ data: [], error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
 HTMLMediaElement.prototype.play = async () => {};
 
@@ -126,6 +146,8 @@ function Scenario({ name, close, saved }: { name: string; close: () => void; sav
     case "tweak-review": return <TinyTweakStrip userId={user.id} />;
     case "companion-response": return <WeeklyCompanionCard post={post} onSaved={saved} />;
     case "companion-settings": return <CompanionSettings onClose={close} />;
+    case "admin-weekly": return <AdminWeeklyCompanion />;
+    case "admin-weekly-denied": return <AdminWeeklyCompanion />;
     case "settings": return <SettingsPage />;
     case "activity-preferences": return <ActivityPreferencesPage />;
     case "circle-profile": return <ManageCirclePage />;
