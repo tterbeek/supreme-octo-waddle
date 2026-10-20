@@ -1,5 +1,7 @@
 import { supabase } from "../supabaseClient";
 import type { CompanionPost, CompanionPreferences } from "../../supabase/functions/_shared/companion";
+import type { CompanionRunDiagnostics } from "../../supabase/functions/_shared/companionDiagnostics";
+export type { CompanionRunDiagnostics } from "../../supabase/functions/_shared/companionDiagnostics";
 export type { CompanionPost, CompanionPreferences, CompanionSource } from "../../supabase/functions/_shared/companion";
 
 export const COMPANION_PREFERENCES_CHANGED = "movenotes:companion-preferences-changed";
@@ -36,8 +38,8 @@ export async function fetchCompanionPosts(userId: string): Promise<CompanionPost
   return (data ?? []) as unknown as CompanionPost[];
 }
 
-export async function ensureWeeklyCompanion(options?: { manual: boolean }): Promise<{ status: string; message?: string }> {
-  const { data, error } = await supabase.functions.invoke("weekly-companion", { body: options?.manual ? { manual: true } : {} });
+export async function ensureWeeklyCompanion(options?: { manual: boolean; storeTestRequest?: boolean }): Promise<{ status: string; message?: string; diagnostics?: CompanionRunDiagnostics }> {
+  const { data, error } = await supabase.functions.invoke("weekly-companion", { body: options?.manual ? { manual: true, ...(options.storeTestRequest === true ? { store_test_request: true } : {}) } : {} });
   if (error) {
     const response = error.context as Response | undefined;
     const payload = response instanceof Response ? await response.clone().json().catch(() => null) as { error?: string } | null : null;

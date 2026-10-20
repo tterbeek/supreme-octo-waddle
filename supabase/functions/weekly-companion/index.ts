@@ -3,6 +3,7 @@ import {
   buildCompanionSources, canRunWeeklyNow, COMPANION_INSTRUCTIONS, previousCompletedWeek, readCompanionOutput,
 } from "../_shared/companion.ts";
 import { FEEDBACK_GUIDANCE_INSTRUCTIONS, loadFeedbackGuidance } from "../_shared/companionFeedback.ts";
+import { companionRunDiagnostics, storeCompanionTestRequest, type CompanionRunDiagnostics } from "../_shared/companionDiagnostics.ts";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -26,6 +27,7 @@ Deno.serve(async (req) => {
   if (authError || !user) return json(401, { error: "Not authenticated." });
   const input = await req.json().catch(() => ({}));
   const manual = input?.manual === true;
+  const storeTestRequest = storeCompanionTestRequest(user, input);
   if (manual && !canRunWeeklyNow(user)) return json(403, { error: "Manual weekly runs are restricted to the owner account." });
   const { data: allowed, error: accessError } = await client.rpc("has_companion_access");
   if (accessError) return json(503, { error: "Couldn't check Companion access just now." });
@@ -33,6 +35,7 @@ Deno.serve(async (req) => {
   const admin = createClient(url, serviceKey);
   let claim: string | null = null;
   let weekStart: string | null = null;
+  let diagnostics: CompanionRunDiagnostics | null = null;
   const releaseClaim = async (status: "pending" | "failed") => {
     if (!claim) return;
     // Never hide/overwrite a previous ready thought or restore deleted/redacted data.
@@ -98,26 +101,33 @@ Deno.serve(async (req) => {
       await releaseClaim("pending");
       return json(200, { status: "preferences_changed" });
     }
+    const requestTimestamp = new Date().toISOString();
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST", signal: AbortSignal.timeout(45_000),
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model, store: false, max_output_tokens: 500, instructions: `${COMPANION_INSTRUCTIONS}\n\n${FEEDBACK_GUIDANCE_INSTRUCTIONS}`,
+        model, store: storeTestRequest, max_output_tokens: 500, instructions: `${COMPANION_INSTRUCTIONS}\n\n${FEEDBACK_GUIDANCE_INSTRUCTIONS}`,
         ...(model === "gpt-6-luna" ? { reasoning: { effort: "none" } } : {}),
         input: JSON.stringify({ completed_week: week, activity_notes_allowed: prefs.allow_activity_notes, records: sources, feedback_guidance: feedbackGuidance }),
       }),
     });
+    const payload = await response.json().catch(() => null);
+    if (storeTestRequest) {
+      diagnostics = companionRunDiagnostics(requestTimestamp, model, response, payload);
+      // Full request/response storage is in OpenAI only, and only for this test.
+      console.info(JSON.stringify({ event: "weekly_companion_stored_test", ...diagnostics }));
+    }
     if (!response.ok) throw new Error(`AI request failed (${response.status}).`);
-    const thought = readCompanionOutput(await response.json());
+    const thought = readCompanionOutput(payload);
     const { data: saved, error: saveError } = await admin.rpc("finish_weekly_companion", {
       p_user_id: user.id, p_week_start: week.start, p_token: claim, p_notes: prefs.allow_activity_notes,
       p_thought: thought, p_sources: sources, p_model: model,
     });
     if (saveError) throw saveError;
-    return json(200, { status: saved ? "ready" : "preferences_changed" });
+    return json(200, { status: saved ? "ready" : "preferences_changed", ...(diagnostics ? { diagnostics } : {}) });
   } catch {
     // Do not log private source records, model responses, tokens or provider errors.
     if (claim && weekStart) await releaseClaim("failed");
-    return json(503, { error: "Couldn't prepare your weekly thought just now. Please try again later." });
+    return json(503, { error: "Couldn't prepare your weekly thought just now. Please try again later.", ...(diagnostics ? { diagnostics } : {}) });
   }
 });

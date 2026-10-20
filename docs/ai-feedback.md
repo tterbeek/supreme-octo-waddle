@@ -132,3 +132,33 @@ Do not reset the database or mark the old migration unapplied.
 
 Apply the feedback, manual/delete and corrective migrations and redeploy `weekly-companion` before releasing the frontend.
 No secrets, settings screen, preference manager, or additional function deployment.
+
+## Full request storage for a controlled owner test
+
+In **Admin → Run weekly now**, the confirmation offers **Store the complete
+request and response in OpenAI for this test**. It starts unchecked and resets
+on the next opening. It adds `store_test_request: true` to that manual request.
+The handler only sends `store: true` when the verified, confirmed auth account
+is `me@thijsterbeek.com`, `manual === true`, and the explicit storage flag is
+also exactly `true`. Scheduled/ordinary Journal calls and unchecked manual runs
+continue sending `store: false`. This does not change any persistent preference.
+
+The stored input includes the actual instructions and context already sent for
+generation (including permitted notes, reflections and feedback). Authorization
+headers are not logged. The full content is stored in OpenAI, **not** Supabase
+console logs. OpenAI organization data-retention controls still apply; see
+[Responses storage](https://developers.openai.com/api/docs/guides/migrate-to-responses)
+and [data controls](https://developers.openai.com/api/docs/guides/your-data).
+
+For a selected test only, the function emits `weekly_companion_stored_test`
+with an allowlisted timestamp, endpoint, configured/resolved model, HTTP status,
+response ID, `x-request-id`, requested/returned storage flags, and project ID
+if OpenAI actually supplies it in `openai-project`. This metadata is also
+returned to the owner and shown after success. Missing project information
+is reported as unknown—not inferred from the Supabase project or a key prefix.
+An early ready/waiting/disabled return makes no provider call and has no
+diagnostics; the explicit manual path bypasses ready-content reuse.
+
+Rollout: redeploy the existing `weekly-companion` function with `--use-api` and
+publish the frontend. No migration or new secret is needed. No live test is
+performed merely by opening/cancelling the confirmation.

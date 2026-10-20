@@ -116,7 +116,10 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
 };
 Object.defineProperty(supabase, "functions", { value: { invoke: async (name: string, options: unknown) => {
   qa.invocations.push({ name, options }); await wait();
-  if (name === "weekly-companion") return { data: { status: "ready" }, error: qa.fail ? { message: "Simulated generation error" } : null };
+  if (name === "weekly-companion") return { data: { status: "ready", ...((options as any)?.body?.store_test_request ? { diagnostics: {
+    request_timestamp: "2026-10-20T12:00:00Z", endpoint: "https://api.openai.com/v1/responses", requested_model: "fixture-model", model: "fixture-model",
+    response_id: "resp_fictional", request_id: "req_fictional", project_id: "proj_fictional", store_requested: true, store_returned: true, http_status: 200,
+  } } : {}) }, error: qa.fail ? { message: "Simulated generation error" } : null };
   return { data: { connected: false, fetched: 0, inserted: 0, skipped: 0 }, error: null };
 } } });
 (supabase.storage as any).from = () => ({ createSignedUrls: async () => ({ data: [], error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });

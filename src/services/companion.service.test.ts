@@ -17,6 +17,14 @@ describe("explicit weekly actions", () => {
     expect(rpc).toHaveBeenCalledWith("delete_companion_post", { p_post_id: "post", p_generated_at: "2026-10-18T10:00:00.123456+00:00" });
     expect(invoke).not.toHaveBeenCalled();
   });
+  it("sends the storage flag only for an explicitly chosen manual test", async () => {
+    await ensureWeeklyCompanion({ manual: true, storeTestRequest: true });
+    expect(invoke).toHaveBeenNthCalledWith(1, "weekly-companion", { body: { manual: true, store_test_request: true } });
+    await ensureWeeklyCompanion({ manual: false, storeTestRequest: true });
+    expect(invoke).toHaveBeenNthCalledWith(2, "weekly-companion", { body: {} });
+    await ensureWeeklyCompanion({ manual: true });
+    expect(invoke).toHaveBeenNthCalledWith(3, "weekly-companion", { body: { manual: true } });
+  });
   it("surfaces a failed deletion for retry without issuing generation", async () => {
     rpc.mockResolvedValueOnce({ error: new Error("failed") });
     await expect(deleteCompanionPost("post", null)).rejects.toThrow("failed");
