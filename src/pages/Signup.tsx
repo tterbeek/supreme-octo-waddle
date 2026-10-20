@@ -119,7 +119,7 @@ export default function Signup({ onSignup }: SignupProps) {
     <div className="flex flex-col items-center justify-start pt-24 pb-12 min-h-dvh bg-movenotes-bg text-movenotes-text relative">
       <PublicTopNav />
       <div className="mb-6 flex justify-center">
-        <HeaderLogo />
+        <HeaderLogo withTagline />
       </div>
       <FormPage title="Create account" backTo="/" dirty={email !== prefilledEmail || Boolean(otp || consentPrivacy || consentTerms || newsletterOptIn)} busy={loading}>
 
