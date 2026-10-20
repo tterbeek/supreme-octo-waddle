@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import PublicTopNav from "../components/PublicTopNav";
+import HeaderLogo from "../components/HeaderLogo";
 
 export default function Login({ onLogin }: { onLogin?: (session: any) => void }) {
   const [email, setEmail] = useState("");
@@ -81,6 +82,9 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
   return (
     <div className="flex flex-col items-center justify-start pt-24 pb-12 min-h-dvh bg-movenotes-bg text-movenotes-text relative">
       <PublicTopNav />
+      <div className="mb-6 flex justify-center">
+        <HeaderLogo />
+      </div>
       <FormPage title="Log in" backTo="/" dirty={Boolean(email || otp)} busy={loading}>
         {error && <p role="alert" className="mn-error">{error}</p>}
 

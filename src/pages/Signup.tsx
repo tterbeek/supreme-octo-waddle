@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import PublicTopNav from "../components/PublicTopNav";
+import HeaderLogo from "../components/HeaderLogo";
 
 interface SignupProps {
   onSignup?: (session: any) => void;
@@ -117,6 +118,9 @@ export default function Signup({ onSignup }: SignupProps) {
   return (
     <div className="flex flex-col items-center justify-start pt-24 pb-12 min-h-dvh bg-movenotes-bg text-movenotes-text relative">
       <PublicTopNav />
+      <div className="mb-6 flex justify-center">
+        <HeaderLogo />
+      </div>
       <FormPage title="Create account" backTo="/" dirty={email !== prefilledEmail || Boolean(otp || consentPrivacy || consentTerms || newsletterOptIn)} busy={loading}>
 
         {error && <p role="alert" className="mn-error">{error}</p>}

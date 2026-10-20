@@ -1,7 +1,10 @@
+import type { DirectionProgress } from "./companionDirectionProgress.ts";
+
 export type CompanionSource = {
   kind: "direction" | "tweak" | "tweak_reflection" | "companion_reflection" | "activity" | "totals";
   label: string;
   detail: string;
+  progress?: DirectionProgress;
 };
 export type CompanionPost = {
   id: string;
@@ -34,9 +37,14 @@ export function canRunWeeklyNow(user: { email?: string | null; email_confirmed_a
 }
 
 export const COMPANION_INSTRUCTIONS = `You write a private weekly Companion post for MoveNotes, a low-pressure movement journal.
-Write only the thought for the week: 40–80 words of plain text, in the user's language when evident, ending with at most one optional reflective question.
+Write 40–80 words in two short paragraphs, separated by a blank line. Use plain text, in the user's language when evident.
+Develop one main thought rather than combining several observations. End with at most one optional reflective question.
 Start directly with one specific, gently phrased observation or perspective grounded in the supplied records.
-Do NOT begin with, or include, a weekly overview, list of activities, counts, distances, durations, target progress or a recap of Directions and Tiny Tweaks. Those details already live in Insights and What it used.
+Do not write a weekly overview or list activities and metrics.
+You may mention one relevant Direction and its supplied progress when it adds meaning to the person's experience, especially when they have explicitly said that goal matters to them.
+Use only supplied, calculated progress. Do not infer that reaching a target proves satisfaction, fitness or that a Tiny Tweak worked. Do not suggest increasing targets or compensating for shortfalls. Do not invent an "on track" assessment or calendar pacing.
+Direction actual and remaining values are measured through as_of only; a monthly or yearly period_end may be later. Do not extrapolate beyond that cutoff.
+Choose one main thread. You do not need to connect every thought to a Direction or Tiny Tweak. An experiment may be useful, unhelpful or unresolved; do not automatically argue for keeping it.
 Use current Directions, the current Tiny Tweak, the last Tiny Tweak reflection and the completed week's activities (and activity notes only when supplied) as context, not as a checklist to repeat.
 Use supplied Companion reflections as the person's own perspective on earlier thoughts, not as AI feedback or verified movement history. Do not infer the earlier AI thought or assume its claims were true. Original authorized activity records remain authoritative for activity facts; preserve uncertainty where reflections and records differ.
 Distinguish what the person actually wrote from your tentative interpretation. Do not claim a tweak caused an outcome or that metrics prove success. Never invent feelings, personal circumstances, reasons or memories.
@@ -68,12 +76,17 @@ export function buildCompanionSources(input: {
   allowNotes: boolean;
   activityLimitReached?: boolean;
   companionReflections?: { week_start: string; user_reflection: string | null }[];
+  directionProgress?: DirectionProgress[];
 }): CompanionSource[] {
   const sources: CompanionSource[] = [];
-  for (const goal of input.goals.slice(0, 30)) sources.push({
-    kind: "direction", label: `Current Direction · ${goal.activity_type}`,
-    detail: `${goal.target} ${goal.metric} per ${goal.period}${goal.name ? ` · ${clip(goal.name, 200)}` : ""}`,
-  });
+  for (const goal of input.goals.slice(0, 30)) {
+    const progress = input.directionProgress?.find(item => item.activity_type === goal.activity_type && item.metric === goal.metric && item.period === goal.period);
+    sources.push({
+      kind: "direction", label: `Current Direction · ${goal.activity_type}`,
+      detail: `${goal.target} ${goal.metric} per ${goal.period}${goal.name ? ` · ${clip(goal.name, 200)}` : ""}${progress ? `\nComputed progress: ${progress.actual} / ${progress.target} ${progress.unit} · ${progress.remaining} ${progress.unit} remaining\nPeriod: ${progress.period_start}–${progress.period_end} · as of ${progress.as_of}` : ""}`,
+      ...(progress ? { progress } : {}),
+    });
+  }
   if (input.tweak?.trim()) sources.push({ kind: "tweak", label: "Current Tiny Tweak", detail: clip(input.tweak, 2000) });
   if (input.lastReflection?.trim()) sources.push({ kind: "tweak_reflection", label: "Your last Tiny Tweak reflection", detail: clip(input.lastReflection, 2000) });
   for (const reflection of (input.companionReflections ?? []).filter(item => item.user_reflection?.trim()).slice(0, 3)) {

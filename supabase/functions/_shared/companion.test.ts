@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildCompanionSources, canRunWeeklyNow, previousCompletedWeek, readCompanionOutput, type CompanionActivity } from "./companion";
+import { buildCompanionSources, canRunWeeklyNow, COMPANION_INSTRUCTIONS, previousCompletedWeek, readCompanionOutput, type CompanionActivity } from "./companion";
+import { calculateDirectionProgress } from "./companionDirectionProgress";
 
 describe("manual weekly eligibility", () => {
   it("requires the authenticated confirmed owner email, never profile metadata or arbitrary accounts", () => {
@@ -57,9 +58,30 @@ describe("completed weekly context", () => {
     const base = { goals: [], tweak: null, lastReflection: null, activities: [], allowNotes: false };
     expect(buildCompanionSources(base)).toEqual(buildCompanionSources({ ...base, companionReflections: [] }));
   });
+  it("attaches calculated Direction values as structured context and readable provenance", () => {
+    const goals = [{ activity_type: "run", metric: "distance", period: "year", target: 1000, name: "My long-term goal" }];
+    const directionProgress = calculateDirectionProgress(goals, [{ type: "run", date: "2026-01-01", distance_km: 600, duration_min: null }], "2026-10-18");
+    const sources = buildCompanionSources({ goals, activities: [], tweak: null, lastReflection: null, allowNotes: false, directionProgress });
+    expect(sources[0].progress).toMatchObject({ actual: 600, remaining: 400, target: 1000, as_of: "2026-10-18" });
+    expect(sources[0].detail).toContain("600 / 1000 km");
+    expect(sources[0].detail).toContain("400 km remaining");
+    expect(sources[0].detail).toContain("as of 2026-10-18");
+  });
 });
 
 describe("provider output", () => {
+  it("requests two paragraphs and selective grounded progress without pressure or compulsory tweak endorsement", () => {
+    expect(COMPANION_INSTRUCTIONS).toContain("two short paragraphs, separated by a blank line");
+    expect(COMPANION_INSTRUCTIONS).toContain("Use only supplied, calculated progress");
+    expect(COMPANION_INSTRUCTIONS).toContain("especially when they have explicitly said that goal matters to them");
+    expect(COMPANION_INSTRUCTIONS).toContain("Do not suggest increasing targets or compensating for shortfalls");
+    expect(COMPANION_INSTRUCTIONS).toContain("do not automatically argue for keeping it");
+    expect(COMPANION_INSTRUCTIONS).not.toContain("durations, target progress");
+  });
+  it("preserves the provider's blank line between paragraphs", () => {
+    const text = "One main thought.\n\nAn optional question?";
+    expect(readCompanionOutput({ status: "completed", output: [{ type: "message", content: [{ type: "output_text", text }] }] })).toBe(text);
+  });
   it("reads text after reasoning items rather than assuming output[0] contains the answer", () => {
     expect(readCompanionOutput({ status: "completed", output: [{ type: "reasoning" }, { type: "message", content: [{ type: "output_text", text: "A small thought." }] }] })).toBe("A small thought.");
   });

@@ -4,6 +4,7 @@ import {
 } from "../_shared/companion.ts";
 import { FEEDBACK_GUIDANCE_INSTRUCTIONS, loadFeedbackGuidance } from "../_shared/companionFeedback.ts";
 import { companionRunDiagnostics, storeCompanionTestRequest, type CompanionRunDiagnostics } from "../_shared/companionDiagnostics.ts";
+import { loadDirectionProgress } from "../_shared/companionDirectionProgress.ts";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -85,12 +86,18 @@ Deno.serve(async (req) => {
     ]);
     for (const result of results) if (result.error) throw result.error;
     const [goals, tweaks, reviews, activities, companionReflections] = results;
+    const directionProgress = await loadDirectionProgress(goals.data ?? [], week.end, ({ start, end, offset, limit }) =>
+      client.from("activities").select("type, date, distance_km, duration_min")
+        .eq("user_id", user.id).gte("date", start).lte("date", end)
+        .order("date", { ascending: true }).order("id", { ascending: true }).range(offset, offset + limit - 1)
+    );
     const sources = buildCompanionSources({
       goals: goals.data ?? [], tweak: tweaks.data?.[0]?.text ?? null,
       lastReflection: reviews.data?.[0]?.text ?? null,
       activities: (activities.data ?? []) as unknown as Parameters<typeof buildCompanionSources>[0]["activities"],
       allowNotes: prefs.allow_activity_notes, activityLimitReached: (activities.data?.length ?? 0) > 200,
       companionReflections: companionReflections.data ?? [],
+      directionProgress,
     });
     const feedbackGuidance = await loadFeedbackGuidance(() => client.rpc("recent_companion_feedback", { p_content_type: "weekly_thought" }));
     // Recheck consent immediately before sending any context to the provider.

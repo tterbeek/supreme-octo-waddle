@@ -129,12 +129,37 @@ never reused as factual context. Included reflections appear in **What it used**
 The first Journal visit after a week completes prepares one post for the
 previous Monday–Sunday in the timezone saved with the preferences. Generation
 is requested on Journal entry/return; there is no background schedule. It does
-not backfill missed weeks. The post is a short thought and optional question;
-the prompt excludes weekly recaps and target summaries. **What it used** holds
+not backfill missed weeks. The post is 40–80 words in two short paragraphs,
+with at most one optional question. The prompt excludes weekly recaps and metric
+lists, but may selectively mention one meaningful Direction and its supplied,
+calculated progress. It does not infer satisfaction, fitness, tweak effectiveness
+or calendar pacing from target attainment. **What it used** holds
 the supporting records as a snapshot; later edits to records do not rewrite an
 already published thought. Large inputs are bounded to 200 activities, 30
 Directions, 1,000 characters per activity note, and a shared 20,000-character
 activity-note budget. Excerpts/omissions are labelled in provenance.
+
+Direction progress is calculated in the Edge Function, using the same calendar
+period and metric rules as the app's stats, through the reflected week's Sunday
+(not today). Each Direction source includes structured `activity_type`, `metric`,
+`unit`, `period`, `period_start`, `period_end`, `target`, `actual`, `remaining`, and
+`as_of` values. Month/year period ends retain their full calendar end; accumulated
+progress stops at `as_of`. A 1,000 km yearly Direction therefore includes actual
+year-to-date distance and non-negative distance remaining as of that Sunday.
+No `on_track` or pacing assessment is supplied. These use current Direction
+definitions, not historical target versions.
+
+All matching numeric activity rows are paginated through the authenticated
+owner-scoped client, independently of the 200 weekly narrative-detail limit.
+Only calculated totals—not raw month/year activity history or older private
+notes—are added to provider context and saved in **What it used**. A failed
+page read fails generation rather than publishing partial progress. No existing
+stats functions, goals, or activity records are changed. The thought UI already
+uses `white-space: pre-wrap`, preserving the blank line between paragraphs.
+
+This progress/prompt change requires redeploying `weekly-companion`; no new
+migration or frontend deployment is required. Existing published thoughts stay
+unchanged unless explicitly regenerated through the owner admin action.
 
 The provider uses the [OpenAI Responses API](https://developers.openai.com/api/docs/guides/text)
 with `store: false`; this is not a claim of zero provider retention. The API key

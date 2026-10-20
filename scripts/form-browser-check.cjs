@@ -74,6 +74,11 @@ const exceptions = [];
   await choose('settings');await click('Units');await evaluate('window.formQA.fail=true');await click('Imperial (mi)');await waitFor("!!document.querySelector('[role=alert]')");await layout('units save error');
   await choose('circle-profile');await type('#circle-name','Changed profile');await evaluate('window.formQA.fail=true');await click('Save profile');await waitFor("!!document.querySelector('[role=alert]')");await layout('profile save error');
   await choose('circle-invite');await click('Accept invitation');await waitFor("location.pathname==='/settings/circle'");
+  for(const name of ['login','signup']){
+    await choose(name);await evaluate('window.scrollTo(0,0)');
+    if(!(await evaluate("(()=>{const logo=[...document.querySelectorAll('h1')].find(el=>el.textContent==='MoveNotes');const email=document.querySelector('input[type=email]');return !!logo && !!email && logo.getBoundingClientRect().bottom<=email.getBoundingClientRect().top && logo.getBoundingClientRect().top>=0})()")))throw Error(name+' logo missing or below fields');
+    await views(name+' with MoveNotes logo');await snapshot(name+'-logo-mobile');
+  }
   await choose('login');await type('input[type=email]','fictional@example.invalid');await click('Send Login Code');await views('login OTP');
   await choose('signup');await type('input[type=email]','fictional@example.invalid');await evaluate("document.querySelector('#privacy').click();document.querySelector('#terms').click()");await click('Send Signup Code');await views('signup OTP');
   // Keyboard focus trapping and position restoration with a genuinely scrolled page.
@@ -106,7 +111,13 @@ const exceptions = [];
   await choose('note');const before=await evaluate('window.formQA.writes.length');await type('textarea','A private memory');await escape();await click('Discard changes');if(await evaluate(`window.formQA.writes.slice(${before}).some(x=>x.table==='activities'&&x.op==='delete')`))throw Error('Reflection dismissal deleted an activity');
   // Saved settings are not unsaved drafts.
   await choose('companion-settings');await evaluate("document.querySelector('input[type=checkbox]').click()");await delay(150);await escape();if(await evaluate("document.body.innerText.includes('Discard changes')"))throw Error('Instant-save settings prompted discard');
-  await choose('companion-response');await click('Add your reflection');await type('textarea','My own words');await views('companion response');await escape();await click('Discard changes');
+  await choose('companion-response');
+  await evaluate('window.scrollTo(0,0)');await delay(50);
+  if(!(await evaluate("(()=>{const p=document.querySelector('article[aria-label=\"Weekly Companion thought\"] p.whitespace-pre-wrap');return !!p && p.textContent.includes('\\n\\n') && ['pre-wrap','pre-line','break-spaces'].includes(getComputedStyle(p).whiteSpace)})()")))throw Error('Companion paragraph breaks collapse');
+  await snapshot('companion-paragraphs-mobile');
+  await click('What it used');await waitFor("document.body.innerText.includes('30.4 / 20 km') && document.body.innerText.includes('as of 2026-10-11')");await views('companion calculated progress provenance');await escape();
+  results.push('Companion blank-line paragraphs preserved and calculated progress shown in provenance');
+  await click('Add your reflection');await type('textarea','My own words');await views('companion response');await escape();await click('Discard changes');
   // Feedback is an independent, explicitly saved comment on the exact AI output.
   await choose('companion-response');await click('Yes');await waitFor("document.body.innerText.includes('Feedback saved')");
   await type('textarea','Unsaved feedback draft');await views('companion feedback');await snapshot('companion-feedback-mobile');

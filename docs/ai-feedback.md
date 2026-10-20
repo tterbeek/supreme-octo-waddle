@@ -28,6 +28,17 @@ generation, rather than used to circumvent note-consent changes.
 
 ## Timing and generation
 
+Direction context also includes server-calculated weekly/monthly/yearly progress
+through the reflected Sunday: calendar bounds, target, actual, remaining, unit
+and `as_of`. Full numeric-history pages are read independently of the weekly
+narrative cap. No pacing status is inferred. The instruction may use one relevant
+Direction when meaningful to the person, without a recap, target escalation,
+compensation pressure or automatic endorsement of a Tiny Tweak. It requests
+40–80 words in two short paragraphs; existing `pre-wrap` rendering preserves
+their blank line. Structured progress is also listed under **What it used**.
+Formatting and context remain separate from user text, following the
+[official prompting guidance](https://developers.openai.com/api/docs/guides/prompt-engineering).
+
 Your saved **Companion reflections** also inform future thoughts, but remain
 separate from feedback guidance. The authenticated, owner-scoped post query
 reads up to three non-empty responses to ready/redacted posts from weeks within
