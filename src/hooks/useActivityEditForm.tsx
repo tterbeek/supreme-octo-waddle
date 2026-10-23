@@ -18,7 +18,7 @@ import {
   type ImageSource,
 } from "../lib/media/getImage";
 import { getCurrentUser } from "../services/auth.service";
-import { fetchActivityPreference } from "../services/quickLog.service";
+import { createPresetFromActivity, fetchActivityPreference } from "../services/quickLog.service";
 import {
   compressImage,
   createThumbnail,
@@ -88,6 +88,9 @@ export function useActivityEditForm({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saveAsPreset, setSaveAsPreset] = useState(false);
+  const [presetNameOverride, setPresetName] = useState<string | null>(null);
+  const presetName = presetNameOverride ?? title;
   const [deleting, setDeleting] = useState(false);
   const [ready, setReady] = useState(false);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -399,6 +402,13 @@ export function useActivityEditForm({
       if (removeExistingPhotos || selectedFiles.length > 0) {
         void resolveActivityLocationTag(activity.id);
       }
+      if (saveAsPreset && presetName.trim()) {
+        if (!currentUserId) throw new Error("Sign in to save a preset.");
+        const { error: presetError } = await createPresetFromActivity({
+          userId: currentUserId, activityType, name: presetName.trim(), distanceValue, durationValue, effortValue,
+        });
+        if (presetError) throw presetError;
+      }
     } catch (err: any) {
       console.error("[EditActivity] Save error:", err);
       setUploadError(err?.message || "Could not save changes");
@@ -523,6 +533,10 @@ export function useActivityEditForm({
     setUploadError,
     setUploadProgress,
     saving,
+    saveAsPreset,
+    setSaveAsPreset,
+    presetName,
+    setPresetName,
     deleting,
     ready,
     handleDistanceChange,

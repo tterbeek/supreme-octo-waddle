@@ -11,6 +11,7 @@ import FeelingPhasesSelector from "../../components/quick-log/FeelingPhasesSelec
 import EffortSelector from "../../components/quick-log/EffortSelector";
 import ModalSheet from "../../components/ModalSheet";
 import { FormActions } from "../../components/forms/FormLayout";
+import SavePresetFooter from "../../components/quick-log/SavePresetFooter";
 
 
 type EditActivityModalProps = {
@@ -64,6 +65,10 @@ export default function EditActivityModal({
     uploadError,
     uploadProgress,
     saving,
+    saveAsPreset,
+    setSaveAsPreset,
+    presetName,
+    setPresetName,
     deleting,
     ready,
     distanceDisplay,
@@ -109,7 +114,7 @@ export default function EditActivityModal({
   return (
     <>
       <ModalSheet title={reflectionOnly ? "Add reflection" : "Edit activity"} onClose={onClose} busy={saving || deleting || uploading} ready={ready}
-        draft={{ title, date, distanceDisplay, duration, feelingDuring, feelingAfter, effort, selectedEquipmentIds, note, selectedFiles, removeExistingPhotos }}>
+        draft={{ title, date, distanceDisplay, duration, feelingDuring, feelingAfter, effort, selectedEquipmentIds, note, selectedFiles, removeExistingPhotos, saveAsPreset, presetName: saveAsPreset ? presetName : null }}>
         <div className="space-y-5">
           {!reflectionOnly && (
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -331,6 +336,8 @@ export default function EditActivityModal({
             </div>
           )}
 
+          {!reflectionOnly && <SavePresetFooter saveAsPreset={saveAsPreset} presetName={presetName}
+            onToggleSaveAsPreset={() => setSaveAsPreset(value => !value)} onPresetNameChange={setPresetName} hideSave />}
           <FormActions><button
             onClick={handleSave}
             disabled={saving || deleting || !ready}

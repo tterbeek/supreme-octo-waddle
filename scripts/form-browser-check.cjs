@@ -24,7 +24,7 @@ const exceptions = [];
   const send=(method,params={})=>new Promise((resolve,reject)=>{const i=++id;pending.set(i,{resolve,reject});ws.send(JSON.stringify({id:i,method,params}))});
   const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true,userGesture:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value};
   const waitFor=async(expression,limit=100)=>{for(let n=0;n<limit;n++){if(await evaluate(expression))return;await delay(40)}throw Error(`Timed out in ${await evaluate('window.formQA?.case')}: ${expression}\n${await evaluate('document.body.innerText')}`)};
-  const click=async label=>{await evaluate(`(()=>{const nodes=[...document.querySelectorAll('button,a')].filter(b=>!b.closest('[inert]')&&getComputedStyle(b).visibility!=='hidden');const b=nodes.find(b=>b.textContent.trim()===${JSON.stringify(label)}||b.getAttribute('aria-label')===${JSON.stringify(label)});if(!b)throw Error('Missing button '+${JSON.stringify(label)});if(b.disabled)throw Error('Disabled button '+${JSON.stringify(label)});b.focus({preventScroll:true});b.click()})()`);await delay(50)};
+  const click=async label=>{await evaluate(`(()=>{const nodes=[...document.querySelectorAll('button,a')].filter(b=>!b.closest('[inert]')&&getComputedStyle(b).visibility!=='hidden');const b=nodes.find(b=>b.textContent.trim()===${JSON.stringify(label)}||b.getAttribute('aria-label')===${JSON.stringify(label)}||(b.getAttribute('aria-labelledby')||'').split(' ').map(id=>document.getElementById(id)?.textContent.trim()).join(' ')===${JSON.stringify(label)});if(!b)throw Error('Missing button '+${JSON.stringify(label)});if(b.disabled)throw Error('Disabled button '+${JSON.stringify(label)});b.focus({preventScroll:true});b.click()})()`);await delay(50)};
   const type=async(selector,text)=>{await evaluate(`(()=>{const el=[...document.querySelectorAll(${JSON.stringify(selector)})].find(e=>!e.closest('[inert]')&&getComputedStyle(e).visibility!=='hidden');if(!el)throw Error('Missing field');const p=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(p,'value').set.call(el,${JSON.stringify(text)});el.dispatchEvent(new Event('input',{bubbles:true}))})()`);await delay(50)};
   const choose=async name=>{await evaluate(`window.formQA.select(${JSON.stringify(name)})`);await delay(200);await waitFor("!document.querySelector('[role=dialog] fieldset:disabled')");};
   const escape=async()=>{await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'});await delay(50)};
@@ -54,6 +54,24 @@ const exceptions = [];
     await send('Emulation.setDeviceMetricsOverride',{width:320,height:720,deviceScaleFactor:1,mobile:true});await evaluate("document.documentElement.style.fontSize='32px'");await delay(80);await layout(name+' enlarged narrow');
     await evaluate("document.documentElement.style.fontSize=''");await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   }
+  for(const [name,save] of [['log','Save activity'],['import','Save details'],['edit','Save Changes']]){
+    await choose(name);
+    if(!(await evaluate("document.querySelector('[role=switch]')?.getAttribute('aria-checked')==='false' && !document.querySelector('input[placeholder=\"e.g. Morning 5k loop\"]')")))throw Error(name+' preset toggle must default off');
+    await click('Save activity as preset');await type('input[placeholder="e.g. Morning 5k loop"]','Reusable '+name);
+    if(!(await evaluate("document.querySelector('[role=switch]').getAttribute('aria-checked')==='true'")))throw Error(name+' preset toggle did not switch on');
+    await views(name+' preset toggle');await snapshot(name+'-preset-toggle-mobile');
+    await escape();await click('Keep editing');
+    if(!(await evaluate(`document.querySelector('input[placeholder="e.g. Morning 5k loop"]').value===${JSON.stringify('Reusable '+name)}`)))throw Error(name+' preset draft lost');
+    const writes=await evaluate('window.formQA.writes.length');await click(save);
+    await waitFor(`window.formQA.writes.slice(${writes}).some(x=>x.table==='presets' && x.op==='insert')`);
+    if(!(await evaluate(`window.formQA.writes.slice(${writes}).some(x=>x.table==='presets' && x.payload[0].name===${JSON.stringify('Reusable '+name)} && x.payload[0].type==='walk')`)))throw Error(name+' preset payload incorrect');
+    if(name!=='log' && await evaluate(`window.formQA.writes.slice(${writes}).some(x=>x.table==='activities' && x.op==='insert')`))throw Error(name+' preset saving duplicated an activity');
+    await choose(name);await click('Save activity as preset');await click('Save activity as preset');
+    if(await evaluate("!!document.querySelector('input[placeholder=\"e.g. Morning 5k loop\"]')"))throw Error(name+' preset field remains after switch off');
+    await escape();await waitFor("!document.querySelector('.mn-overlay[aria-hidden=false]')");
+  }
+  await choose('edit-reflection');if(await evaluate("!!document.querySelector('[role=switch]')"))throw Error('Reflection-only form should not offer activity presets');
+  results.push('shared preset toggle save/off/draft protection in create, import and edit without duplicate activities');
   const editable=[['log','#activity-title','Save activity'],['import','#activity-title','Save details'],['edit','#edit-activity-title','Save Changes'],['edit-reflection','textarea','Save reflection'],['note','textarea','Save reflection'],['journal','textarea','Save'],['journal-edit','textarea','Save'],['preset-add','#preset-name','Save preset'],['preset-edit','#preset-name','Save changes'],['equipment-add','input','Add equipment'],['direction-add','input[aria-label=Target]','Set direction'],['direction-edit','input[aria-label=Name]','Save Changes'],['tweak','textarea','Save'],['tweak-adjust','textarea','Save']];
   for(const[name,selector,save]of editable){
     await choose(name);await escape();await waitFor("!document.querySelector('.mn-overlay[aria-hidden=false]')");

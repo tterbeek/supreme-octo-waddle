@@ -220,7 +220,7 @@ export default function AddActivityForm({
         </div>
 
         <div>
-          {!existingActivity ? <SavePresetFooter
+          <SavePresetFooter
             className="mb-4 space-y-3"
             saveAsPreset={saveAsPreset}
             presetName={presetName}
@@ -242,7 +242,8 @@ export default function AddActivityForm({
               setMetricTooltipAcknowledged(true);
               localStorage.setItem(tooltipSeenKey, "true");
             }}
-          /> : (
+          />
+          {existingActivity && !saveAsPreset && (
             <div className="space-y-2 pb-3">
               <button type="button" onClick={keepImportedData} className="w-full py-2 text-sm text-movenotes-primary underline">Keep imported details as-is</button>
             </div>
