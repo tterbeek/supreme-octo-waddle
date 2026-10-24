@@ -9,9 +9,14 @@ describe("activity image privacy and formatting", () => {
   it("copies only allowlisted fields, not private notes or photo credentials", () => {
     const privateActivity = { ...base, notes: "SECRET NOTE", effort: 5, feeling: "sad", user_id: "PRIVATE ID", source: "polar", route: "SECRET ROUTE", note_image_url: "https://private?token=SECRET" };
     const model = buildActivityImageModel(privateActivity, "metric");
-    expect(Object.keys(model).sort()).toEqual(["date", "metrics", "title", "type"]);
-    expect(model).toEqual({ type: "run", title: "Morning run", date: "17 Oct 2026", metrics: ["10 km", "1h5min"] });
-    expect(JSON.stringify(model)).not.toMatch(/SECRET|PRIVATE|polar/);
+    expect(Object.keys(model).sort()).toEqual(["date", "metrics", "source", "title", "type"]);
+    expect(model).toEqual({ type: "run", title: "Morning run", date: "17 Oct 2026", metrics: ["10 km", "1h5min"], source: "polar" });
+    expect(JSON.stringify(model)).not.toMatch(/SECRET|PRIVATE/);
+  });
+  it("includes only supported import provenance and omits manual or arbitrary sources", () => {
+    expect(buildActivityImageModel({ ...base, source: "strava" }, "metric").source).toBe("strava");
+    expect(buildActivityImageModel({ ...base, source: "manual" }, "metric")).not.toHaveProperty("source");
+    expect(buildActivityImageModel({ ...base, source: "https://private?token=SECRET" }, "metric")).not.toHaveProperty("source");
   });
   it("uses imperial units and the user's preferred metric order", () => {
     expect(buildActivityImageModel(base, "imperial", { activity_type: "run", default_metric: "duration" }).metrics).toEqual(["1h5min", "6 mi"]);

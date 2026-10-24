@@ -9,7 +9,7 @@ export async function loadOwnedActivityImage(activityId: string, units: UnitSyst
   if (authError || !auth.user) throw new Error("Sign in to share your activity.");
   const userId = auth.user.id;
   const { data: activity, error } = await supabase.from("activities")
-    .select("type, title, date, distance_km, duration_min, note_image_url, note_thumb_image_url")
+    .select("type, title, date, source, distance_km, duration_min, note_image_url, note_thumb_image_url")
     .eq("id", activityId).eq("user_id", userId).single();
   if (error || !activity) throw new Error("Couldn't load your activity. Try again.");
   const [photos, preferences] = await Promise.all([
@@ -27,7 +27,7 @@ export async function loadOwnedActivityImage(activityId: string, units: UnitSyst
   };
 }
 
-/** Authenticated private storage download. Neither URLs nor source metadata reach the renderer. */
+/** Authenticated private storage download. Storage URLs never reach the renderer. */
 export async function loadActivityImagePhoto(rawPath: string): Promise<Blob> {
   const path = normalizeStoragePath(rawPath);
   if (!path) throw new Error("Couldn't load this photo.");

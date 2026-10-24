@@ -8,6 +8,7 @@ import { ACTIVITY_TYPES } from '../config/activityTypes';
 import { signStorageValues } from '../services/storage.service';
 import { supabase } from '../supabaseClient';
 import MemoryHighlightPhotos from '../components/MemoryHighlightPhotos';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function Photo({path,urls,className=''}:{path?:string|null;urls:Record<string,string>;className?:string}) {
   return path&&urls[path] ? <img loading="lazy" src={urls[path]} alt="" className={className} onError={e=>{e.currentTarget.style.display='none';}}/> : null;
@@ -28,6 +29,9 @@ export default function MemoriesPage() {
   const month=requestedMonth&&/^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)?requestedMonth:null;
   const requestedYear=params.get('year');
   const year=(requestedYear&&years.includes(requestedYear)?requestedYear:null)||month?.slice(0,4)||years[0];
+  const yearIndex=years.indexOf(year);
+  const previousYear=years[yearIndex+1];
+  const nextYear=yearIndex>0?years[yearIndex-1]:undefined;
   const change=(key:string,value:string|null)=>{const next=new URLSearchParams(params);if(value)next.set(key,value);else next.delete(key);if(key==='year')next.delete('month');setParams(next,{replace:true});};
   useEffect(()=>{
     let cancelled=false;setError(false);
@@ -80,7 +84,19 @@ export default function MemoriesPage() {
       <button className="text-xs underline px-5 pb-4 text-movenotes-muted" onClick={()=>{setHideError(false);void memoryFeatureAction(feature.day,feature.id!,true).then(()=>setFeature(null)).catch(()=>setHideError(true));}}>Hide this suggestion</button>{hideError&&<p role="alert" className="px-5 pb-3 text-sm">Couldn't hide this suggestion. Please try again.</p>}
     </section>}
     {!!months.length&&<section className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="text-xl font-semibold">Through the years</h2><label className="text-sm">Year <select aria-label="Archive year" className="bg-transparent border rounded-lg p-2 ml-2" value={year} onChange={e=>change('year',e.target.value)}>{years.map(y=><option key={y}>{y}</option>)}</select></label></div>
+      {years.length>1&&<>
+      <h2 className="text-xl font-semibold">Through the years</h2>
+      <nav aria-label="Archive year" className="relative grid grid-cols-3 items-center gap-2 py-2">
+        <span aria-hidden="true" className="absolute inset-x-6 top-1/2 h-px bg-movenotes-border"/>
+        <button type="button" disabled={!previousYear} aria-label={previousYear?`Show year ${previousYear}`:'No earlier year'}
+          className="relative min-h-11 flex items-center justify-center gap-1 rounded-full bg-movenotes-bg px-2 text-sm text-movenotes-muted disabled:opacity-30"
+          onClick={()=>previousYear&&change('year',previousYear)}><ChevronLeft size={16} aria-hidden="true"/><span>{previousYear||'—'}</span></button>
+        <span aria-current="true" aria-label={`Selected year ${year}`} className="relative flex min-h-11 items-center justify-center rounded-full border border-movenotes-primary/20 bg-movenotes-bg px-3 font-semibold text-movenotes-primary">{year}</span>
+        <button type="button" disabled={!nextYear} aria-label={nextYear?`Show year ${nextYear}`:'No later year'}
+          className="relative min-h-11 flex items-center justify-center gap-1 rounded-full bg-movenotes-bg px-2 text-sm text-movenotes-muted disabled:opacity-30"
+          onClick={()=>nextYear&&change('year',nextYear)}><span>{nextYear||'—'}</span><ChevronRight size={16} aria-hidden="true"/></button>
+      </nav>
+      </>}
       {month ? <><button className="underline text-sm" onClick={()=>change('month',null)}>← All months</button><h3 className="text-xl">{new Date(`${month}-01T12:00:00`).toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</h3><div className="space-y-3">{rows.map(activity=>{const config=ACTIVITY_TYPES[activity.type]||ACTIVITY_TYPES.other;const photo=getActivityPhotos(activity)[0];return <button key={activity.id} className="w-full text-left rounded-2xl border border-movenotes-border bg-movenotes-surface p-4 flex gap-4" onClick={()=>openMemory(activity.id,monthRange(month))}><div className="w-16 h-20 shrink-0 rounded-lg overflow-hidden bg-movenotes-bg flex items-center justify-center">{photo ? <Photo path={photo.thumb_path||photo.image_path} urls={urls} className="w-full h-full object-cover"/> : <config.Icon size={28}/>}</div><div className="min-w-0"><p className="text-xs text-movenotes-muted">{activity.date} · {config.label}</p><h4 className="font-semibold break-words">{activity.title||config.label}</h4>{activity.notes&&<p className="text-sm line-clamp-2 whitespace-pre-wrap mt-1">{activity.notes}</p>}</div></button>;})}</div>{pageLoading&&<p role="status">Loading activities…</p>}{pageError&&<p role="alert">Couldn't load activities. <button className="underline" onClick={()=>rows.length?void more():refresh()}>Retry</button></p>}{hasMore&&<button disabled={pageLoading} className="border rounded-xl p-3 w-full" onClick={()=>void more()}>More activities</button>}</> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{months.filter(m=>m.month.startsWith(year)).map(m=><button key={m.month} className="text-left rounded-2xl overflow-hidden border border-movenotes-border bg-movenotes-surface" onClick={()=>change('month',m.month)}>{m.thumbs?.length>0&&<div className="flex h-28 overflow-hidden">{m.thumbs.filter(Boolean).map((p,i)=><Photo key={`${p}:${i}`} path={p} urls={urls} className="min-w-0 flex-1 w-1/3 h-full object-cover"/>)}</div>}<div className="p-5"><h3 className="text-lg font-semibold">{new Date(`${m.month}-01T12:00:00`).toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</h3><p className="text-sm text-movenotes-muted">{m.count} {m.count===1?'activity':'activities'}</p></div></button>)}</div>}
     </section>}
     {reader}

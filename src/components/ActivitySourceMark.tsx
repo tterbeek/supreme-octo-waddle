@@ -1,14 +1,4 @@
-import { IconLayersLinked } from "@tabler/icons-react";
-
-type ActivitySourceConfig = {
-  label: string;
-  icon?: typeof IconLayersLinked;
-};
-
-const activitySources: Record<string, ActivitySourceConfig> = {
-  polar: { label: "Polar", icon: IconLayersLinked },
-  strava: { label: "Strava" },
-};
+import { activitySources } from "../config/activitySources";
 
 export default function ActivitySourceMark({ source }: { source: string }) {
   const config = activitySources[source.toLowerCase()] ?? {

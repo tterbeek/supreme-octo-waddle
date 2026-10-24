@@ -8,6 +8,7 @@ export type ActivityImageModel = {
   title: string;
   date: string;
   metrics: string[];
+  source?: "polar" | "strava";
 };
 
 type ExportableActivity = {
@@ -16,6 +17,7 @@ type ExportableActivity = {
   date: string;
   distance_km?: number | null;
   duration_min?: number | null;
+  source?: string | null;
 };
 
 export function buildActivityImageModel(activity: ExportableActivity, units: UnitSystem, preference?: ActivityPreference): ActivityImageModel {
@@ -36,6 +38,7 @@ export function buildActivityImageModel(activity: ExportableActivity, units: Uni
     title: activity.title?.trim() || ACTIVITY_TYPES[type].label,
     date: date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
     metrics,
+    ...(activity.source === "polar" || activity.source === "strava" ? { source: activity.source } : {}),
   };
 }
 

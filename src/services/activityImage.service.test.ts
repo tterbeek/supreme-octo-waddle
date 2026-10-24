@@ -19,7 +19,7 @@ it("checks owner on the saved activity and attachments and performs no writes", 
     const q = {
       table,
       select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { type: "walk", title: "Saved walk", date: "2026-10-17", distance_km: null, duration_min: 20 }, error: null }),
+      single: vi.fn().mockResolvedValue({ data: { type: "walk", source: "polar", title: "Saved walk", date: "2026-10-17", distance_km: null, duration_min: 20 }, error: null }),
       maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(resolve),
     };
@@ -27,6 +27,7 @@ it("checks owner on the saved activity and attachments and performs no writes", 
   });
   const result = await loadOwnedActivityImage("activity", "metric");
   expect(result.model.title).toBe("Saved walk");
+  expect(result.model.source).toBe("polar");
   expect(result.model.metrics).toEqual(["20min"]);
   expect(result.photos).toEqual([]);
   expect(queries.map(q => q.table)).toEqual(["activities", "activity_photos", "activity_preferences"]);
