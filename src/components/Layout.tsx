@@ -9,6 +9,8 @@ import {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import AppHeader from "./AppHeader";
+import { BookOpen, Users, ChartLine } from "lucide-react";
+import MemoriesAlbumIcon from "./MemoriesAlbumIcon";
 import { usePwaInstallBanner } from "../hooks/usePwaInstallBanner";
 import PwaInstallBanner from "./PwaInstallBanner";
 import { LayoutChromeContext } from "../contexts/LayoutChromeContext";
@@ -255,7 +257,7 @@ export default function Layout({
         mx-auto 
         w-full 
         max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl 
-        px-4 pb-20 pt-2
+        px-4 pb-[calc(104px+env(safe-area-inset-bottom))] pt-2
       "
         >
           {/* Page content */}
@@ -270,6 +272,7 @@ export default function Layout({
           <nav className="fixed bottom-0 left-0 right-0 z-30 bg-movenotes-bg/95 backdrop-blur border-t-[3px] border-movenotes-border shadow-[0_-4px_14px_rgba(0,0,0,0.09)]">
             <div className="mx-auto max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-2 py-3 flex items-center gap-1 pb-[max(12px,env(safe-area-inset-bottom))]">
               {bottomNavItems.map((item) => {
+                const Icon = item.to === "/" ? BookOpen : item.to === "/circle" ? Users : ChartLine;
                 const isActive =
                   item.to === "/"
                     ? isJournalRoute
@@ -293,21 +296,23 @@ export default function Layout({
                     key={item.to}
                     type="button"
                     onClick={handleClick}
-                    className={`flex-1 text-center text-sm font-medium rounded-full py-2 transition ${
+                    className={`min-w-0 flex-1 text-center text-xs font-medium rounded-2xl py-2 transition ${
                       isActive
                         ? "bg-movenotes-primary/15 text-movenotes-primary shadow-sm border border-movenotes-primary/20"
                         : "text-movenotes-text/80 hover:text-movenotes-text bg-transparent"
                     }`}
                     aria-current={isActive ? "page" : undefined}
                   >
-                    <span className="inline-flex items-center justify-center gap-1">
-                      {item.label}
+                    <span className="inline-flex max-w-full flex-col items-center justify-center gap-1">
+                      {item.to === "/memories" ? <MemoriesAlbumIcon /> : <Icon size={24} strokeWidth={1.7} aria-hidden="true" />}
+                      <span className="relative max-w-full [overflow-wrap:anywhere]">{item.label}
                       {item.to === "/circle" && showCircleDot && !isCircleRoute && (
                         <span
-                          className="inline-block h-2 w-2 rounded-full bg-movenotes-primary"
+                          className="absolute -right-2 top-0 h-2 w-2 rounded-full bg-movenotes-primary"
                           aria-hidden="true"
                         />
                       )}
+                      </span>
                     </span>
                   </button>
                 );

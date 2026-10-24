@@ -32,15 +32,19 @@ The current day's assignment also refreshes after local-date rollover.
 ## Deterministic featured selection
 
 - Minimum age: 90 local calendar days, for suggestions only.
-- Date tiers: exact prior-year anniversary; prior-year anniversary within ±14 days;
+- Date tiers: exact prior-year anniversary; prior-year anniversary within ±30 days;
   other eligible history. Windows cross New Year. February 29 is never labelled an
   exact February 28 anniversary; non-leap years use March 1 for its nearby window
   only, while exact matching always requires the original month/day.
 - Permanently exclude hidden suggestions. Exclude activities actually displayed
   in the previous 30 days, except the current day's own assigned activity.
 - Within the best tier, rotate with a user/date/activity hash. Every third calendar
-  day prefers sparse entries when both sparse and photo/note entries exist; other
-  days lightly prefer photos/notes. No metrics, feelings or sentiment affect choice.
+  day prefers sparse entries, then other photo-free activities; other days prefer
+  photos, then notes. Exact anniversaries always remain first. When the nearby
+  window has no photos and there is no exact anniversary, one day in each three-day
+  cycle can instead feature an eligible photo from anywhere in the older archive,
+  labelled “A moment to revisit.” It retains the 90-day minimum age and all hide/
+  exposure exclusions. No metrics, feelings or sentiment affect choice.
 - Persist one assignment, including an empty assignment, per user/local day.
   A transaction advisory lock and primary key serialize simultaneous assignments.
   The server derives the day using the browser's local IANA zone (matching existing
@@ -55,6 +59,13 @@ The current day's assignment also refreshes after local-date rollover.
 `20261024000000_memories.sql` adds lightweight `memory_days` and
 `memory_dismissals` tables, owner policies, indexes and RPCs. It does not change
 existing activity records. There are no new secrets, AI calls or Edge Functions.
+
+`20261024010000_memory_highlight_photos.sql` updates the date window and selection
+functions. It preserves existing daily assignments, dismissals and exposure
+history; broader selection takes effect for the next unassigned day. The highlight
+now includes a native swipe/scroll photo gallery with keyboard/arrow controls and
+a counter. Opening a photo enters the existing Memory reader at that photo.
+Photos keep their original aspect ratio within the highlight frame.
 
 Apply locally without clearing development data:
 
@@ -82,14 +93,14 @@ Fixtures cover multiple years, 45 activities, multiline words, multiple photos,
 feelings, sparse Polar data, missing/empty/recent-only history and simulated errors.
 SVG photo placeholders are explicitly fictional; all Supabase network is blocked.
 
-The full Supabase verifier could not start here because Docker's socket was
-unavailable. The actual new migration and SQL assertions instead passed in a
-temporary PGlite PostgreSQL database with minimal auth/activity/owner-policy
-fixtures. This verifies SQL execution and the new rules, but does not replace
-replaying the complete baseline in Supabase. Run the isolated verifier with Docker
-before rollout. Browser tests use fictional auth/storage; real-account storage
-authorization, physical phone gestures/keyboard and multi-device concurrency need
-an authenticated development smoke test. No production data was accessed.
+The full isolated Supabase verifier passed on 24 October 2026: it replayed the
+production baseline and all migrations, then ran all database behavior tests,
+including both Memories suites. This resolves the earlier V1 Docker limitation.
+The two Memories migrations and SQL assertions also passed in temporary PGlite
+PostgreSQL. The normal development database was not reset. Browser tests use
+fictional auth/storage; real-account storage authorization, physical phone
+gestures/keyboard and multi-device concurrency still need an authenticated
+development smoke test. No production data was accessed.
 
 The optional P1 Journal invitation is not included.
 
@@ -110,11 +121,11 @@ The optional P1 Journal invitation is not included.
   date boundaries, distinct-photo collections and connected UI regression checks.
 
 Verification: 141 Vitest tests passed; production build and focused ESLint passed.
-The new migration and PostgreSQL assertions passed in temporary PGlite as described
-above. The browser journey passed 55 assertions across mobile, desktop and enlarged
+Full isolated Supabase schema verification and the additional PGlite assertions
+passed. The browser journey passed 63 assertions across mobile, desktop and enlarged
 text, including pagination, Back, Calendar/Photos reader entry, gallery, missing
-photo/error recovery, edit-save/cancel, unsaved changes, direct URLs and deletion.
-The Docker/Supabase limitation above remains outstanding before rollout.
+photo/error recovery, highlight photo navigation and selected-photo reader entry,
+edit-save/cancel, unsaved changes, direct URLs and deletion.
 
 Representative fictional screenshots:
 

@@ -20,7 +20,9 @@ begin
  assert memory_date_tier('2024-02-29','2025-03-01')=1,'non-leap window uses March 1 only for nearby matching';
  assert memory_date_tier('2024-02-29','2028-02-29')=0,'leap exact';
  assert memory_date_tier('2024-10-10','2026-10-24')=1,'14 days inclusive';
- assert memory_date_tier('2024-10-09','2026-10-24')=2,'15 days excluded';
+ assert memory_date_tier('2024-10-09','2026-10-24')=1,'15 days now included';
+ assert memory_date_tier('2024-09-24','2026-10-24')=1,'30 days inclusive';
+ assert memory_date_tier('2024-09-23','2026-10-24')=2,'31 days excluded';
  assert memory_date_tier('2026-01-01','2026-10-24')=2,'nearby anniversaries only prior years';
  assert (select jsonb_array_length(memory_archive()))=1,'only own archive months';
  assert (memory_archive()->0->>'count')::int=85,'summary not subject to row cap';

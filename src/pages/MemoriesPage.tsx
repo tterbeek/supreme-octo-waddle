@@ -7,6 +7,7 @@ import { getActivityPhotos } from '../lib/photos';
 import { ACTIVITY_TYPES } from '../config/activityTypes';
 import { signStorageValues } from '../services/storage.service';
 import { supabase } from '../supabaseClient';
+import MemoryHighlightPhotos from '../components/MemoryHighlightPhotos';
 
 function Photo({path,urls,className=''}:{path?:string|null;urls:Record<string,string>;className?:string}) {
   return path&&urls[path] ? <img loading="lazy" src={urls[path]} alt="" className={className} onError={e=>{e.currentTarget.style.display='none';}}/> : null;
@@ -52,7 +53,7 @@ export default function MemoriesPage() {
   const more=async()=>{if(!month||pageLoading)return;const ticket=request.current;setPageLoading(true);setPageError(false);try{const range=monthRange(month);const data=await memoryPage(range.start,range.end,rows.at(-1));if(ticket!==request.current)return;setRows(prev=>[...prev,...data]);setHasMore(data.length===40);}catch{setPageError(true);}finally{if(ticket===request.current)setPageLoading(false);}};
   useEffect(()=>{
     let cancelled=false;
-    const paths=[...months.filter(m=>m.month.startsWith(year||'')).flatMap(m=>m.thumbs||[]),...rows.flatMap(r=>getActivityPhotos(r).slice(0,1).map(p=>p.thumb_path||p.image_path)),...(feature?.activity?getActivityPhotos(feature.activity).slice(0,1).map(p=>p.image_path||p.thumb_path):[])].filter((p):p is string=>!!p);
+    const paths=[...months.filter(m=>m.month.startsWith(year||'')).flatMap(m=>m.thumbs||[]),...rows.flatMap(r=>getActivityPhotos(r).slice(0,1).map(p=>p.thumb_path||p.image_path)),...(feature?.activity?getActivityPhotos(feature.activity).map(p=>p.image_path||p.thumb_path):[])].filter((p):p is string=>!!p);
     void signStorageValues([...new Set(paths)]).then(signed=>{if(!cancelled)setUrls(signed);}).catch(()=>{});
     return()=>{cancelled=true;};
   },[months,rows,feature,year]);
@@ -71,8 +72,9 @@ export default function MemoriesPage() {
     <header><h1 className="text-2xl font-semibold">Memories</h1><p className="text-sm text-movenotes-muted mt-1">Your movement moments, across time.</p></header>
     {!months.length&&<p className="py-10 text-movenotes-muted">Your activities will be here to revisit whenever you like.</p>}
     {!month&&feature?.activity&&<section ref={featureElement} className="rounded-2xl overflow-hidden border border-movenotes-border bg-movenotes-surface">
+      <MemoryHighlightPhotos key={`${feature.activity.id}:${getActivityPhotos(feature.activity).map(photo=>photo.id).join(',')}`} photos={getActivityPhotos(feature.activity)} urls={urls}
+        onOpen={photoId=>openMemory(feature.activity!.id,{...monthRange(feature.activity!.date.slice(0,7)),photoId})}/>
       <button className="w-full text-left" onClick={()=>openMemory(feature.activity!.id,monthRange(feature.activity!.date.slice(0,7)))}>
-        <Photo path={getActivityPhotos(feature.activity)[0]?.image_path||getActivityPhotos(feature.activity)[0]?.thumb_path} urls={urls} className="w-full max-h-80 object-cover"/>
         <div className="p-5 space-y-2"><p className="text-sm text-movenotes-muted">{featureLabels[feature.tier??2]}</p><h2 className="text-xl font-semibold">{feature.activity.title||ACTIVITY_TYPES[feature.activity.type]?.label||'Activity'}</h2><p className="text-sm">{new Date(`${feature.activity.date}T12:00:00`).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p>{feature.activity.notes&&<p className="line-clamp-3 whitespace-pre-wrap">{feature.activity.notes.slice(0,180)}</p>}</div>
       </button>
       <button className="text-xs underline px-5 pb-4 text-movenotes-muted" onClick={()=>{setHideError(false);void memoryFeatureAction(feature.day,feature.id!,true).then(()=>setFeature(null)).catch(()=>setHideError(true));}}>Hide this suggestion</button>{hideError&&<p role="alert" className="px-5 pb-3 text-sm">Couldn't hide this suggestion. Please try again.</p>}
