@@ -27,6 +27,9 @@ Original photos, full multiline notes, during/after feelings, effort and availab
 metrics remain authoritative. Sparse records receive no completion prompts.
 The existing editor, unsaved-change protection, photo gallery and delete flow are
 reused. Photo controls/gestures are separate from the text-region activity swipe.
+Earlier/Later lives in the reader's fixed safe-area footer, including while loading;
+only the content scrolls, so navigation stays in place with portrait/landscape
+photos, long notes, and photo-free activities.
 The current day's assignment also refreshes after local-date rollover.
 
 ## Deterministic featured selection
@@ -122,7 +125,7 @@ The optional P1 Journal invitation is not included.
 
 Verification: 141 Vitest tests passed; production build and focused ESLint passed.
 Full isolated Supabase schema verification and the additional PGlite assertions
-passed. The browser journey passed 63 assertions across mobile, desktop and enlarged
+passed. The browser journey passed 67 assertions across mobile, desktop and enlarged
 text, including pagination, Back, Calendar/Photos reader entry, gallery, missing
 photo/error recovery, highlight photo navigation and selected-photo reader entry,
 edit-save/cancel, unsaved changes, direct URLs and deletion.

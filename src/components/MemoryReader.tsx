@@ -49,7 +49,14 @@ export default function MemoryReader({ id, context, onClose, onChange, onUpdated
   const refresh=()=>{setEdit(false);setRetry(n=>n+1);onUpdated();};
   const earlier=()=>{if(neighbors.earlier)onChange(neighbors.earlier);};
   const later=()=>{if(neighbors.later)onChange(neighbors.later);};
-  return <ModalSheet title="Memory" presentation="fullscreen" layerDepth={1} onClose={onClose}>
+  const navigationReady = Boolean(activity && !loading && !error);
+  const navigation = <nav aria-label="Browse memories" className="flex items-center justify-between gap-2">
+    <button className="min-h-11 rounded-xl border p-3 disabled:opacity-40" disabled={!navigationReady || !neighbors.later} onClick={later}>← Later</button>
+    <span className="text-xs text-center tabular-nums text-movenotes-muted" aria-live="polite">{navigationReady && neighbors.total ? `${neighbors.position} of ${neighbors.total}` : ''}</span>
+    <button className="min-h-11 rounded-xl border p-3 disabled:opacity-40" disabled={!navigationReady || !neighbors.earlier} onClick={earlier}>Earlier →</button>
+  </nav>;
+  return <ModalSheet title="Memory" presentation="fullscreen" layerDepth={1} onClose={onClose}
+    sheetClassName="[&>.mn-form-body]:flex-1" footer={navigation}>
     {loading ? <p role="status">Opening memory…</p> : error ? <div role="alert"><p>Couldn't load this memory.</p><button onClick={()=>setRetry(n=>n+1)}>Retry</button></div> : !activity ? <p>This activity is unavailable. <button onClick={onClose} className="underline">Back to browsing</button></p> : <article className="space-y-6 pb-[env(safe-area-inset-bottom)]">
       <div className="flex justify-between items-center"><button onClick={onClose} className="text-sm underline">Back to browsing</button><div className="relative"><button aria-label="Memory actions" aria-expanded={menu} onClick={()=>setMenu(!menu)} className="p-3"><MoreHorizontal size={20}/></button>{menu&&<div className="absolute right-0 z-10 w-44 rounded-xl border bg-movenotes-surface p-2 shadow"><button className="block p-3 text-sm" onClick={()=>{setMenu(false);setEdit(true);}}>Edit activity</button><button className="block p-3 text-sm" onClick={()=>{setMenu(false);setRemove(true);}}>Delete activity</button></div>}</div></div>
       {item && <section aria-label="Activity photos" className="space-y-2">
@@ -65,7 +72,6 @@ export default function MemoryReader({ id, context, onClose, onChange, onUpdated
           {activity.effort!=null&&<div><dt className="text-movenotes-muted">Effort</dt><dd>{activity.effort} / 5</dd></div>}
         </dl>}
         <div className="flex flex-wrap items-center gap-3 text-sm text-movenotes-muted border-t border-movenotes-border pt-4"><config.Icon size={18}/><span>{config.label}</span>{activity.distance_km!=null&&<span>{formatDistance(activity.distance_km,unitSystem)}</span>}{activity.duration_min!=null&&<span>{formatDurationMinutes(activity.duration_min)}</span>}</div>
-        <nav aria-label="Browse memories" className="flex items-center justify-between gap-2 pt-4"><button className="rounded-xl border p-3 disabled:opacity-40" disabled={!neighbors.later} onClick={later}>← Later</button><span className="text-xs text-movenotes-muted" aria-live="polite">{neighbors.total ? `${neighbors.position} of ${neighbors.total}` : ''}</span><button className="rounded-xl border p-3 disabled:opacity-40" disabled={!neighbors.earlier} onClick={earlier}>Earlier →</button></nav>
       </div>
     </article>}
     {edit&&activity&&<EditActivityModal activity={activity} onClose={()=>setEdit(false)} onUpdated={refresh} onDeleted={refresh}/>}
