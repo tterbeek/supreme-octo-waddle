@@ -32,6 +32,7 @@ import IntroPage from "./pages/IntroPage";
 import { UnitProvider } from "./contexts/UnitContext";
 import CalendarPage from "./pages/CalendarPage";
 import PhotosPage from "./pages/PhotosPage";
+import MemoriesPage from "./pages/MemoriesPage";
 import CirclePage from "./pages/CirclePage";
 
 export default function App() {
@@ -202,6 +203,14 @@ export default function App() {
                     }
                   />
 
+                  <Route
+                    path="/memories"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <MemoriesPage />
+                      </Layout>
+                    }
+                  />
                   <Route
                     path="/calendar"
                     element={

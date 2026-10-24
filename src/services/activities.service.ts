@@ -2,6 +2,21 @@ import { supabase } from "../supabaseClient";
 import { attachLocationTagsToActivities } from "./activityLocation.service";
 import type { FeelingAfter, FeelingDuring } from "../lib/feelings";
 
+/** Calendar months must not stop at PostgREST's default row limit. */
+export async function fetchCalendarActivities(userId: string, start: string, end: string) {
+  const rows = [];
+  for (let offset = 0; ; offset += 500) {
+    const result = await supabase.from('activities').select(
+      'id, user_id, type, source, user_enrichment_status, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, feeling_during, feeling_after, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))'
+    ).eq('user_id', userId).gte('date', start).lt('date', end)
+      .order('date', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true })
+      .range(offset, offset + 499);
+    if (result.error) return { data: [], error: result.error };
+    rows.push(...result.data);
+    if (result.data.length < 500) return { data: rows, error: null };
+  }
+}
+
 export async function fetchActivitiesForGoals(userId: string, cutoffStr: string) {
   const { data, error } = await supabase
     .from("activities")

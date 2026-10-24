@@ -41,6 +41,11 @@ import { SelectActivityTypeModal } from "../../src/components/SelectActivityType
 import Sidebar from "../../src/components/Sidebar";
 import GalleryLightbox from "../../src/components/GalleryLightbox";
 import ActivityImageSheet from "../../src/components/ActivityImageSheet";
+import MemoriesPage from '../../src/pages/MemoriesPage';
+import MemoryReader from '../../src/components/MemoryReader';
+import CalendarPage from '../../src/pages/CalendarPage';
+import PhotosPage from '../../src/pages/PhotosPage';
+import Layout from '../../src/components/Layout';
 import "../../src/index.css";
 
 const qa = (window as any).formQA = { fail: false, delay: 0, writes: [], invocations: [], saved: 0, closed: 0, case: "", network: [], select: (_name: string) => {} };
@@ -52,6 +57,12 @@ window.fetch = (input, init) => {
 };
 const user = { id: "fictional-owner", email: "fictional@example.invalid", email_confirmed_at: "2026-10-01" };
 const activity: any = { id: "fictional-activity", user_id: user.id, title: "A gentle morning walk", type: "walk", date: "2026-10-17", distance_km: 4, duration_min: 45, notes: "A private note that must be kept.", feeling_during: "smile", feeling_after: "happy", effort: 2, source: "manual", activity_equipment: [] };
+const memoryContext={start:'2024-10-01',end:'2024-11-01'};
+const memoryRows=Array.from({length:45},(_,i)=>({...activity,id:`memory-${i}`,created_at:`2024-10-24T12:00:${String(59-i).padStart(2,'0')}`,date:'2024-10-24',title:i===1?'Polar walk':i===2?'A feeling remembered':i===3?'A photo without a note':`An October walk ${i+1}`,
+ notes:i===0?'We took the quieter path.\n\nThere was time to stop and talk.\n'+('These are my original words. '.repeat(40)):i===1||i===2||i===3?null:activity.notes,
+ feeling_during:i===1||i===3?null:'smile',feeling_after:i===1||i===3?null:'happy',effort:i===1||i===3?null:2,distance_km:i===1?null:4,duration_min:i===1?null:45,
+ source:i===1?'polar':'manual',photos:i===0||i===3?[1,2].map(n=>({id:`photo-${n}`,image_path:`fictional-owner/memory-${n}.svg`,thumb_path:`fictional-owner/memory-${n}.svg`,sort_order:n,created_at:'2024-10-24'})):[]}));
+let memoryHidden=false;
 const equipment: any[] = Array.from({ length: 45 }, (_, i) => ({ id: `equipment-${i}`, user_id: user.id, name: i === 0 ? "Walking shoes" : `Fictional equipment ${i + 1}`, notes: "A remembered detail.", is_active: true, created_at: "2026-01-01" }));
 const presets: any[] = Array.from({ length: 18 }, (_, i) => ({ id: `preset-${i}`, user_id: user.id, name: `Gentle walk ${i + 1}`, type: "walk", distance_km: 4, duration_min: 45, effort: 2, equipment_ids: [], preset_equipment: [] }));
 const goal: any = { id: "goal", user_id: user.id, activity_type: "walk", metric: "distance", target: 10, period: "week", name: "Room to move", updated_at: "2026-10-17" };
@@ -73,18 +84,25 @@ auth.onAuthStateChange = () => ({ data: { subscription: { unsubscribe() {} } } }
 auth.signInWithOtp = async () => { await wait(); return { error: qa.fail ? { message: "Simulated auth error" } : null }; };
 auth.verifyOtp = async () => { await wait(); return { data: { session: { user }, user }, error: qa.fail ? { message: "Simulated auth error" } : null }; };
 (supabase as any).from = (table: string) => {
-  let op = "read"; let payload: any; let filters: any[] = []; let selection = "";
+  let op = "read"; let payload: any; let filters: any[] = []; const ranges: Array<[string,string,unknown]> = []; let selection = "";
   const result = async (single = false) => {
     if (op !== "read") { qa.writes.push({ table, op, payload, filters }); await wait(); }
     if (op !== "read" && qa.fail) return { data: null, error: { message: "Simulated save error" }, count: 0 };
     let data = rows[table] || [];
+    if(qa.case.startsWith('memor')&&table==='activities') {
+      data=memoryRows.filter(row=>filters.every(([key,value])=>row[key as keyof typeof row]===value)&&ranges.every(([op,key,value])=>op==='gte'?String(row[key as keyof typeof row])>=String(value):op==='lt'?String(row[key as keyof typeof row])<String(value):true));
+      if(qa.case==='memories-missing')data=[];
+      if(qa.fail||qa.case==='memories-error')return {data:null,error:{message:'Fictional fetch failure'}};
+      if(op==='update')data.forEach(row=>Object.assign(row,payload));
+      if(op==='delete')data.forEach(row=>{const index=memoryRows.indexOf(row);if(index>=0)memoryRows.splice(index,1);});
+    }
     if (table === "companion_feedback") {
       data = data.filter(row => filters.every(([key, value]) => row[key] === value));
       if (op === "delete") rows[table] = rows[table].filter(row => !data.includes(row));
       return { data: single ? data[0] || null : data, error: null };
     }
     if (table === "micro_adjustments" && filters.some(([key, value]) => key === "status" && value === "ended")) data = [tweak];
-    if (table === "activities" && selection === "id") data = [];
+    if (table === "activities" && selection === "id"&&!qa.case.startsWith('memories')) data = [];
     if (op !== "read") data = [{ ...(data[0] || {}), ...(Array.isArray(payload) ? payload[0] : payload), id: data[0]?.id || "fictional-saved" }];
     return { data: single ? data[0] || null : data, error: null, count: 0 };
   };
@@ -93,11 +111,21 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
   q.eq = (key: string, value: unknown) => { filters.push([key, value]); return q; };
   for (const method of ["insert", "update", "upsert", "delete"]) q[method] = (value: unknown) => { op = method; payload = value; return q; };
   for (const method of ["order", "limit", "gte", "lte", "gt", "lt", "in", "is", "not", "or", "range", "neq"]) q[method] = () => q;
+  if(qa.case.startsWith('memories'))for(const op of ['gte','lt'])q[op]=(key:string,value:unknown)=>{ranges.push([op,key,value]);return q;};
   q.single = q.maybeSingle = () => result(true);
   q.then = (resolve: any, reject: any) => result().then(resolve, reject);
   return q;
 };
 (supabase as any).rpc = async (name: string, args: any) => {
+  if(qa.case.startsWith('memories')&&name==='get_journal_feed_page_v2')return {data:memoryRows.slice(args.p_offset,args.p_offset+args.p_limit).map(row=>({...row,entry_kind:'activity'})),error:null};
+  if(name.startsWith('memory_')) {
+    if(qa.fail)return {data:null,error:{message:'Fictional Memories failure'}};
+    if(name==='memory_archive')return {data:qa.case==='memories-empty'?[]:[{month:'2024-10',count:memoryRows.length,thumbs:['fictional-owner/memory-1.svg','fictional-owner/memory-2.svg']},{month:'2023-06',count:1,thumbs:[]}],error:null};
+    if(name==='memory_feature')return {data:qa.case==='memories-empty'||qa.case==='memories-recent'?{day:'2026-10-24'}:{day:'2026-10-24',id:memoryHidden?null:'memory-0',tier:0},error:null};
+    if(name==='memory_feature_action'){qa.writes.push({table:name,payload:args});if(args.p_hide)memoryHidden=true;return {data:null,error:null};}
+    if(name==='memory_page'){const index=args.p_before?memoryRows.findIndex(r=>r.id===args.p_before.id)+1:0;return {data:memoryRows.slice(index,index+40),error:null};}
+    if(name==='memory_neighbors'){const i=memoryRows.findIndex(r=>r.id===args.p_id);return {data:{earlier:memoryRows[i+1]?.id,later:memoryRows[i-1]?.id,position:i+1,total:memoryRows.length},error:null};}
+  }
   if (name === "save_companion_feedback") {
     qa.writes.push({ table: name, payload: args }); await wait();
     if (qa.fail) return { data: null, error: { message: "Simulated save error" } };
@@ -122,11 +150,13 @@ Object.defineProperty(supabase, "functions", { value: { invoke: async (name: str
   } } : {}) }, error: qa.fail ? { message: "Simulated generation error" } : null };
   return { data: { connected: false, fetched: 0, inserted: 0, skipped: 0 }, error: null };
 } } });
-(supabase.storage as any).from = () => ({ createSignedUrls: async () => ({ data: [], error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
+(supabase.storage as any).from = () => ({ createSignedUrls: async (paths:string[]) => ({ data: paths.filter(p=>p.includes('memory-')).map(path=>({path,signedUrl:'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="450"><rect width="600" height="450" fill="${path.includes('1')?'#b4c9b8':'#e4c9ad'}"/><circle cx="300" cy="210" r="110" fill="#f3ede4"/><text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#374d44">Fictional activity photo ${path.includes('1')?'1':'2'}</text></svg>`)})), error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
 HTMLMediaElement.prototype.play = async () => {};
 
 function Scenario({ name, close, saved }: { name: string; close: () => void; saved: () => void }) {
   switch (name) {
+    case 'memories': case 'memories-empty': case 'memories-recent': return <MemoriesPage/>;
+    case 'memories-reader': case 'memories-missing': case 'memories-error': return <MemoryReader id="memory-0" context={memoryContext} onClose={close} onChange={()=>{}} onUpdated={saved}/>;
     case "log": return <AddActivityForm initialType="walk" onClose={close} onLogged={saved} />;
     case "import": return <AddActivityForm existingActivity={{ ...activity, source: "polar", user_enrichment_status: "pending" }} onClose={close} onLogged={saved} />;
     case "edit": return <EditActivityModal activity={activity} onClose={close} onUpdated={saved} onDeleted={saved} />;
@@ -170,17 +200,21 @@ function Scenario({ name, close, saved }: { name: string; close: () => void; sav
     default: return null;
   }
 }
+function MemoryNavigationFixture() {
+  const location=useLocation();
+  return <Layout menuOpen={false} setMenuOpen={()=>{}}>{location.pathname==='/calendar'?<CalendarPage/>:location.pathname==='/photos'?<PhotosPage/>:<MemoriesPage/>}</Layout>;
+}
 function Harness() {
   const [name, setName] = useState(""); const [key, setKey] = useState(0); const [open, setOpen] = useState(false);
   const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
   const navigate = useNavigate(); const location = useLocation();
-  qa.select = (value: string) => { allowFormNavigation(() => navigate(value === "circle-invite" ? "/circle/invite/fictional" : "/forms", { replace: true })); qa.case = value; qa.fail = false; qa.delay = 0; setName(value); setKey(n => n + 1); setOpen(true); };
+  qa.select = (value: string) => { allowFormNavigation(() => navigate(value === "circle-invite" ? "/circle/invite/fictional" : value==='memories-nav'?'/memories':"/forms", { replace: true })); qa.case = value; qa.fail = false; qa.delay = 0; setName(value); setKey(n => n + 1); setOpen(true); };
   qa.checkpoint = () => allowFormNavigation(() => navigate("/forms?checkpoint=1"));
   qa.navigate = (to: string) => navigate(to);
   const close = () => { qa.closed++; setOpen(false); };
   return <UnitContext.Provider value={{ unitSystem, setUnitSystem }}><FormNavigationGuard />
     <main className="p-4" style={{ minHeight: 1800 }}><button type="button" onClick={() => setOpen(true)}>Open form</button><p>Fictional form QA only</p>
-      {(location.pathname === "/forms" || location.pathname.startsWith("/circle/invite/")) && open && <Scenario key={key} name={name} close={close} saved={() => qa.saved++} />}
+      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(location.pathname === "/forms" || location.pathname.startsWith("/circle/invite/")) && open && <Scenario key={key} name={name} close={close} saved={() => qa.saved++} />}
     </main>
   </UnitContext.Provider>;
 }

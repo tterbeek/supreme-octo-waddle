@@ -5,6 +5,9 @@ import { getCurrentUser } from "../services/auth.service";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
+import { useMemoryReader } from '../hooks/useMemoryReader';
+import { distinctMemoryIds } from '../lib/memories';
+import { loadMemory } from '../services/memories.service';
 import {
   buildGalleryItemsForActivities,
   getActivityDateValue,
@@ -19,15 +22,15 @@ export default function PhotosPage() {
   const [photoThumbs, setPhotoThumbs] = useState<Record<string, string>>({});
   const signedPathsRef = useRef<Set<string>>(new Set());
 
-  const { activities, initialFeedLoaded, loadMore, hasMoreFeed, isLoading } =
+  const { activities, setActivities, initialFeedLoaded, loadMore, hasMoreFeed, isLoading } =
     useHomeFeed(userId);
+  const {openMemory,reader}=useMemoryReader(id=>{void loadMemory(id).then(value=>setActivities(prev=>value?prev.map(a=>a.id===id?value:a):prev.filter(a=>a.id!==id))).catch(()=>{});});
   const {
     open: galleryOpen,
     items: galleryOpenItems,
     activeIndex: galleryActiveIndex,
     signedImages,
     signedThumbs,
-    openGallery,
     replaceItems,
     closeGallery,
     setActiveIndex,
@@ -60,7 +63,7 @@ export default function PhotosPage() {
 
   const orderedPhotos = useMemo(() => {
     return [...photoActivities].sort(
-      (a, b) => getActivityDateValue(b) - getActivityDateValue(a)
+      (a, b) => getActivityDateValue(b) - getActivityDateValue(a) || String(b.id).localeCompare(String(a.id))
     );
   }, [photoActivities]);
 
@@ -160,7 +163,8 @@ export default function PhotosPage() {
 
   const openViewer = (startIndex: number) => {
     if (galleryItems.length === 0) return;
-    openGallery(galleryItems, startIndex);
+    const item=galleryItems[startIndex];
+    openMemory(item.activity.id,{ids:distinctMemoryIds(galleryItems.map(p=>String(p.activity.id))),photoId:item.photoId||undefined});
   };
 
   const hasPhotos = galleryItems.length > 0;
@@ -209,6 +213,7 @@ export default function PhotosPage() {
         )}
       </div>
 
+      {reader}
       <GalleryLightbox
         open={galleryOpen}
         items={galleryOpenItems}

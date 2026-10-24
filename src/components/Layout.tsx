@@ -26,7 +26,7 @@ const BOTTOM_STORAGE_KEY = "movenotes_last_bottom_tab";
 const getStoredJournalTab = () => {
   if (typeof window === "undefined") return "/";
   const stored = localStorage.getItem(JOURNAL_STORAGE_KEY);
-  if (stored === "/calendar" || stored === "/photos" || stored === "/") {
+  if (stored === "/") {
     return stored;
   }
   return "/";
@@ -34,8 +34,6 @@ const getStoredJournalTab = () => {
 
 const isJournalRoutePath = (pathname: string) =>
   pathname === "/" ||
-  pathname.startsWith("/calendar") ||
-  pathname.startsWith("/photos") ||
   pathname.startsWith("/home-legacy") ||
   pathname.startsWith("/home-rpc");
 
@@ -69,7 +67,7 @@ export default function Layout({
   const initNavigationRef = useRef(false);
 
   const topNavItems = [
-    { to: "/", label: "Journal" },
+    { to: "/memories", label: "Timeline" },
     { to: "/calendar", label: "Calendar" },
     { to: "/photos", label: "Photos" },
   ];
@@ -78,11 +76,13 @@ export default function Layout({
       showCircleTab
         ? [
             { to: "/", label: "Journal" },
+            { to: "/memories", label: "Memories" },
             { to: "/circle", label: "Circle" },
             { to: "/stats", label: "Insights" },
           ]
         : [
             { to: "/", label: "Journal" },
+            { to: "/memories", label: "Memories" },
             { to: "/stats", label: "Insights" },
           ],
     [showCircleTab]
@@ -101,7 +101,8 @@ export default function Layout({
       location.pathname.startsWith("/stats-"),
     [location.pathname]
   );
-  const showTopNav = isJournalRoute && !chromeHidden;
+  const isMemoriesRoute = ['/memories','/calendar','/photos'].some(path=>location.pathname.startsWith(path));
+  const showTopNav = isMemoriesRoute && !chromeHidden;
   const activeJournalTarget = isJournalRoute
     ? getJournalPathForStorage(location.pathname)
     : journalTarget;
@@ -222,11 +223,7 @@ export default function Layout({
             <nav className="mx-auto w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-4 py-2 flex items-center gap-2">
               {topNavItems.map((item) => {
                 const isActive =
-                  item.to === "/"
-                    ? isJournalRoute &&
-                      !location.pathname.startsWith("/calendar") &&
-                      !location.pathname.startsWith("/photos")
-                    : location.pathname.startsWith(item.to);
+                  location.pathname.startsWith(item.to);
 
                 return (
                   <Link
@@ -271,11 +268,13 @@ export default function Layout({
         {/* Bottom nav */}
         {!chromeHidden && (
           <nav className="fixed bottom-0 left-0 right-0 z-30 bg-movenotes-bg/95 backdrop-blur border-t-[3px] border-movenotes-border shadow-[0_-4px_14px_rgba(0,0,0,0.09)]">
-            <div className="mx-auto max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-6 py-3 flex items-center gap-4">
+            <div className="mx-auto max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl px-2 py-3 flex items-center gap-1 pb-[max(12px,env(safe-area-inset-bottom))]">
               {bottomNavItems.map((item) => {
                 const isActive =
                   item.to === "/"
                     ? isJournalRoute
+                    : item.to === "/memories"
+                    ? isMemoriesRoute
                     : item.to === "/circle"
                     ? isCircleRoute
                     : location.pathname.startsWith("/stats") ||

@@ -1,5 +1,11 @@
 # MoveNotes
 
+## Memories
+
+Memories offers a private Timeline, Calendar and Photos with a dedicated activity
+reader and a daily, dismissible moment to revisit. See [Memories V1](docs/memories-v1.md)
+for behavior, the required migration, local checks and verification limits.
+
 ## Weekly thought feedback
 
 Weekly thoughts offer **Yes / Not really**, an optional 300-character comment,

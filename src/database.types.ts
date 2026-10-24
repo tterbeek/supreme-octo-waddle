@@ -1062,6 +1062,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      memory_archive: { Args: Record<string, never>; Returns: Json }
+      memory_page: { Args: { p_start: string; p_end: string; p_before?: Json }; Returns: Json }
+      memory_neighbors: { Args: { p_id: string; p_start: string; p_end: string }; Returns: Json }
+      memory_feature: { Args: { p_timezone: string }; Returns: Json }
+      memory_feature_action: { Args: { p_day: string; p_id: string; p_hide: boolean }; Returns: undefined }
       accept_circle_invite: {
         Args: { p_token: string; p_user_id: string }
         Returns: string

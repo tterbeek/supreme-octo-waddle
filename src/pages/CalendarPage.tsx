@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from 'react-router-dom';
 import { List } from "react-window";
 import type { ListImperativeAPI, RowComponentProps } from "react-window";
 import { supabase } from "../supabaseClient";
 import ModalSheet from "../components/ModalSheet";
 import AddBottomSheet from "../components/AddBottomSheet";
 import AddActivityModal from "../features/activities/AddActivityModal";
-import { needsImportedEnrichment, type ImportedActivity } from "../lib/importedActivity";
+import { type ImportedActivity } from "../lib/importedActivity";
 import EditActivityModal from "../features/activities/EditActivityModal";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { getCurrentUser } from "../services/auth.service";
@@ -21,7 +22,6 @@ import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.serv
 import { fetchJournalEntriesInRange } from "../services/journalEntries.service";
 import PostLogNoteFlow from "../components/PostLogNoteFlow";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
-import { buildGalleryItemsForActivity } from "../lib/photos";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
 import { POLAR_SYNC_COMPLETED_EVENT, syncPolarIfStale } from "../services/polar.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
@@ -32,6 +32,9 @@ import {
   type ActivityLocationUpdatedDetail,
 } from "../services/activityLocation.service";
 import { useCircleAccessState } from "../hooks/useCircleAccessState";
+import { useMemoryReader } from '../hooks/useMemoryReader';
+import { dayRange } from '../lib/memories';
+import { fetchCalendarActivities } from '../services/activities.service';
 
 type CalendarActivity = {
   entry_kind?: "activity";
@@ -131,6 +134,8 @@ const log = (...args: any[]) => {
 };
 
 export default function CalendarPage() {
+  const [calendarParams] = useSearchParams();
+  const linkedDay = calendarParams.get('date');
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [monthActivities, setMonthActivities] = useState<
@@ -140,7 +145,7 @@ export default function CalendarPage() {
     Record<string, CalendarJournalEntry[]>
   >({});
   const [loadingMonths, setLoadingMonths] = useState<Record<string, boolean>>({});
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(linkedDay&&/^\d{4}-\d{2}-\d{2}$/.test(linkedDay)?linkedDay:null);
   const [reflectionActivity, setReflectionActivity] = useState<any | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [dayThumbs, setDayThumbs] = useState<Record<string, string>>({});
@@ -257,16 +262,7 @@ export default function CalendarPage() {
         const monthStart = startOfMonth(monthDate);
         const monthEnd = nextMonth(monthDate);
         const [activitiesResult, journalResult] = await Promise.all([
-          supabase
-            .from("activities")
-            .select(
-              "id, user_id, type, source, user_enrichment_status, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, feeling_during, feeling_after, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))"
-            )
-            .eq("user_id", userId)
-            .gte("date", formatDateKey(monthStart))
-            .lt("date", formatDateKey(monthEnd))
-            .order("date", { ascending: true })
-            .order("created_at", { ascending: true }),
+          fetchCalendarActivities(userId, formatDateKey(monthStart), formatDateKey(monthEnd)),
           fetchJournalEntriesInRange(userId, monthStart.toISOString(), monthEnd.toISOString()),
         ]);
 
@@ -352,6 +348,8 @@ export default function CalendarPage() {
     return candidates.sort((a, b) => a.getTime() - b.getTime())[0];
   }, [userId]);
 
+  useEffect(()=>{if(selectedDate&&!error)void fetchMonthActivities(new Date(`${selectedDate}T12:00:00`));},[selectedDate,fetchMonthActivities,error]);
+
   useEffect(() => {
     const loadUser = async () => {
       const user = await getCurrentUser();
@@ -426,7 +424,7 @@ export default function CalendarPage() {
       const bSource = b.entry_kind === "journal_entry" ? b.created_at : b.started_at || b.created_at || b.date;
       const aTime = new Date(aSource).getTime();
       const bTime = new Date(bSource).getTime();
-      return bTime - aTime;
+      return bTime - aTime || b.id.localeCompare(a.id);
     });
   }, [selectedDayEntries]);
 
@@ -477,6 +475,8 @@ export default function CalendarPage() {
       setError(e?.message ?? "Failed to refresh calendar");
     }
   }, [fetchFirstEntryDate, todayMonthIndex, userId]);
+
+  const { openMemory, reader } = useMemoryReader(refreshLoadedCalendarData);
 
   const playWritingSound = () => {
     const audio = new Audio("/sounds/writing.mp3");
@@ -888,7 +888,7 @@ export default function CalendarPage() {
                     signedNoteImages={signedNoteImages}
                     signedNoteThumbs={signedNoteThumbs}
                     noteImageOrientation={noteImageOrientation}
-                    onEdit={(activity) => needsImportedEnrichment(activity) ? setImportedActivity(activity) : setEditActivity(activity)}
+                    onEdit={(activity) => openMemory(activity.id, { ...dayRange(selectedDate!), ids: selectedDayActivities.map(item=>item.id) })}
                     onNoteImageLoad={(activityId, naturalWidth, naturalHeight) => {
                       setNoteImageOrientation((prev) => ({
                         ...prev,
@@ -900,8 +900,7 @@ export default function CalendarPage() {
                     tooltipVisible={false}
                     onTooltipClose={() => {}}
                     onOpenGallery={(activity) => {
-                      const items = buildGalleryItemsForActivity(activity);
-                      gallery.openGallery(items, 0);
+                      openMemory(activity.id, { ...dayRange(selectedDate!), ids: selectedDayActivities.map(item=>item.id) });
                     }}
                     onAddReflection={(activity) => setReflectionActivity(activity)}
                     canShareWithCircle={circleEnabled}
@@ -937,6 +936,7 @@ export default function CalendarPage() {
         </button>
       )}
 
+      {reader}
       <GalleryLightbox
         open={gallery.open}
         items={gallery.items}
