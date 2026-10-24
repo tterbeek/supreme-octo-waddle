@@ -1,4 +1,4 @@
-export type MemoryContext = { start?: string; end?: string; ids?: string[]; photoId?: string };
+export type MemoryContext = { start?: string; end?: string; ids?: string[]; photoId?: string; selection?: 'selected' | 'all'; includeId?: string };
 export function monthRange(month: string) {
   const [year, number] = month.split('-').map(Number);
   return { start: `${month}-01`, end: `${year + (number === 12 ? 1 : 0)}-${String(number === 12 ? 1 : number + 1).padStart(2, '0')}-01` };

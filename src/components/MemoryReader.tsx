@@ -17,8 +17,8 @@ import { allowFormNavigation } from '../lib/formLifecycle';
 
 const duringLabels: Record<string,string> = { sad:'Struggling',neutral:'Neutral',smile:'Flowing',happy:'Energized' };
 const afterLabels: Record<string,string> = { sad:'Drained',smile:'Relaxed',happy:'Good',spark:'Uplifted' };
-export default function MemoryReader({ id, context, onClose, onChange, onUpdated }: {
-  id: string; context: MemoryContext; onClose: () => void; onChange: (id: string, removed?: string) => void; onUpdated: () => void;
+export default function MemoryReader({ id, context, onClose, onChange, onUpdated, onShowAll }: {
+  id: string; context: MemoryContext; onClose: () => void; onChange: (id: string, removed?: string) => void; onUpdated: () => void; onShowAll?: () => void;
 }) {
   const [activity,setActivity] = useState<MemoryActivity | null>(null);
   const [neighbors,setNeighbors] = useState<MemoryNeighbors>({});
@@ -59,6 +59,7 @@ export default function MemoryReader({ id, context, onClose, onChange, onUpdated
     sheetClassName="[&>.mn-form-body]:flex-1" footer={navigation}>
     {loading ? <p role="status">Opening memory…</p> : error ? <div role="alert"><p>Couldn't load this memory.</p><button onClick={()=>setRetry(n=>n+1)}>Retry</button></div> : !activity ? <p>This activity is unavailable. <button onClick={onClose} className="underline">Back to browsing</button></p> : <article className="space-y-6 pb-[env(safe-area-inset-bottom)]">
       <div className="flex justify-between items-center"><button onClick={onClose} className="text-sm underline">Back to browsing</button><div className="relative"><button aria-label="Memory actions" aria-expanded={menu} onClick={()=>setMenu(!menu)} className="p-3"><MoreHorizontal size={20}/></button>{menu&&<div className="absolute right-0 z-10 w-44 rounded-xl border bg-movenotes-surface p-2 shadow"><button className="block p-3 text-sm" onClick={()=>{setMenu(false);setEdit(true);}}>Edit activity</button><button className="block p-3 text-sm" onClick={()=>{setMenu(false);setRemove(true);}}>Delete activity</button></div>}</div></div>
+      {context.selection&&<div className="flex min-h-11 flex-wrap items-center justify-between gap-2 text-sm"><span className="text-movenotes-muted">{context.selection==='selected'?'Selected moments':'All activities'}</span>{context.selection==='selected'&&onShowAll&&<button type="button" className="min-h-11 underline" onClick={onShowAll}>All activities</button>}</div>}
       {item && <section aria-label="Activity photos" className="space-y-2">
         <button className="block w-full rounded-2xl overflow-hidden bg-movenotes-bg" aria-label="Open photo fullscreen" onClick={()=>gallery.openGallery(items,photoIndex)}>{path&&urls[path]&&!failedPhotos.includes(path) ? <img src={urls[path]} alt={`Activity photo ${photoIndex+1}`} className="w-full max-h-[55dvh] object-contain" onError={()=>setFailedPhotos(prev=>[...prev,path])}/> : <span className="block p-10 text-sm">Photo unavailable</span>}</button>
         {items.length>1&&<div className="flex justify-between text-sm"><button className="p-2 disabled:opacity-40" disabled={photoIndex===0} onClick={()=>setPhotoIndex(n=>n-1)}>Previous photo</button><span className="p-2">{photoIndex+1} / {items.length}</span><button className="p-2 disabled:opacity-40" disabled={photoIndex===items.length-1} onClick={()=>setPhotoIndex(n=>n+1)}>Next photo</button></div>}

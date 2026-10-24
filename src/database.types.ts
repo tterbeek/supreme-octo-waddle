@@ -1063,6 +1063,9 @@ export type Database = {
     }
     Functions: {
       memory_archive: { Args: Record<string, never>; Returns: Json }
+      memory_archive_v2: { Args: Record<string, never>; Returns: Json }
+      memory_page_v2: { Args: { p_start: string; p_end: string; p_before?: Json; p_selected?: boolean }; Returns: Json }
+      memory_neighbors_v2: { Args: { p_id: string; p_start: string; p_end: string; p_selected?: boolean; p_include?: string }; Returns: Json }
       memory_page: { Args: { p_start: string; p_end: string; p_before?: Json }; Returns: Json }
       memory_neighbors: { Args: { p_id: string; p_start: string; p_end: string }; Returns: Json }
       memory_feature: { Args: { p_timezone: string }; Returns: Json }

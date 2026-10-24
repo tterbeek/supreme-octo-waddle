@@ -16,7 +16,14 @@ it('requires exact activity owner, retains original content and performs no writ
 it('uses value cursor across pages rather than depending on a surviving last record',async()=>{
  mocks.rpc.mockResolvedValue({data:[],error:null});
  await memoryPage('2024-01-01','2024-02-01',{id:'deleted',date:'2024-01-10',created_at:null} as never);
- expect(mocks.rpc).toHaveBeenCalledWith('memory_page',{p_start:'2024-01-01',p_end:'2024-02-01',p_before:{id:'deleted',date:'2024-01-10',created_at:null}});
+ expect(mocks.rpc).toHaveBeenCalledWith('memory_page_v2',{p_start:'2024-01-01',p_end:'2024-02-01',p_selected:false,p_before:{id:'deleted',date:'2024-01-10',created_at:null}});
+});
+it('keeps selected reader neighbors aligned with selected month pagination',async()=>{
+ mocks.rpc.mockResolvedValue({data:[],error:null});
+ await memoryPage('2024-01-01','2024-02-01',undefined,true);
+ expect(mocks.rpc).toHaveBeenLastCalledWith('memory_page_v2',{p_start:'2024-01-01',p_end:'2024-02-01',p_selected:true});
+ await memoryNeighbors('a',{start:'2024-01-01',end:'2024-02-01',selection:'selected'});
+ expect(mocks.rpc).toHaveBeenLastCalledWith('memory_neighbors_v2',{p_id:'a',p_start:'2024-01-01',p_end:'2024-02-01',p_selected:true});
 });
 it('direct URL requires no preloaded collection and query errors stay distinct from empty',async()=>{
  expect(await memoryNeighbors('a',{})).toEqual({});expect(mocks.rpc).not.toHaveBeenCalled();

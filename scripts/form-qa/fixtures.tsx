@@ -59,10 +59,18 @@ const user = { id: "fictional-owner", email: "fictional@example.invalid", email_
 const activity: any = { id: "fictional-activity", user_id: user.id, title: "A gentle morning walk", type: "walk", date: "2026-10-17", distance_km: 4, duration_min: 45, notes: "A private note that must be kept.", feeling_during: "smile", feeling_after: "happy", effort: 2, source: "manual", activity_equipment: [] };
 const memoryContext={start:'2024-10-01',end:'2024-11-01'};
 const memoryRows=Array.from({length:45},(_,i)=>({...activity,id:`memory-${i}`,created_at:`2024-10-24T12:00:${String(59-i).padStart(2,'0')}`,date:'2024-10-24',title:i===1?'Polar walk':i===2?'A feeling remembered':i===3?'A photo without a note':`An October walk ${i+1}`,
- notes:i===0?'We took the quieter path.\n\nThere was time to stop and talk.\n'+('These are my original words. '.repeat(40)):i===1||i===2||i===3?null:activity.notes,
- feeling_during:i===1||i===3?null:'smile',feeling_after:i===1||i===3?null:'happy',effort:i===1||i===3?null:2,distance_km:i===1?null:4,duration_min:i===1?null:45,
+ notes:i===0?'We took the quieter path.\n\nThere was time to stop and talk.\n'+('These are my original words. '.repeat(40)):i===1||i===2||i===3||i>=35?null:activity.notes,
+ feeling_during:i===1||i===3||i>=35?null:'smile',feeling_after:i===1||i===3||i>=35?null:'happy',effort:i===1||i===3?null:2,distance_km:i===1?null:4,duration_min:i===1?null:45,
  source:i===1?'polar':'manual',photos:i===0||i===3?[1,2].map(n=>({id:`photo-${n}`,image_path:`fictional-owner/memory-${n}.svg`,thumb_path:`fictional-owner/memory-${n}.svg`,sort_order:n,created_at:'2024-10-24'})):[]}));
 let memoryHidden=false;
+const olderMemory={...activity,id:'memory-older',date:'2023-06-10',created_at:'2023-06-10T12:00:00',notes:null,photos:[],feeling_during:null,feeling_after:null};
+function fixtureSelected(rows: typeof memoryRows) {
+  const personal=rows.filter(r=>r.notes?.trim()||r.photos?.length);
+  const details=rows.filter(r=>!personal.includes(r)&&(r.feeling_during||r.feeling_after));
+  const basic=rows.filter(r=>!personal.includes(r)&&!details.includes(r));
+  const ids=new Set([...personal,...details.slice(0,1),...basic.slice(0,1)].map(r=>r.id));
+  return rows.filter(r=>ids.has(r.id));
+}
 const equipment: any[] = Array.from({ length: 45 }, (_, i) => ({ id: `equipment-${i}`, user_id: user.id, name: i === 0 ? "Walking shoes" : `Fictional equipment ${i + 1}`, notes: "A remembered detail.", is_active: true, created_at: "2026-01-01" }));
 const presets: any[] = Array.from({ length: 18 }, (_, i) => ({ id: `preset-${i}`, user_id: user.id, name: `Gentle walk ${i + 1}`, type: "walk", distance_km: 4, duration_min: 45, effort: 2, equipment_ids: [], preset_equipment: [] }));
 const goal: any = { id: "goal", user_id: user.id, activity_type: "walk", metric: "distance", target: 10, period: "week", name: "Room to move", updated_at: "2026-10-17" };
@@ -90,7 +98,7 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     if (op !== "read" && qa.fail) return { data: null, error: { message: "Simulated save error" }, count: 0 };
     let data = rows[table] || [];
     if(qa.case.startsWith('memor')&&table==='activities') {
-      data=memoryRows.filter(row=>filters.every(([key,value])=>row[key as keyof typeof row]===value)&&ranges.every(([op,key,value])=>op==='gte'?String(row[key as keyof typeof row])>=String(value):op==='lt'?String(row[key as keyof typeof row])<String(value):true));
+      data=[...memoryRows,olderMemory].filter(row=>filters.every(([key,value])=>row[key as keyof typeof row]===value)&&ranges.every(([op,key,value])=>op==='gte'?String(row[key as keyof typeof row])>=String(value):op==='lt'?String(row[key as keyof typeof row])<String(value):true));
       if(qa.case==='memories-missing')data=[];
       if(qa.fail||qa.case==='memories-error')return {data:null,error:{message:'Fictional fetch failure'}};
       if(op==='update')data.forEach(row=>Object.assign(row,payload));
@@ -121,6 +129,13 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
   if(name.startsWith('memory_')) {
     if(qa.fail)return {data:null,error:{message:'Fictional Memories failure'}};
     if(name==='memory_archive')return {data:qa.case==='memories-empty'?[]:[{month:'2024-10',count:memoryRows.length,thumbs:['fictional-owner/memory-1.svg','fictional-owner/memory-2.svg']},{month:'2023-06',count:1,thumbs:[]}],error:null};
+    if(name==='memory_archive_v2')return {data:qa.case==='memories-empty'?[]:[{month:'2024-10',count:memoryRows.length,selected_count:fixtureSelected(memoryRows).length,personal_count:memoryRows.filter(r=>r.notes||r.photos.length).length,moments:fixtureSelected(memoryRows).slice(0,3),thumbs:['fictional-owner/memory-1.svg','fictional-owner/memory-2.svg']},{month:'2023-06',count:1,selected_count:1,personal_count:0,moments:[olderMemory],thumbs:[]}],error:null};
+    if(name==='memory_page_v2'||name==='memory_neighbors_v2') {
+      const allRows=args.p_start.startsWith('2023')?[olderMemory]:memoryRows;
+      const eligible=args.p_selected?fixtureSelected(allRows as typeof memoryRows):allRows;
+      if(name==='memory_page_v2'){const index=args.p_before?eligible.findIndex(r=>r.id===args.p_before.id)+1:0;return {data:eligible.slice(index,index+40),error:null};}
+      const i=eligible.findIndex(r=>r.id===args.p_id);return {data:i<0?{}:{earlier:eligible[i+1]?.id,later:eligible[i-1]?.id,position:i+1,total:eligible.length},error:null};
+    }
     if(name==='memory_feature')return {data:qa.case==='memories-empty'||qa.case==='memories-recent'?{day:'2026-10-24'}:{day:'2026-10-24',id:memoryHidden?null:'memory-0',tier:0},error:null};
     if(name==='memory_feature_action'){qa.writes.push({table:name,payload:args});if(args.p_hide)memoryHidden=true;return {data:null,error:null};}
     if(name==='memory_page'){const index=args.p_before?memoryRows.findIndex(r=>r.id===args.p_before.id)+1:0;return {data:memoryRows.slice(index,index+40),error:null};}

@@ -16,6 +16,8 @@ export function useMemoryReader(onUpdated: (id: string) => void = () => {}) {
     navigate({pathname:location.pathname,search:search.toString()},{state:{...location.state,memoryContext:context,memoryOpened:true}});
   },[location,navigate]);
   const close=()=>{if(state?.memoryOpened){navigate(-1);}else{params.delete('memory');navigate({pathname:location.pathname,search:params.toString()},{replace:true});}};
-  const reader=id ? <MemoryReader key={`${identityVersion}:${id}`} id={id} context={state?.memoryContext||emptyContext} onClose={close} onUpdated={()=>onUpdated(id)} onChange={(next,removed)=>{params.set('memory',next);const nextContext=state?.memoryContext;const nextState=removed&&nextContext?.ids?{...location.state,memoryContext:{...nextContext,ids:nextContext.ids.filter(value=>value!==removed)}}:location.state;navigate({pathname:location.pathname,search:params.toString()},{replace:true,state:nextState});}}/> : null;
+  const reader=id ? <MemoryReader key={`${identityVersion}:${id}`} id={id} context={state?.memoryContext||emptyContext} onClose={close} onUpdated={()=>onUpdated(id)}
+    onShowAll={()=>{params.set('view','all');navigate({pathname:location.pathname,search:params.toString()},{replace:true,state:{...location.state,memoryContext:{...state?.memoryContext,selection:'all',ids:undefined}}});}}
+    onChange={(next,removed)=>{params.set('memory',next);const nextContext=state?.memoryContext;const nextState=removed&&nextContext?.ids?{...location.state,memoryContext:{...nextContext,ids:nextContext.ids.filter(value=>value!==removed)}}:location.state;navigate({pathname:location.pathname,search:params.toString()},{replace:true,state:nextState});}}/> : null;
   return {openMemory,reader};
 }

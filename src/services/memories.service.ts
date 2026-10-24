@@ -9,7 +9,7 @@ export type MemoryActivity = {
   distance_km?: number | null; duration_min?: number | null; feeling?: number | null;
   feeling_during?: string | null; feeling_after?: string | null; effort?: number | null;
 };
-export type ArchiveMonth = { month: string; count: number; thumbs: string[] };
+export type ArchiveMonth = { month: string; count: number; thumbs: string[]; selected_count: number; personal_count: number; moments: MemoryActivity[] };
 export type MemoryNeighbors = { earlier?: string | null; later?: string | null; position?: number; total?: number };
 export async function memoryOwner() {
   const { data, error } = await supabase.auth.getUser();
@@ -24,18 +24,18 @@ export async function loadMemory(id: string): Promise<MemoryActivity | null> {
   return data as MemoryActivity | null;
 }
 export async function memoryArchive() {
-  const { data, error } = await supabase.rpc('memory_archive', {}); if (error) throw error;
+  const { data, error } = await supabase.rpc('memory_archive_v2', {}); if (error) throw error;
   return data as unknown as ArchiveMonth[];
 }
-export async function memoryPage(start: string, end: string, before?: MemoryActivity) {
-  const { data, error } = await supabase.rpc('memory_page', { p_start: start, p_end: end,
+export async function memoryPage(start: string, end: string, before?: MemoryActivity, selected = false) {
+  const { data, error } = await supabase.rpc('memory_page_v2', { p_start: start, p_end: end, p_selected: selected,
     ...(before ? { p_before: { id: before.id, date: before.date, created_at: before.created_at } as Json } : {}) });
   if (error) throw error; return data as unknown as MemoryActivity[];
 }
 export async function memoryNeighbors(id: string, context: MemoryContext): Promise<MemoryNeighbors> {
   if (context.ids) return collectionNeighbors(context.ids, id);
   if (!context.start || !context.end) return {};
-  const { data, error } = await supabase.rpc('memory_neighbors', { p_id: id, p_start: context.start, p_end: context.end });
+  const { data, error } = await supabase.rpc('memory_neighbors_v2', { p_id: id, p_start: context.start, p_end: context.end, p_selected: context.selection === 'selected', ...(context.includeId?{p_include:context.includeId}:{}) });
   if (error) throw error; return data as MemoryNeighbors;
 }
 export async function memoryFeature() {
