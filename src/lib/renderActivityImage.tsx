@@ -67,7 +67,9 @@ export async function renderActivityImage(model: ActivityImageModel, photo?: Blo
   if (!ctx) throw new Error("Image export isn't supported in this browser.");
   ctx.font = `700 58px ${FONT}`;
   const lines = wrapImageTitle(model.title, text => ctx.measureText(text).width, 816);
-  const photoHeight = image ? Math.round(Math.max(400, Math.min(760, 888 * image.naturalHeight / image.naturalWidth))) : 0;
+  // Keep the decoded photo's aspect ratio, including EXIF orientation. A fixed
+  // height limit turned portrait photos into cropped landscape frames.
+  const photoHeight = image ? Math.round(888 * image.naturalHeight / image.naturalWidth) : 0;
   const titleY = 204;
   const dateY = titleY + lines.length * 76 + 16;
   const metricsY = dateY + 64;
@@ -90,9 +92,7 @@ export async function renderActivityImage(model: ActivityImageModel, photo?: Blo
   }
   if (image) {
     ctx.save(); ctx.beginPath(); ctx.roundRect(96, photoY, 888, photoHeight, 24); ctx.clip();
-    const scale = Math.max(888 / image.naturalWidth, photoHeight / image.naturalHeight);
-    const width = image.naturalWidth * scale; const height = image.naturalHeight * scale;
-    ctx.drawImage(image, 96 + (888 - width) / 2, photoY + (photoHeight - height) / 2, width, height);
+    ctx.drawImage(image, 96, photoY, 888, photoHeight);
     ctx.restore();
   }
   ctx.strokeStyle = "#E1DCD3"; ctx.beginPath(); ctx.moveTo(96, footerY - 30); ctx.lineTo(984, footerY - 30); ctx.stroke();
