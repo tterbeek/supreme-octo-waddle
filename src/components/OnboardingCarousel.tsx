@@ -1,5 +1,5 @@
 import ModalSheet from "./ModalSheet";
-import { FormActions } from "./forms/FormLayout";
+import OnboardingControls from "./OnboardingControls";
 // src/components/OnboardingCarousel.tsx
 import { useState } from "react";
 
@@ -7,8 +7,6 @@ import {
   IconRun,
   IconWalk,
   IconCamera,
-  IconChevronLeft,
-  IconChevronRight,
   IconPlant2,
 } from "@tabler/icons-react";
 
@@ -66,58 +64,16 @@ export default function OnboardingCarousel({
   const { title, body, Icon } = screens[index];
 
   return (
-    <ModalSheet title={title} onClose={onSkip} presentation="fullscreen">
-      {/* Skip button */}
-      <button
-        className="absolute top-4 right-4 text-sm text-gray-500 underline"
-        onClick={onSkip}
-      >
-        Skip
-      </button>
-
+    <ModalSheet title={title} onClose={onSkip} presentation="fullscreen" sheetClassName="[&>.mn-form-body]:flex-1"
+      footer={<OnboardingControls index={index} total={screens.length} label={index === screens.length - 1 ? "Get Started" : "Next"}
+        previousLabel="Previous welcome screen" onPrevious={prev} onNext={next} onSkip={onSkip} />}>
       {/* Main icon */}
-      <div className="mt-10 flex flex-col items-center">
+      <div className="mx-auto mt-10 flex max-w-md flex-col items-center">
         <Icon size={72} className="text-movenotes-primary mb-6" />
 
         <p className="text-center text-gray-700 max-w-xs">{body}</p>
       </div>
 
-      {/* Pagination dots */}
-      <div className="flex gap-2 my-4">
-        {screens.map((_, i) => (
-          <div
-            key={i}
-            className={`h-2 w-2 rounded-full transition ${
-              i === index ? "bg-movenotes-primary" : "bg-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-
-      {/* Nav buttons */}
-      <div className="w-full max-w-md flex justify-between items-center mb-6">
-        <button
-          aria-label="Previous welcome screen"
-          onClick={prev}
-          disabled={index === 0}
-          className={`p-2 rounded-full ${
-            index === 0 ? "opacity-30" : "bg-warm-200 active:scale-95"
-          }`}
-        >
-          <IconChevronLeft size={20} />
-        </button>
-
-        <FormActions><button
-          onClick={next}
-          className="px-6 py-3 bg-movenotes-primary text-primary-text rounded-full text-lg font-medium active:scale-95"
-        >
-          {index === screens.length - 1 ? "Get Started" : "Next"}
-        </button></FormActions>
-
-        <div className="p-2 opacity-0">
-          <IconChevronRight size={20} />
-        </div>
-      </div>
     </ModalSheet>
   );
 }

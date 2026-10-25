@@ -1,8 +1,7 @@
 import ModalSheet from "./ModalSheet";
-import { FormActions } from "./forms/FormLayout";
+import OnboardingControls from "./OnboardingControls";
 import { formLeaves } from "../lib/formLifecycle";
 import { useEffect, useState } from "react";
-import { IconChevronLeft } from "@tabler/icons-react";
 import ActivityPreferencesPage from "../pages/ActivityPreferencesPage";
 import ManageEquipmentPage from "../pages/ManageEquipmentPage";
 import MicroAdjustmentCreateModal from "./MicroAdjustmentCreateModal";
@@ -215,16 +214,11 @@ export default function OnboardingWizard({
   }
 
   return (
-    <ModalSheet title={step.title} onClose={onSkip} presentation="fullscreen">
-      <button
-        type="button"
-        className="absolute top-4 right-4 text-sm text-gray-500 underline"
-        onClick={() => { if (!formLeaves.current()?.busy) onSkip(); }}
-      >
-        Skip
-      </button>
-
-      <div className="w-full max-w-3xl flex flex-col items-center">
+    <ModalSheet title={step.title} onClose={onSkip} presentation="fullscreen" sheetClassName="[&>.mn-form-body]:flex-1"
+      footer={<OnboardingControls index={stepIndex} total={steps.length} label={isLast ? "Start logging" : "Next"}
+        previousLabel="Back" onPrevious={handlePrev} onNext={handleNext}
+        onSkip={() => { if (!formLeaves.current()?.busy) onSkip(); }} />}>
+      <div className="mx-auto w-full max-w-3xl flex flex-col items-center">
         <div className="mt-2 text-center flex-shrink-0">
           <p className="text-xs uppercase tracking-widest text-gray-400">
             Welcome step {stepIndex + 1} of {steps.length}
@@ -240,40 +234,6 @@ export default function OnboardingWizard({
         </div>
       </div>
 
-      <div className="flex gap-2 my-3 flex-shrink-0">
-        {steps.map((_, idx) => (
-          <div
-            key={steps[idx].id}
-            className={`h-2 w-2 rounded-full transition ${
-              idx === stepIndex ? "bg-movenotes-primary" : "bg-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-
-      <div className="w-full max-w-3xl grid grid-cols-3 items-center mb-2 flex-shrink-0">
-        <button
-          type="button"
-          onClick={handlePrev}
-          disabled={isFirst}
-          className={`p-2 rounded-full justify-self-start ${
-            isFirst ? "opacity-30" : "bg-warm-200 active:scale-95"
-          }`}
-          aria-label="Back"
-        >
-          <IconChevronLeft size={20} />
-        </button>
-
-        <FormActions><button
-          type="button"
-          onClick={handleNext}
-          className="px-8 py-3 rounded-full bg-movenotes-primary text-primary-text text-lg font-semibold justify-self-center active:scale-95"
-        >
-          {isLast ? "Start logging" : "Next"}
-        </button></FormActions>
-
-        <div />
-      </div>
     </ModalSheet>
   );
 }
