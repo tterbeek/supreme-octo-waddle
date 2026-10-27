@@ -1,5 +1,7 @@
 // Dev-only fictional fixtures. Not imported by the app or included in dist.
 import { useState } from "react";
+import TrendsTab from "../../src/components/stats/TrendsTab";
+import { useActivityTrends, type TrendPeriod } from "../../src/hooks/useActivityTrends";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../src/supabaseClient";
@@ -147,6 +149,13 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
   return q;
 };
 (supabase as any).rpc = async (name: string, args: any) => {
+  if(name==='stats_activity_trends'){
+    const period=args.p_period;qa.invocations.push({name,options:args});await wait();
+    if(qa.fail)return {data:null,error:{message:'Simulated trends error'}};
+    if(qa.trendEmpty)return {data:[],error:null};
+    const dates=period==='year'?['2020-01-01','2023-01-01','2026-01-01']:period==='month'?['2026-01-01','2026-03-01','2026-10-01']:['2026-10-05','2026-10-12','2026-10-19'];
+    return {data:dates.map((period_start,i)=>({activity_type:'run',period_start,distance_value:10+i,duration_value:30+i})),error:null};
+  }
   if(name.startsWith('social_')){
     if(qa.fail)return {data:null,error:{message:'Simulated social error'}};
     const read=name==='social_home'||name==='social_feed'||name==='social_activity'&&!args.p_change||name==='social_community'&&args.p_action==='get'||name==='social_discussion'&&args.p_action==='read'||name==='social_own_comments'||name==='social_challenges'&&args.p_action==='list'||name==='social_invite'&&['preview','get'].includes(args.p_action);
@@ -236,8 +245,16 @@ Object.defineProperty(supabase, "functions", { value: { invoke: async (name: str
 (supabase.storage as any).from = () => ({ createSignedUrls: async (paths:string[]) => ({ data: paths.filter(p=>p.includes('memory-')||p.includes('circle-profile')).map(path=>({path,signedUrl:'data:image/svg+xml,'+encodeURIComponent(`<svg data-fixture-path="${path}" xmlns="http://www.w3.org/2000/svg" width="${path.includes('1')?600:450}" height="${path.includes('1')?450:600}" viewBox="0 0 600 450"><rect width="600" height="450" fill="${path.includes('1')?'#b4c9b8':'#e4c9ad'}"/><circle cx="300" cy="210" r="110" fill="#f3ede4"/><text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#374d44">Fictional activity photo ${path.includes('1')?'1':'2'}</text></svg>`)})), error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
 HTMLMediaElement.prototype.play = async () => {};
 
+function TrendsScenario() {
+  const [period,setPeriod]=useState<TrendPeriod>('week');
+  const [units,setUnits]=useState<'metric'|'imperial'>('metric');
+  const trends=useActivityTrends(user.id,true,period);
+  return <div className="mx-auto max-w-3xl px-4 py-3"><button onClick={()=>setUnits(v=>v==='metric'?'imperial':'metric')}>Switch units</button><TrendsTab {...trends} period={period} onPeriodChange={setPeriod} unitSystem={units}/></div>;
+}
+
 function Scenario({ name, close, saved }: { name: string; close: () => void; saved: () => void }) {
   switch (name) {
+    case "trends": return <TrendsScenario/>;
     case 'social-page': return <SocialPage/>;
     case 'social-sharing': return <ActivitySharingSheet activityId="social-owned-activity" onClose={close} onSaved={saved}/>;
     case 'community-join': return <CommunityJoinPage/>;

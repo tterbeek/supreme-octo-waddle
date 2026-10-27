@@ -1,5 +1,12 @@
 # MoveNotes
 
+## Insights Trends
+
+Trends offers Year / Month / Week grouping: every recorded year, up to twelve
+calendar months with data, or the existing weekly range. Apply
+`20261027050000_trend_periods.sql` before deploying the frontend. No Edge Function
+deployment is needed. See [behavior and verification](docs/insights-trends.md).
+
 ## Local development
 
 Start local Supabase with `npx supabase start`, then run `npm run dev`.

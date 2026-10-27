@@ -7,7 +7,7 @@ import GoalTrackingTab from "../components/stats/GoalTrackingTab";
 import TrendsTab from "../components/stats/TrendsTab";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useGoalTrackingStats, type GoalStat } from "../hooks/useGoalTrackingStats";
-import { useActivityTrends } from "../hooks/useActivityTrends";
+import { useActivityTrends, type TrendPeriod } from "../hooks/useActivityTrends";
 import type { Goal } from "../types";
 import { useUnitSystem } from "../contexts/UnitContext";
 
@@ -22,6 +22,8 @@ export default function StatsRpcPage() {
     if (saved === "trends") return "trends";
     return "goalTracking";
   });
+
+  const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("week");
 
   const statsHeaderRef = useRef<HTMLDivElement | null>(null);
   const { unitSystem } = useUnitSystem();
@@ -52,7 +54,7 @@ export default function StatsRpcPage() {
     hasTrendRows,
     getDefaultMetric,
     canToggle,
-  } = useActivityTrends(userId, activeTab === "trends");
+  } = useActivityTrends(userId, activeTab === "trends", trendPeriod);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -123,6 +125,8 @@ export default function StatsRpcPage() {
 
       {activeTab === "trends" && (
         <TrendsTab
+          period={trendPeriod}
+          onPeriodChange={setTrendPeriod}
           metasWithDefault={metasWithDefault}
           selectedMetric={selectedMetric}
           trendData={trendData}

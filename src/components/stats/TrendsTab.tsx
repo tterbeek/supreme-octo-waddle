@@ -7,12 +7,14 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import { AlertCircle } from "lucide-react";
-import { format, startOfWeek } from "date-fns";
+import { format, parseISO, startOfWeek, startOfMonth, startOfYear } from "date-fns";
 import { ACTIVITY_TYPES } from "../../config/activityTypes";
 import { kmToMiles } from "../../lib/units";
-import type { TrendMeta, TrendPoint } from "../../hooks/useActivityTrends";
+import type { TrendMeta, TrendPoint, TrendPeriod } from "../../hooks/useActivityTrends";
 
 type TrendsTabProps = {
+  period: TrendPeriod;
+  onPeriodChange: (period: TrendPeriod) => void;
   metasWithDefault: TrendMeta[];
   selectedMetric: Record<string, "distance" | "duration">;
   trendData: Record<string, TrendPoint[]>;
@@ -26,6 +28,8 @@ type TrendsTabProps = {
 };
 
 export default function TrendsTab({
+  period,
+  onPeriodChange,
   metasWithDefault,
   selectedMetric,
   trendData,
@@ -39,6 +43,14 @@ export default function TrendsTab({
 }: TrendsTabProps) {
   return (
     <>
+      <div className="mb-4 flex justify-end">
+        <label className="flex items-center gap-2 text-sm text-movenotes-muted">
+          <span className="sr-only">Trend period</span>
+          <select aria-label="Trend period" value={period} onChange={event => onPeriodChange(event.target.value as TrendPeriod)} className="min-h-11 rounded-full border border-movenotes-border bg-movenotes-surface px-4 text-movenotes-text">
+            <option value="year">Year</option><option value="month">Month</option><option value="week">Week</option>
+          </select>
+        </label>
+      </div>
       {trendsLoading && !error && (
         <p className="text-sm text-gray-500 text-center">Loading trends…</p>
       )}
@@ -70,7 +82,8 @@ export default function TrendsTab({
             if (!defaultMetric) return null;
             const cfg = ACTIVITY_TYPES[meta.activity_type];
             const Icon = cfg.Icon;
-            const activeMetric = selectedMetric[meta.activity_type] ?? defaultMetric;
+            const chosenMetric = selectedMetric[meta.activity_type];
+            const activeMetric = chosenMetric && (chosenMetric === 'distance' ? meta.has_distance : meta.has_duration) ? chosenMetric : defaultMetric;
             const key = `${meta.activity_type}:${activeMetric}`;
             const series = trendData[key] || [];
             if (!series.length) return null;
@@ -81,25 +94,17 @@ export default function TrendsTab({
                   : "km"
                 : "min";
 
-            const currentWeekStr = format(
-              startOfWeek(new Date(), { weekStartsOn: 1 }),
-              "yyyy-MM-dd"
-            );
-
+            const now = new Date();
+            const currentPeriod = format(period === 'year' ? startOfYear(now) : period === 'month' ? startOfMonth(now) : startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
             const rows = series.map((point) => {
-              const start = new Date(point.week_start + "T00:00:00");
+              const start = parseISO(point.period_start);
               const end = new Date(start);
-              end.setDate(end.getDate() + 6);
-              const isCurrent = point.week_start === currentWeekStr;
-              const value =
-                activeMetric === "distance" && unitSystem === "imperial"
-                  ? kmToMiles(point.value)
-                  : point.value;
+              if (period === 'week') end.setDate(end.getDate() + 6);
+              const value = activeMetric === 'distance' && unitSystem === 'imperial' ? kmToMiles(point.value) : point.value;
               return {
-                week: point.week_start,
-                weekLabel: format(end, "dd MMM"),
-                value,
-                isCurrent,
+                periodLabel: format(period === 'week' ? end : start, period === 'year' ? 'yyyy' : period === 'month' ? 'MMM yy' : 'dd MMM'),
+                fullLabel: period === 'week' ? `${format(start, 'd MMM yyyy')} – ${format(end, 'd MMM yyyy')}` : format(start, period === 'year' ? 'yyyy' : 'MMMM yyyy'),
+                value, isCurrent: point.period_start === currentPeriod,
               };
             });
 
@@ -173,7 +178,7 @@ export default function TrendsTab({
 
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={rowsWithLines}>
-                    <XAxis dataKey="weekLabel" stroke="#888" fontSize={12} />
+                    <XAxis dataKey="periodLabel" stroke="#888" fontSize={12} />
                     <YAxis
                       stroke="#888"
                       fontSize={12}
@@ -185,6 +190,7 @@ export default function TrendsTab({
                       }
                     />
                     <RechartsTooltip
+                      labelFormatter={(_label, payload) => payload?.[0]?.payload?.fullLabel ?? _label}
                       formatter={(value: number | string) =>
                         activeMetric === "distance"
                           ? `${Number(value).toFixed(0)} ${unitLabel}`

@@ -1348,6 +1348,10 @@ export type Database = {
           has_duration: boolean
         }[]
       }
+      stats_activity_trends: {
+        Args: { p_period?: string; p_timezone?: string }
+        Returns: { activity_type: string; period_start: string; distance_value: number | null; duration_value: number | null }[]
+      }
       stats_activity_trend_series: {
         Args: {
           activity_type: string

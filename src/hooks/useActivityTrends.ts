@@ -8,8 +8,8 @@ import {
   type UserActivityTypeRow,
 } from "../lib/userActivityTypesCache";
 
-const TRENDS_META_RPC = "stats_activity_trend_meta";
-const TRENDS_SERIES_RPC = "stats_activity_trend_series";
+import { buildTrendSeries, type TrendPoint, type TrendPeriod } from '../lib/activityTrends';
+export type { TrendPoint, TrendPeriod } from '../lib/activityTrends';
 
 export type TrendMeta = {
   activity_type: keyof typeof ACTIVITY_TYPES;
@@ -17,64 +17,6 @@ export type TrendMeta = {
   has_duration: boolean;
   default_metric: "distance" | "duration" | null;
 };
-
-export type TrendPoint = {
-  week_start: string;
-  value: number;
-};
-
-const isSchemaCacheError = (err: any) =>
-  typeof err?.message === "string" && err.message.toLowerCase().includes("schema cache");
-
-async function fetchTrendMeta(userId: string) {
-  const { data, error } = await supabase.rpc(TRENDS_META_RPC, {
-    target_user: userId,
-    weeks_back: 9,
-  });
-  if (!error) return data as TrendMeta[];
-
-  if (isSchemaCacheError(error)) {
-    const { data: fallbackData, error: fallbackError } = await supabase.rpc(
-      TRENDS_META_RPC,
-      {
-        p_target_user: userId,
-        p_weeks_back: 9,
-      } as never
-    );
-    if (!fallbackError) return fallbackData as TrendMeta[];
-  }
-
-  throw error;
-}
-
-async function fetchTrendSeries(
-  userId: string,
-  activityType: string,
-  metric: "distance" | "duration"
-) {
-  const { data, error } = await supabase.rpc(TRENDS_SERIES_RPC, {
-    target_user: userId,
-    activity_type: activityType,
-    metric,
-    weeks_back: 9,
-  });
-  if (!error) return data as TrendPoint[];
-
-  if (isSchemaCacheError(error)) {
-    const { data: fallbackData, error: fallbackError } = await supabase.rpc(
-      TRENDS_SERIES_RPC,
-      {
-        p_target_user: userId,
-        p_activity_type: activityType,
-        p_metric: metric,
-        p_weeks_back: 9,
-      } as never
-    );
-    if (!fallbackError) return fallbackData as TrendPoint[];
-  }
-
-  throw error;
-}
 
 const fieldToMetric = (field: string | undefined): "distance" | "duration" | null => {
   if (field === "distance_km") return "distance";
@@ -85,7 +27,7 @@ const fieldToMetric = (field: string | undefined): "distance" | "duration" | nul
 const metaHasMetric = (meta: TrendMeta, metric: "distance" | "duration") =>
   metric === "distance" ? meta.has_distance : meta.has_duration;
 
-export function useActivityTrends(userId: string | null, enabled: boolean) {
+export function useActivityTrends(userId: string | null, enabled: boolean, period: TrendPeriod = "week") {
   const [trendMeta, setTrendMeta] = useState<TrendMeta[]>([]);
   const [trendData, setTrendData] = useState<Record<string, TrendPoint[]>>({});
   const [selectedMetric, setSelectedMetric] = useState<
@@ -192,110 +134,39 @@ export function useActivityTrends(userId: string | null, enabled: boolean) {
   }, [userId, enabled]);
 
   useEffect(() => {
-    if (!userId || !enabled) return;
     let cancelled = false;
+    setTrendMeta([]);
+    setTrendData({});
+    setError(null);
+    if (!userId || !enabled) { setTrendsLoading(false); return; }
     setTrendsLoading(true);
-    fetchTrendMeta(userId)
-      .then((data) => {
-        if (cancelled) return;
-        setTrendMeta(data || []);
-        setError(null);
-      })
-      .catch((err: any) => {
-        if (cancelled) return;
-        console.error("[Trends] Meta fetch error:", err?.message || err);
-        setError(err?.message || "Could not load trends.");
-      })
-      .finally(() => {
-        if (!cancelled) setTrendsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, enabled]);
+    void Promise.resolve(supabase.rpc('stats_activity_trends', {
+      p_period: period,
+      p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    })).then(({ data, error: fetchError }) => {
+      if (cancelled) return;
+      if (fetchError) { setError(fetchError.message); setTrendsLoading(false); return; }
+      const rows = data || [];
+      const series = buildTrendSeries(rows);
+      setTrendData(series);
+      setTrendMeta([...new Set(rows.map(row => row.activity_type))].filter(type => !!ACTIVITY_TYPES[type]).map(type => ({
+        activity_type: type,
+        has_distance: !!series[`${type}:distance`]?.length,
+        has_duration: !!series[`${type}:duration`]?.length,
+        default_metric: null,
+      })));
+      setTrendsLoading(false);
+    }).catch(() => { if (!cancelled) { setError('Could not load trends.'); setTrendsLoading(false); } });
+    return () => { cancelled = true; };
+  }, [userId, enabled, period]);
 
   useEffect(() => {
-    if (!enabled || !trendMeta.length || !userId) return;
+    setSelectedMetric({});
+  }, [userId]);
 
-    setSelectedMetric((prev) => {
-      const next = { ...prev };
-      trendMeta.forEach((meta) => {
-        const def = getDefaultMetric(meta);
-        if (!def) return;
-        const current = prev[meta.activity_type];
-        if (!current || !metaHasMetric(meta, current)) {
-          next[meta.activity_type] = def;
-        }
-      });
-      return next;
-    });
-
-    const missing = trendMeta.filter((meta) => {
-      const def = getDefaultMetric(meta);
-      return def && !trendData[`${meta.activity_type}:${def}`];
-    });
-
-    if (!missing.length) return;
-
-    let cancelled = false;
-    setTrendsLoading(true);
-
-    const loadSeries = async () => {
-      try {
-        await Promise.all(
-          missing.map(async (meta) => {
-            const def = getDefaultMetric(meta);
-            if (!def) return;
-            const series = await fetchTrendSeries(userId, meta.activity_type, def);
-            if (cancelled) return;
-            setTrendData((prev) => ({
-              ...prev,
-              [`${meta.activity_type}:${def}`]: series,
-            }));
-          })
-        );
-      } catch (err: any) {
-        if (!cancelled) {
-          console.error("[Trends] Series fetch error:", err?.message || err);
-          setError(err?.message || "Could not load trend data.");
-        }
-      } finally {
-        if (!cancelled) {
-          setTrendsLoading(false);
-        }
-      }
-    };
-
-    loadSeries();
-
-    return () => {
-      cancelled = true;
-    };
-    // trendData is intentionally included to avoid refetching loaded series
-  }, [trendMeta, trendData, userId, activityPreferences, enabled, getDefaultMetric]);
-
-  const onToggleMetric = useCallback(
-    async (activityType: string, metric: "distance" | "duration") => {
-      if (!userId) return;
-
-      setSelectedMetric((prev) => ({ ...prev, [activityType]: metric }));
-
-      const key = `${activityType}:${metric}`;
-      if (trendData[key]) return;
-
-      try {
-        setTrendsLoading(true);
-        const series = await fetchTrendSeries(userId, activityType, metric);
-        setTrendData((prev) => ({ ...prev, [key]: series }));
-      } catch (err: any) {
-        console.error("[Trends] Series fetch error:", err?.message || err);
-        setError(err?.message || "Could not load trend data.");
-      } finally {
-        setTrendsLoading(false);
-      }
-    },
-    [userId, trendData]
-  );
+  const onToggleMetric = useCallback((activityType: string, metric: "distance" | "duration") => {
+    setSelectedMetric(previous => ({ ...previous, [activityType]: metric }));
+  }, []);
 
   const metasWithDefault = useMemo(
     () => trendMeta.filter((meta) => getDefaultMetric(meta)),
@@ -327,7 +198,7 @@ export function useActivityTrends(userId: string | null, enabled: boolean) {
     () =>
       orderedMetas.some((meta) => {
         const activeMetric =
-          selectedMetric[meta.activity_type] ??
+          (selectedMetric[meta.activity_type] && metaHasMetric(meta, selectedMetric[meta.activity_type]) ? selectedMetric[meta.activity_type] : undefined) ??
           (getDefaultMetric(meta) as "distance" | "duration");
         const key = `${meta.activity_type}:${activeMetric}`;
         return (trendData[key]?.length || 0) > 0;
