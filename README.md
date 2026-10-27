@@ -22,8 +22,8 @@ enabling the frontend; pushing the frontend alone does not enable it.
 Production release order (on `main`):
 
 1. Run `npm test`, `npm run build`, and `npm run supabase:verify-local`.
-2. Run `npx supabase db push --linked --dry-run`; expect the nine migrations
-   from `20261025000000` through `20261027020000`. Apply with
+2. Run `npx supabase db push --linked --dry-run`; expect the ten migrations
+   from `20261025000000` through `20261027030000`. Apply with
    `npx supabase db push --linked` once the pending list matches.
 3. Deploy `npx supabase functions deploy social-media --project-ref ljthydvstmbcgqdnqkvx --use-api`.
 4. Set `VITE_SOCIAL_V2_ENABLED=true` in Vercel's Production environment.

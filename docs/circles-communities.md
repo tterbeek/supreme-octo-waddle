@@ -81,7 +81,8 @@ or storage access to recipients. Apply this migration as well as the foundation.
   never populated from them. It is the same across audiences. New photos are
   included by default when the activity is shared. Owners can
   unselect individual photos in Modify sharing; exclusions persist on replacement.
-  Existing saved photo choices are preserved by the migration.
+  The follow-up migration `20261027030000` selects existing photos once;
+  subsequent per-photo exclusions persist.
 - Shared summaries expose only identity/display name, title, type, date,
   distance/duration, the shared note, selected photo IDs and authorized audience
   labels. Private notes, feelings, effort, equipment, routes and integration
@@ -334,7 +335,8 @@ unauthorized reads, plus TypeScript compilation. No production changes applied.
 `20261027020000_shared_photos_by_default.sql` selects new activity photos and
 new legacy attachments by default. This does not create a sharing audience or
 expose a private activity. Modify sharing still controls each photo; replacing
-an existing image preserves its selection. Existing stored selections are left
-unchanged. Private notes/reflections remain separate from the shared note.
+an existing image preserves its selection. The follow-up `20261027030000_existing_photos_shared_by_default.sql` also
+selects existing photos once, resetting previous photo exclusions to establish
+the requested all-photos default. Later opt-outs remain authoritative. Private notes/reflections remain separate from the shared note.
 Deploy the migration before the frontend wording update; no Edge Function
 redeployment is needed for this change.
