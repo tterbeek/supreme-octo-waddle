@@ -1,16 +1,9 @@
+import ActivityPhotoPreview from './ActivityPhotoPreview';
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { MapPin, Zap } from "lucide-react";
 import { SOCIAL_V2_ENABLED } from '../config/social';
 import ActivitySharingSheet from './social/ActivitySharingSheet';
 import {
-  IconBoxMultiple2,
-  IconBoxMultiple3,
-  IconBoxMultiple4,
-  IconBoxMultiple5,
-  IconBoxMultiple6,
-  IconBoxMultiple7,
-  IconBoxMultiple8,
-  IconBoxMultiple9,
   IconChevronRight,
   IconMoodEmpty,
   IconMoodHappy,
@@ -73,7 +66,6 @@ export default function RecentActivityCard({
   activity,
   signedNoteImages,
   signedNoteThumbs,
-  noteImageOrientation,
   onEdit,
   onShareImage,
   onDeleted,
@@ -98,7 +90,6 @@ export default function RecentActivityCard({
   disableSwipe = false,
   imageLoading = "lazy",
 }: RecentActivityCardProps) {
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionDialog, setActionDialog] = useState<"share" | "delete" | "audiences" | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -110,12 +101,6 @@ export default function RecentActivityCard({
     document.addEventListener("pointerdown", closeOutside);
     return () => document.removeEventListener("pointerdown", closeOutside);
   }, [actionsOpen]);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const cachedImageHandledRef = useRef<string | null>(null);
-  const onNoteImageLoadRef = useRef(onNoteImageLoad);
-  const pointerTypeRef = useRef<string | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const touchMovedRef = useRef(false);
   const typeConfig = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES["other"];
   const TypeIcon = typeConfig.Icon;
   const formattedDistance =
@@ -214,41 +199,6 @@ export default function RecentActivityCard({
           { value: "happy", label: "Good" },
           { value: "spark", label: "Uplifted" },
         ] as const);
-  useEffect(() => {
-    onNoteImageLoadRef.current = onNoteImageLoad;
-  }, [onNoteImageLoad]);
-
-  const countIcon = (() => {
-    if (photoCount <= 1) return null;
-    if (photoCount === 2) return IconBoxMultiple2;
-    if (photoCount === 3) return IconBoxMultiple3;
-    if (photoCount === 4) return IconBoxMultiple4;
-    if (photoCount === 5) return IconBoxMultiple5;
-    if (photoCount === 6) return IconBoxMultiple6;
-    if (photoCount === 7) return IconBoxMultiple7;
-    if (photoCount === 8) return IconBoxMultiple8;
-    return IconBoxMultiple9;
-  })();
-
-  useEffect(() => {
-    setImageLoaded(false);
-    cachedImageHandledRef.current = null;
-  }, [thumbUrl]);
-
-  useEffect(() => {
-    const imageEl = imageRef.current;
-    if (!thumbUrl || !imageEl) return;
-    if (!imageEl.complete || imageEl.naturalWidth === 0 || imageEl.naturalHeight === 0) {
-      return;
-    }
-    if (cachedImageHandledRef.current === thumbUrl) {
-      return;
-    }
-
-    cachedImageHandledRef.current = thumbUrl;
-    onNoteImageLoadRef.current(activity.id, imageEl.naturalWidth, imageEl.naturalHeight);
-    setImageLoaded(true);
-  }, [activity.id, thumbUrl]);
 
   return (
     <SwipeActions onEdit={() => onEdit(activity)} disabled={disableSwipe}>
@@ -483,79 +433,9 @@ export default function RecentActivityCard({
               </p>
             )}
 
-            {thumbUrl && (
-              <div
-                className="relative inline-block"
-                data-photo-trigger="true"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  pointerTypeRef.current = e.pointerType;
-                  if (e.pointerType === "touch") {
-                    touchStartRef.current = { x: e.clientX, y: e.clientY };
-                    touchMovedRef.current = false;
-                  }
-                }}
-                onPointerMove={(e) => {
-                  if (pointerTypeRef.current !== "touch") return;
-                  if (!touchStartRef.current) return;
-                  const dx = Math.abs(e.clientX - touchStartRef.current.x);
-                  const dy = Math.abs(e.clientY - touchStartRef.current.y);
-                  if (dx > 8 || dy > 8) {
-                    touchMovedRef.current = true;
-                  }
-                }}
-                onPointerUp={(e) => {
-                  e.stopPropagation();
-                  if (pointerTypeRef.current === "touch") {
-                    const moved = touchMovedRef.current;
-                    touchStartRef.current = null;
-                    if (moved) return;
-                  }
-                  if (photoCount > 0) onOpenGallery(activity);
-                }}
-                onPointerCancel={() => {
-                  touchStartRef.current = null;
-                  touchMovedRef.current = false;
-                }}
-              >
-                <img
-                  ref={imageRef}
-                  src={thumbUrl}
-                  alt="Activity note"
-                  loading={imageLoading}
-                  className={`
-                    rounded-xl border border-warm-200 shadow-sm transition-opacity duration-200
-                    ${
-                      noteImageOrientation[activity.id] === "portrait"
-                        ? "max-h-60 w-auto max-w-full mx-auto object-contain"
-                        : "w-full max-h-56 object-cover"
-                    }
-                    ${imageLoaded ? "opacity-100" : "opacity-0"}
-                  `}
-                  data-photo-trigger="true"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (pointerTypeRef.current && pointerTypeRef.current !== "mouse") {
-                      return;
-                    }
-                    if (photoCount > 0) onOpenGallery(activity);
-                  }}
-                  onLoad={(e) => {
-                    const { naturalWidth, naturalHeight } = e.currentTarget;
-                    onNoteImageLoad(activity.id, naturalWidth, naturalHeight);
-                    setImageLoaded(true);
-                  }}
-                />
-                {countIcon && (
-                  <span className="absolute bottom-2 right-2 rounded-full bg-black/70 text-white text-[11px] font-semibold px-2 py-0.5">
-                    {(() => {
-                      const CountIcon = countIcon;
-                      return <CountIcon size={14} strokeWidth={2} />;
-                    })()}
-                  </span>
-                )}
-              </div>
-            )}
+            {thumbUrl && <ActivityPhotoPreview src={thumbUrl} count={photoCount} loading={imageLoading}
+              onOpen={() => onOpenGallery(activity)} onLoad={(width, height) => onNoteImageLoad(activity.id, width, height)}/>}
+
           </div>
         )}
 

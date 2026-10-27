@@ -67,8 +67,8 @@ const socialComments:any={'social-activity':[{id:'thread-comment',author_id:'fic
 const socialReactions:Record<string,string|null>={};const fixtureChallenges:any[]=[];
 qa.setChallengeDemo=()=>{qa.challengeDemo=true;if(!socialRows[0].contexts.some((c:any)=>c.community==='community-one'))socialRows[0].contexts.push({id:'community-context',audience:'audience-community',kind:'community',community:'community-one',name:'Brussels Runners'});fixtureChallenges.length=0;fixtureChallenges.push({id:'challenge-demo',title:'Around the world together',metric:'distance',target:10,scope:'collective',types:['walk','run','ride'],starts_on:'2026-10-19',ends_on:'2026-11-02',time_zone:'Europe/Brussels',state:'active',total:16,mine:4,has_cover:true,cover_updated_at:'2026-10-26T10:00:00Z'});};
 qa.setCardOwner=(owner:boolean)=>{socialRows[0].author_id=owner?user.id:'fictional-friend';};
-qa.setCardDemo=(orientation:string,total=8)=>{
- Object.assign(socialRows[0],{title:'Morning run Woluwe-Saint-Lambert',type:'run',distance_km:5,duration_min:33,public_note:'A quiet morning in the park. Lovely light through the trees.',photos:[{id:'qa-'+orientation,order:0}]});
+qa.setCardDemo=(orientation:string,total=8,photoCount=1)=>{
+ Object.assign(socialRows[0],{title:'Morning run Woluwe-Saint-Lambert',type:'run',distance_km:5,duration_min:33,public_note:'A quiet morning in the park. Lovely light through the trees.',photos:Array.from({length:photoCount},(_,i)=>({id:'qa-'+orientation+(i?'-'+i:''),order:i}))});
  socialComments['social-activity']=Array.from({length:total},(_,i)=>({id:'demo-comment-'+i,author_id:'demo-author-'+i,author:['Emma','Ben','Alex'][i%3],body:'A shared moment '+(i+1),created_at:new Date(Date.now()-(8-i)*3600_000).toISOString(),can_delete:false}));
 };
 const activity: any = { id: "fictional-activity", user_id: user.id, title: "A gentle morning walk", type: "walk", date: "2026-10-17", distance_km: 4, duration_min: 45, notes: "A private note that must be kept.", feeling_during: "smile", feeling_after: "happy", effort: 2, source: "manual", activity_equipment: [] };
@@ -154,7 +154,7 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     if(name==='social_home')return {data:{enabled:true,circle:'circle-owner',audiences:qa.profileNoCommunity?socialAudiences.filter(a=>a.kind==='circle'):qa.challengeDemo?socialAudiences.filter(a=>a.kind==='circle'||a.community_id==='community-one'):socialAudiences},error:null};
     if(name==='social_set_rule'){Object.assign(socialAudiences.find(a=>a.id===args.p_audience),{mode:args.p_mode,types:args.p_types});return {data:null,error:null};}
     if(name==='social_activity'){
-      const c=args.p_change;if(c){if(c.private!==undefined)socialSharing.private=c.private;if(c.public_note!==undefined)socialSharing.public_note=c.public_note;if(c.private)socialSharing.audiences.forEach((a:any)=>a.shared=false);for(const a of c.audiences||[])socialSharing.audiences.find((x:any)=>x.id===a.id).shared=a.share;}
+      const c=args.p_change;if(c){if(c.photos)socialSharing.photos.forEach((p:any)=>p.shared=c.photos.includes(p.id));if(c.private!==undefined)socialSharing.private=c.private;if(c.public_note!==undefined)socialSharing.public_note=c.public_note;if(c.private)socialSharing.audiences.forEach((a:any)=>a.shared=false);for(const a of c.audiences||[])socialSharing.audiences.find((x:any)=>x.id===a.id).shared=a.share;}
       return {data:{...socialSharing,audiences:socialSharing.audiences.map((a:any)=>({...a}))},error:null};
     }
     if(name==='social_feed'&&args.p_activity==='social-owned-activity')return {data:[{...socialRows[0],id:'social-owned-activity',author_id:user.id,author:'You',contexts:[]}],error:null};

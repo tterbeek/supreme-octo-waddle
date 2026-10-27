@@ -37,7 +37,7 @@ only validity, name and rules. Authentication and an explicit Join are required.
 ## Sharing and history
 
 Shared cards use an author/avatar/date header with activity options, centered
-activity details and an italic shared note, then uncropped photos. A divider
+activity details and an italic shared note, then the Journal-style first-photo preview and gallery counter. A divider
 separates subtle sharing provenance from the three most recent comments and an
 inline reply field. **View more comments** reveals five more inline each time and
 disappears once all comments are shown. Tapping the Comments heading opens the full
@@ -340,3 +340,19 @@ selects existing photos once, resetting previous photo exclusions to establish
 the requested all-photos default. Later opt-outs remain authoritative. Private notes/reflections remain separate from the shared note.
 Deploy the migration before the frontend wording update; no Edge Function
 redeployment is needed for this change.
+
+
+## Shared activity gallery
+
+`20261027040000_unified_shared_activity_photos.sql` makes attachment rows
+canonical for shared photo selection and delivery, matching the Journal. The
+older single-image field is used only when no attachments exist, where it
+appears as a normal Photo 1 checkbox. It cannot duplicate the first attachment
+or bypass an unchecked attachment through a legacy media request. Saved photo
+choices are unchanged. The Journal and shared feed both use
+`ActivityPhotoPreview` and the existing `GalleryLightbox`, including the photo
+count badge, portrait/landscape sizing and multi-photo navigation.
+
+Apply the migration before deploying the frontend. The existing social-media
+function calls the updated database media resolver, so no function redeployment
+is needed.

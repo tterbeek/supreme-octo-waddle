@@ -1,3 +1,4 @@
+import ActivityPhotoPreview from '../ActivityPhotoPreview';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { IconChevronDown, IconDotsVertical, IconSend2 } from '@tabler/icons-react';
 import { format, formatDistanceToNowStrict, parseISO } from 'date-fns';
@@ -159,11 +160,13 @@ export default function SocialActivityCard({ activity, onConversation, viewerId 
       <h2 className="flex items-start justify-center gap-3 text-lg font-semibold sm:text-xl"><span className="mt-0.5 shrink-0"><config.Icon size={26} /></span><span className="min-w-0 [overflow-wrap:anywhere]">{activity.title || config.label}</span></h2>
       <p className="text-sm text-gray-500">{[activity.distance_km != null ? formatDistance(activity.distance_km, unitSystem) : null, activity.duration_min != null ? formatDurationMinutes(activity.duration_min) : null].filter(Boolean).join(' · ')}</p>
       {activity.public_note && <p className="whitespace-pre-wrap break-words font-playfair text-[15px] md:text-[17px] italic leading-relaxed text-gray-600">{activity.public_note}</p>}
-      {!!activity.photos.length && <div className={`mx-auto grid max-w-lg gap-3 pt-2 ${activity.photos.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-        {activity.photos.map((p, i) => <button key={p.id} type="button" aria-label={`Open shared photo ${i + 1}`} onClick={() => setActive(i)} className="flex min-w-0 items-center justify-center overflow-hidden rounded-2xl">
-          {urls[p.id] ? <img src={urls[p.id]} alt="Shared activity" onError={() => setUrls(previous => ({ ...previous, [p.id]: '' }))} className={`block w-auto max-w-full rounded-2xl object-contain ${activity.photos.length > 1 ? 'max-h-72' : 'max-h-[28rem]'}`} /> : <span className="flex min-h-40 items-center text-sm text-movenotes-muted">Photo unavailable</span>}
-        </button>)}
+      {!!activity.photos.length && <div className="mx-auto max-w-lg pt-2">
+        {urls[activity.photos[0].id] ? <ActivityPhotoPreview src={urls[activity.photos[0].id]} count={activity.photos.length}
+          alt="Shared activity" label="Open shared photo 1" onOpen={() => setActive(0)}
+          onError={() => setUrls(previous => ({ ...previous, [activity.photos[0].id]: '' }))}/>
+          : <span className="text-sm text-movenotes-muted">Photo unavailable</span>}
       </div>}
+
     </div>
     <section className="space-y-4 border-t border-gray-300/60 pt-4" aria-label="Activity comments">
       <p className="text-xs text-movenotes-muted break-words">Shared with {activity.contexts.map(c => c.name).join(' · ')}</p>
