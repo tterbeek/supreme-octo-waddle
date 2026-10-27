@@ -77,6 +77,11 @@ export default function WeeklyCompanionCard({ post, onSaved, onDeleted }: { post
       <p className="mt-4 text-xs text-movenotes-text/60">{post.includes_activity_notes ? "Activity-note use was enabled for this thought." : "Private activity notes were not used."}</p>
     </CompanionSheet>}
     {sheet === "response" && <CompanionSheet title="Your reflection" busy={saving} dirty={draft !== (post.user_reflection ?? "")} onClose={() => setSheet(null)}>
+      <section aria-label="Original Companion thought" className="mb-4 rounded-xl border border-[#CBD8CA] bg-[#EEF2E9] p-4 text-movenotes-text">
+        <p className="text-xs text-[#66786A] mb-2">Companion · {formatDate(post.week_start)}–{formatDate(post.week_end)}</p>
+        <h3 className="font-playfair italic text-lg mb-2">A thought for the week</h3>
+        {post.status === "ready" ? <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">{post.thought}</p> : <p className="text-sm text-movenotes-text/65">This thought was removed when you turned off activity-note use.</p>}
+      </section>
       <p className="text-sm text-movenotes-text/70 mb-4">What felt true, different, or missing? You can also leave this thought unanswered.</p>
       <label htmlFor="companion-response" className="block text-sm">Your words</label>
       <FormTextarea id="companion-response" value={draft} onChange={(event) => setDraft(event.target.value)} rows={6} maxLength={4000} disabled={saving} className="mt-2 w-full rounded-xl border border-warm-200 bg-white/70 p-3 text-base" />
