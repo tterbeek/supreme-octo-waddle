@@ -28,6 +28,7 @@ import AdminWeeklyCompanion from "../../src/components/AdminWeeklyCompanion";
 import SettingsPage from "../../src/pages/SettingsPage";
 import ActivityPreferencesPage from "../../src/pages/ActivityPreferencesPage";
 import ManageCirclePage from "../../src/pages/ManageCirclePage";
+import ProfileSettingsPage from "../../src/pages/ProfileSettingsPage";
 import CircleInvitePage from "../../src/pages/CircleInvitePage";
 import ConnectionsPage from "../../src/pages/ConnectionsPage";
 import PolarCallbackPage from "../../src/pages/PolarCallbackPage";
@@ -41,6 +42,9 @@ import { SelectActivityTypeModal } from "../../src/components/SelectActivityType
 import Sidebar from "../../src/components/Sidebar";
 import GalleryLightbox from "../../src/components/GalleryLightbox";
 import ActivityImageSheet from "../../src/components/ActivityImageSheet";
+import SocialPage from '../../src/pages/SocialPage';
+import CommunityJoinPage from '../../src/pages/CommunityJoinPage';
+import ActivitySharingSheet from '../../src/components/social/ActivitySharingSheet';
 import MemoriesPage from '../../src/pages/MemoriesPage';
 import MemoryReader from '../../src/components/MemoryReader';
 import CalendarPage from '../../src/pages/CalendarPage';
@@ -56,6 +60,17 @@ window.fetch = (input, init) => {
   return originalFetch(input, init);
 };
 const user = { id: "fictional-owner", email: "fictional@example.invalid", email_confirmed_at: "2026-10-01" };
+const socialAudiences:any[]=[{id:'circle-owner',kind:'circle',name:'Circle',community_id:null,role:null,mode:'manual',types:[]},{id:'audience-community',kind:'community',name:'Brussels Runners',community_id:'community-one',role:'owner',mode:'manual',types:[],description:'A closed group for gentle movement.'}];
+const socialSharing:any={private:false,public_note:'',legacy_photo:false,has_legacy_photo:false,photos:[],audiences:[{id:'circle-owner',name:'Circle',shared:false},{id:'audience-community',name:'Brussels Runners',shared:false}]};
+const socialRows:any[]=[{id:'social-activity',date:'2026-10-25',shared_at:'2026-10-25T09:00:00Z',author_id:'fictional-friend',author:'Fictional friend',title:'A morning walk',type:'walk',distance_km:4,duration_min:45,public_note:'Some shared words.',photos:[],contexts:[{id:'circle-context',audience:'circle-owner',kind:'circle',community:null,name:'Circle'},{id:'community-context',audience:'audience-community',kind:'community',community:'community-one',name:'Brussels Runners'}]}];
+const socialComments:any={'social-activity':[{id:'thread-comment',author_id:'fictional-friend',author:'Fictional friend',body:'One shared conversation',created_at:'2026-10-25T09:00:00Z',can_delete:false,has_avatar:true}]};
+const socialReactions:Record<string,string|null>={};const fixtureChallenges:any[]=[];
+qa.setChallengeDemo=()=>{qa.challengeDemo=true;if(!socialRows[0].contexts.some((c:any)=>c.community==='community-one'))socialRows[0].contexts.push({id:'community-context',audience:'audience-community',kind:'community',community:'community-one',name:'Brussels Runners'});fixtureChallenges.length=0;fixtureChallenges.push({id:'challenge-demo',title:'Around the world together',metric:'distance',target:10,scope:'collective',types:['walk','run','ride'],starts_on:'2026-10-19',ends_on:'2026-11-02',time_zone:'Europe/Brussels',state:'active',total:16,mine:4,has_cover:true,cover_updated_at:'2026-10-26T10:00:00Z'});};
+qa.setCardOwner=(owner:boolean)=>{socialRows[0].author_id=owner?user.id:'fictional-friend';};
+qa.setCardDemo=(orientation:string,total=8)=>{
+ Object.assign(socialRows[0],{title:'Morning run Woluwe-Saint-Lambert',type:'run',distance_km:5,duration_min:33,public_note:'A quiet morning in the park. Lovely light through the trees.',photos:[{id:'qa-'+orientation,order:0}]});
+ socialComments['social-activity']=Array.from({length:total},(_,i)=>({id:'demo-comment-'+i,author_id:'demo-author-'+i,author:['Emma','Ben','Alex'][i%3],body:'A shared moment '+(i+1),created_at:new Date(Date.now()-(8-i)*3600_000).toISOString(),can_delete:false}));
+};
 const activity: any = { id: "fictional-activity", user_id: user.id, title: "A gentle morning walk", type: "walk", date: "2026-10-17", distance_km: 4, duration_min: 45, notes: "A private note that must be kept.", feeling_during: "smile", feeling_after: "happy", effort: 2, source: "manual", activity_equipment: [] };
 const memoryContext={start:'2024-10-01',end:'2024-11-01'};
 const memoryRows=Array.from({length:45},(_,i)=>({...activity,id:`memory-${i}`,created_at:`2024-10-24T12:00:${String(59-i).padStart(2,'0')}`,date:'2024-10-24',title:i===1?'Polar walk':i===2?'A feeling remembered':i===3?'A photo without a note':`An October walk ${i+1}`,
@@ -85,8 +100,14 @@ const rows: Record<string, any[]> = {
   companion_feedback: [],
 };
 const wait = () => new Promise(resolve => setTimeout(resolve, qa.delay));
+qa.setSocialProfile = (name:string,accepted:number,community=true,photo=false) => {
+  rows.user_preferences[0].social_display_name=name;
+  rows.user_preferences[0].social_profile_image_path=photo?'fictional-owner/profile.jpg':null;
+  rows.user_connections=Array.from({length:accepted},()=>({status:'accepted',requester_user_id:user.id,addressee_user_id:'fictional-friend'}));
+  qa.profileNoCommunity=!community;
+};
 const auth: any = supabase.auth;
-auth.getUser = async () => ({ data: { user: qa.case === "admin-weekly" ? { ...user, email: "me@thijsterbeek.com" } : user }, error: null });
+auth.getUser = async () => ({ data: { user: (qa as any).signedOut?null:qa.case === "admin-weekly" ? { ...user, email: "me@thijsterbeek.com" } : user }, error: null });
 auth.getSession = async () => ({ data: { session: { user, access_token: "fictional-not-a-token" } }, error: null });
 auth.onAuthStateChange = () => ({ data: { subscription: { unsubscribe() {} } } });
 auth.signInWithOtp = async () => { await wait(); return { error: qa.fail ? { message: "Simulated auth error" } : null }; };
@@ -104,6 +125,7 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
       if(op==='update')data.forEach(row=>Object.assign(row,payload));
       if(op==='delete')data.forEach(row=>{const index=memoryRows.indexOf(row);if(index>=0)memoryRows.splice(index,1);});
     }
+    if(table==="user_preferences"&&op!=="read"){Object.assign(rows.user_preferences[0],payload);data=rows.user_preferences;}
     if (table === "companion_feedback") {
       data = data.filter(row => filters.every(([key, value]) => row[key] === value));
       if (op === "delete") rows[table] = rows[table].filter(row => !data.includes(row));
@@ -125,6 +147,49 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
   return q;
 };
 (supabase as any).rpc = async (name: string, args: any) => {
+  if(name.startsWith('social_')){
+    if(qa.fail)return {data:null,error:{message:'Simulated social error'}};
+    const read=name==='social_home'||name==='social_feed'||name==='social_activity'&&!args.p_change||name==='social_community'&&args.p_action==='get'||name==='social_discussion'&&args.p_action==='read'||name==='social_own_comments'||name==='social_challenges'&&args.p_action==='list'||name==='social_invite'&&['preview','get'].includes(args.p_action);
+    if(!read){qa.writes.push({table:name,payload:args});await wait();}
+    if(name==='social_home')return {data:{enabled:true,circle:'circle-owner',audiences:qa.profileNoCommunity?socialAudiences.filter(a=>a.kind==='circle'):qa.challengeDemo?socialAudiences.filter(a=>a.kind==='circle'||a.community_id==='community-one'):socialAudiences},error:null};
+    if(name==='social_set_rule'){Object.assign(socialAudiences.find(a=>a.id===args.p_audience),{mode:args.p_mode,types:args.p_types});return {data:null,error:null};}
+    if(name==='social_activity'){
+      const c=args.p_change;if(c){if(c.private!==undefined)socialSharing.private=c.private;if(c.public_note!==undefined)socialSharing.public_note=c.public_note;if(c.private)socialSharing.audiences.forEach((a:any)=>a.shared=false);for(const a of c.audiences||[])socialSharing.audiences.find((x:any)=>x.id===a.id).shared=a.share;}
+      return {data:{...socialSharing,audiences:socialSharing.audiences.map((a:any)=>({...a}))},error:null};
+    }
+    if(name==='social_feed'&&args.p_activity==='social-owned-activity')return {data:[{...socialRows[0],id:'social-owned-activity',author_id:user.id,author:'You',contexts:[]}],error:null};
+    if(name==='social_feed')return {data:socialRows.filter(a=>!args.p_activity||a.id===args.p_activity).map(a=>({...a,comment_count:(socialComments[a.id]||[]).length,reaction_counts:socialReactions[a.id]?[{reaction:socialReactions[a.id],count:1}]:[],contexts:args.p_audience?a.contexts.filter((c:any)=>args.p_audience==='00000000-0000-0000-0000-000000000001'?c.kind==='circle':c.audience===args.p_audience):a.contexts})).filter(a=>a.contexts.length),error:null};
+    if(name==='social_community'){
+      if(args.p_action==='create'){const id='community-created';if(!socialAudiences.some(a=>a.community_id===id))socialAudiences.push({id:'audience-created',kind:'community',community_id:id,name:args.p_data.name,description:args.p_data.description,role:'owner',mode:'manual',types:[]});return {data:{id},error:null};}
+      if(args.p_action==='edit')Object.assign(socialAudiences.find(a=>a.community_id===args.p_id),{name:args.p_data.name,description:args.p_data.description});
+      const a=socialAudiences.find(a=>a.community_id===args.p_id)||socialAudiences[1];
+      return {data:{id:args.p_id,name:a.name,description:a.description,owner_id:user.id,members:[{id:user.id,name:'Fictional owner',role:'owner'},{id:'member-two',name:'Fictional member',role:'member'}]},error:null};
+    }
+    if(name==='social_invite'){
+      if(args.p_action==='get')return {data:{status:'missing'},error:null};
+      if(args.p_action==='rotate')return {data:{token:'a'.repeat(64),expires_at:'2026-11-25'},error:null};
+      if(args.p_action==='join'){if(!socialAudiences.some(a=>a.id==='audience-joined'))socialAudiences.push({id:'audience-joined',kind:'community',community_id:'community-joined',name:'Joined Community',role:'member',mode:'manual',types:[]});return {data:{status:'joined',id:'community-joined'},error:null};}
+      return {data:{status:'valid',name:'Joined Community',description:'A QR-only closed Community.'},error:null};
+    }
+    if(name==='social_discussion'){
+      const c=args.p_activity;const p=args.p_data||{};socialComments[c]??=[];
+      if(args.p_action==='comment')socialComments[c].push({id:'my-comment-'+qa.writes.length,author_id:user.id,author:'You',body:p.body,created_at:new Date().toISOString(),can_delete:true});
+      if(args.p_action==='delete_comment')socialComments[c]=socialComments[c].filter((x:any)=>x.id!==p.id);
+      if(args.p_action==='reaction')socialReactions[c]=p.reaction;
+      if(args.p_action==='block'){socialRows.length=0;return {data:{blocked:true},error:null};}
+      return {data:{can_moderate:c==='social-owned-activity',comments:[...socialComments[c]],comment_count:socialComments[c].length,reactions:(socialReactions[c]||qa.otherAppreciation)?[{reaction:'CHEER',count:(socialReactions[c]?1:0)+(qa.otherAppreciation?1:0)}]:[],my_reaction:socialReactions[c]||null,reports:[]},error:null};
+    }
+    if(name==='social_own_comments')return {data:{comments:(socialComments['social-activity']||[]).filter((c:any)=>c.author_id===user.id).map(({id,body,created_at}:any)=>({id,body,created_at})),has_more:false,before:null},error:null};
+    if(name==='social_delete_own_comment'){socialComments['social-activity']=socialComments['social-activity'].filter((c:any)=>c.id!==args.p_id||c.author_id!==user.id);return {data:true,error:null};}
+    if(name==='social_remove_community_activity'){for(const a of socialRows)a.contexts=a.contexts.filter((c:any)=>c.community!==args.p_community);return {data:null,error:null};}
+    if(name==='social_challenges'){
+      if(args.p_action==='create')fixtureChallenges.push({...args.p_data,id:'challenge-new',state:'active',total:0,mine:0,participating:false});
+      if(args.p_action==='update')Object.assign(fixtureChallenges.find(c=>c.id===args.p_data.id),args.p_data);
+      if(args.p_action==='cancel')fixtureChallenges.find(c=>c.id===args.p_data.id).state='cancelled';
+      if(['create','update','cover'].includes(args.p_action)&&'cover_path' in (args.p_data||{})){const challenge=fixtureChallenges.find(c=>c.id===(args.p_data.id||'challenge-new'));challenge.has_cover=!!args.p_data.cover_path;challenge.cover_updated_at=new Date().toISOString();}
+      return {data:fixtureChallenges.map(c=>({...c})),error:null};
+    }
+  }
   if(qa.case.startsWith('memories')&&name==='get_journal_feed_page_v2')return {data:memoryRows.slice(args.p_offset,args.p_offset+args.p_limit).map(row=>({...row,entry_kind:'activity'})),error:null};
   if(name.startsWith('memory_')) {
     if(qa.fail)return {data:null,error:{message:'Fictional Memories failure'}};
@@ -159,17 +224,23 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
 };
 Object.defineProperty(supabase, "functions", { value: { invoke: async (name: string, options: unknown) => {
   qa.invocations.push({ name, options }); await wait();
+  if(name==='social-media'&&(options as any)?.body?.challenge)return {data:{url:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="330"><rect width="900" height="330" fill="#bad3c4"/><circle cx="450" cy="165" r="135" fill="#5a7c6d"/><path d="M0 280 900 90" stroke="#f3dfae" stroke-width="15"/><text x="450" y="175" text-anchor="middle" font-family="sans-serif" font-size="36" fill="#fff">Fictional Community cover</text></svg>'),expires_in:60},error:null};
+  if(name==='social-media'&&(options as any)?.body?.photo?.startsWith('qa-')){const portrait=(options as any).body.photo==='qa-portrait';return {data:{url:'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${portrait?400:600}" height="${portrait?600:400}" viewBox="0 0 600 400"><rect width="600" height="400" fill="#b7c9ac"/><path d="M0 400 280 150 600 400" fill="#6e8b73"/><circle cx="460" cy="85" r="45" fill="#f3dfae"/><text x="300" y="365" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#fff">Fictional shared photo</text></svg>`),expires_in:60},error:null};}
+  if(name==='social-media'&&((options as any)?.body?.photo==='profile'||(options as any)?.body?.author))return {data:{url:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#5a7c6d"/><circle cx="16" cy="12" r="6" fill="#f3ede4"/></svg>'),expires_in:60},error:null};
   if (name === "weekly-companion") return { data: { status: "ready", ...((options as any)?.body?.store_test_request ? { diagnostics: {
     request_timestamp: "2026-10-20T12:00:00Z", endpoint: "https://api.openai.com/v1/responses", requested_model: "fixture-model", model: "fixture-model",
     response_id: "resp_fictional", request_id: "req_fictional", project_id: "proj_fictional", store_requested: true, store_returned: true, http_status: 200,
   } } : {}) }, error: qa.fail ? { message: "Simulated generation error" } : null };
   return { data: { connected: false, fetched: 0, inserted: 0, skipped: 0 }, error: null };
 } } });
-(supabase.storage as any).from = () => ({ createSignedUrls: async (paths:string[]) => ({ data: paths.filter(p=>p.includes('memory-')).map(path=>({path,signedUrl:'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${path.includes('1')?600:450}" height="${path.includes('1')?450:600}" viewBox="0 0 600 450"><rect width="600" height="450" fill="${path.includes('1')?'#b4c9b8':'#e4c9ad'}"/><circle cx="300" cy="210" r="110" fill="#f3ede4"/><text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#374d44">Fictional activity photo ${path.includes('1')?'1':'2'}</text></svg>`)})), error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
+(supabase.storage as any).from = () => ({ createSignedUrls: async (paths:string[]) => ({ data: paths.filter(p=>p.includes('memory-')||p.includes('circle-profile')).map(path=>({path,signedUrl:'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${path.includes('1')?600:450}" height="${path.includes('1')?450:600}" viewBox="0 0 600 450"><rect width="600" height="450" fill="${path.includes('1')?'#b4c9b8':'#e4c9ad'}"/><circle cx="300" cy="210" r="110" fill="#f3ede4"/><text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#374d44">Fictional activity photo ${path.includes('1')?'1':'2'}</text></svg>`)})), error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
 HTMLMediaElement.prototype.play = async () => {};
 
 function Scenario({ name, close, saved }: { name: string; close: () => void; saved: () => void }) {
   switch (name) {
+    case 'social-page': return <SocialPage/>;
+    case 'social-sharing': return <ActivitySharingSheet activityId="social-owned-activity" onClose={close} onSaved={saved}/>;
+    case 'community-join': return <CommunityJoinPage/>;
     case 'memories': case 'memories-empty': case 'memories-recent': return <MemoriesPage/>;
     case 'memories-reader': case 'memories-missing': case 'memories-error': return <MemoryReader id="memory-0" context={memoryContext} onClose={close} onChange={()=>{}} onUpdated={saved}/>;
     case "log": return <AddActivityForm initialType="walk" onClose={close} onLogged={saved} />;
@@ -198,7 +269,9 @@ function Scenario({ name, close, saved }: { name: string; close: () => void; sav
     case "admin-weekly-denied": return <AdminWeeklyCompanion />;
     case "settings": return <SettingsPage />;
     case "activity-preferences": return <ActivityPreferencesPage />;
-    case "circle-profile": return <ManageCirclePage />;
+    case "profile-settings":
+    case "circle-profile": return <ProfileSettingsPage />;
+    case "circle-connections": return <ManageCirclePage />;
     case "circle-invite": return <CircleInvitePage />;
     case "connections": return <ConnectionsPage />;
     case "polar-callback": return <PolarCallbackPage />;
@@ -223,15 +296,15 @@ function Harness() {
   const [name, setName] = useState(""); const [key, setKey] = useState(0); const [open, setOpen] = useState(false);
   const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
   const navigate = useNavigate(); const location = useLocation();
-  qa.select = (value: string) => { allowFormNavigation(() => navigate(value === "circle-invite" ? "/circle/invite/fictional" : value==='memories-nav'?'/memories':"/forms", { replace: true })); qa.case = value; qa.fail = false; qa.delay = 0; setName(value); setKey(n => n + 1); setOpen(true); };
+  qa.select = (value: string) => { allowFormNavigation(() => navigate(value === "circle-invite" ? "/circle/invite/fictional" : value==='community-join'?'/community/join/'+'a'.repeat(64):value==='memories-nav'?'/memories':"/forms", { replace: true })); qa.case = value; qa.fail = false; qa.delay = 0; setName(value); setKey(n => n + 1); setOpen(true); };
   qa.checkpoint = () => allowFormNavigation(() => navigate("/forms?checkpoint=1"));
   qa.navigate = (to: string) => navigate(to);
   const close = () => { qa.closed++; setOpen(false); };
   return <UnitContext.Provider value={{ unitSystem, setUnitSystem }}><FormNavigationGuard />
     <main className="p-4" style={{ minHeight: 1800 }}><button type="button" onClick={() => setOpen(true)}>Open form</button><p>Fictional form QA only</p>
-      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(location.pathname === "/forms" || location.pathname.startsWith("/circle/invite/")) && open && <Scenario key={key} name={name} close={close} saved={() => qa.saved++} />}
+      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(["/forms","/settings","/settings/profile","/settings/circle"].includes(location.pathname) || location.pathname.startsWith("/circle/invite/") || location.pathname.startsWith('/community/join/')) && open && <Scenario key={key+location.pathname} name={location.pathname==="/settings/profile"?"profile-settings":location.pathname==="/settings"?"settings":location.pathname==="/settings/circle"?"circle-connections":name} close={close} saved={() => qa.saved++} />}
     </main>
   </UnitContext.Provider>;
 }
-const router = createBrowserRouter([{ path: "*", element: <Harness /> }, { path: "/circle/invite/:token", element: <Harness /> }]);
+const router = createBrowserRouter([{ path: "*", element: <Harness /> }, { path: "/circle/invite/:token", element: <Harness /> },{path:'/community/join/:token',element:<Harness/>}]);
 createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />);

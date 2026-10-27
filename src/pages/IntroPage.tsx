@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { SOCIAL_V2_ENABLED } from '../config/social';
 
 export default function IntroPage() {
   return (
@@ -18,7 +19,7 @@ export default function IntroPage() {
           <li>• Add distance or duration if it matters to you</li>
           <li>• Capture a note, a photo, a moment</li>
           <li>• See patterns emerge over time</li>
-          <li>• Share selectively in the Gentle Circle, if you want</li>
+          <li>• {SOCIAL_V2_ENABLED?'Share selectively with Circle connections or closed Communities':'Share selectively in the Gentle Circle, if you want'}</li>
         </ul>
 
         <p className="text-movenotes-muted">

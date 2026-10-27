@@ -67,6 +67,9 @@ export type Database = {
       }
       activities: {
         Row: {
+          public_note: string | null
+          social_private: boolean
+          share_legacy_photo: boolean
           created_at: string | null
           date: string
           distance_km: number | null
@@ -94,6 +97,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          public_note?: string | null
+          social_private?: boolean
+          share_legacy_photo?: boolean
           created_at?: string | null
           date: string
           distance_km?: number | null
@@ -121,6 +127,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          public_note?: string | null
+          social_private?: boolean
+          share_legacy_photo?: boolean
           created_at?: string | null
           date?: string
           distance_km?: number | null
@@ -181,6 +190,7 @@ export type Database = {
       }
       activity_photos: {
         Row: {
+          is_shared: boolean
           activity_id: string
           created_at: string
           id: string
@@ -192,6 +202,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          is_shared?: boolean
           activity_id: string
           created_at?: string
           id?: string
@@ -203,6 +214,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          is_shared?: boolean
           activity_id?: string
           created_at?: string
           id?: string
@@ -1062,6 +1074,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      social_home: { Args: Record<string, never>; Returns: Json }
+      social_set_rule: { Args: { p_audience: string; p_mode: string; p_types: string[]; p_zone: string }; Returns: undefined }
+      social_activity: { Args: { p_activity: string; p_change?: Json }; Returns: Json }
+      social_community: { Args: { p_action: string; p_id?: string; p_data?: Json }; Returns: Json }
+      social_invite: { Args: { p_action: string; p_community?: string; p_token?: string }; Returns: Json }
+      social_feed: { Args: { p_audience?: string; p_before?: Json; p_activity?: string }; Returns: Json }
+      social_conversation: { Args: { p_context: string; p_action?: string; p_data?: Json }; Returns: Json }
+      social_discussion: { Args: { p_activity: string; p_action?: string; p_data?: Json }; Returns: Json }
+      social_own_comments: { Args: { p_before?: Json }; Returns: Json }
+      social_delete_own_comment: { Args: { p_id: string }; Returns: boolean }
+      social_remove_community_activity: { Args: { p_activity: string; p_community: string }; Returns: undefined }
+      social_discussion_media_path: { Args: { p_activity: string; p_author: string }; Returns: Json }
+      social_challenges: { Args: { p_community: string; p_action?: string; p_data?: Json }; Returns: Json }
+      social_challenge_media_path: { Args: { p_challenge: string }; Returns: Json }
+      social_media_path: { Args: { p_context: string; p_photo: string; p_thumb?: boolean }; Returns: Json }
       memory_archive: { Args: Record<string, never>; Returns: Json }
       memory_archive_v2: { Args: Record<string, never>; Returns: Json }
       memory_page_v2: { Args: { p_start: string; p_end: string; p_before?: Json; p_selected?: boolean }; Returns: Json }

@@ -1,4 +1,6 @@
 import { supabase } from "../supabaseClient";
+import { SOCIAL_V2_ENABLED } from '../config/social';
+import { socialHome,socialSettings } from './social.service';
 import type { CircleReactionType } from "../lib/circleReactions";
 import {
   compressImage,
@@ -90,6 +92,7 @@ export type OwnCircleProfile = {
 };
 
 export async function hasCircleAccess(userId: string): Promise<boolean> {
+  if(SOCIAL_V2_ENABLED)return (await socialHome()).enabled;
   const { data, error } = await supabase.rpc("has_circle_access", {
     p_user_id: userId,
   });
@@ -123,6 +126,7 @@ export async function getCircleFeed(params: {
 }
 
 export async function shareActivityWithConnections(activityId: string, userId: string) {
+  if(SOCIAL_V2_ENABLED){const home=await socialHome();await socialSettings(activityId,{private:false,audiences:[{id:home.circle!,share:true}]});return activityId;}
   const { data, error } = await supabase.rpc("share_activity_with_connections", {
     p_activity_id: activityId,
     p_user_id: userId,
@@ -132,6 +136,7 @@ export async function shareActivityWithConnections(activityId: string, userId: s
 }
 
 export async function fetchOwnSharedActivityIds(userId: string, activityIds: string[]) {
+  if(SOCIAL_V2_ENABLED){const rows=await Promise.all(activityIds.map(async id=>{const s=await socialSettings(id);return s.audiences.some(a=>a.shared)?id:null;}));return new Set(rows.filter((id):id is string=>!!id));}
   const uniqueIds = Array.from(new Set(activityIds.filter(Boolean)));
   if (uniqueIds.length === 0) return new Set<string>();
 
@@ -147,6 +152,7 @@ export async function fetchOwnSharedActivityIds(userId: string, activityIds: str
 }
 
 export async function unshareActivity(activityId: string, userId: string) {
+  if(SOCIAL_V2_ENABLED){const h=await socialHome();await socialSettings(activityId,{audiences:[{id:h.circle!,share:false}]});return true;}
   const { data, error } = await supabase.rpc("unshare_activity", {
     p_activity_id: activityId,
     p_user_id: userId,
@@ -156,6 +162,7 @@ export async function unshareActivity(activityId: string, userId: string) {
 }
 
 export async function refreshSharedActivity(activityId: string, userId: string) {
+  if(SOCIAL_V2_ENABLED)return true; // Canonical fields are read live; no copy to refresh.
   const { data, error } = await supabase.rpc("refresh_shared_activity", {
     p_activity_id: activityId,
     p_user_id: userId,
@@ -211,6 +218,7 @@ export async function removeCircleActivityReaction(params: {
 }
 
 export async function hasCircleNewReactions(userId: string) {
+  if(SOCIAL_V2_ENABLED)return false;
   const { data, error } = await supabase.rpc("has_circle_new_reactions", {
     p_user_id: userId,
   });

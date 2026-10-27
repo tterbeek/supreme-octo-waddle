@@ -13,8 +13,13 @@ import {
   type CircleFeedItem,
 } from "../services/circle.service";
 import { NOTE_STORAGE_BUCKET } from "../services/storage.service";
+import { SOCIAL_V2_ENABLED } from '../config/social';
+import SocialPage from './SocialPage';
 
 export default function CirclePage() {
+  return SOCIAL_V2_ENABLED ? <SocialPage/> : <LegacyCirclePage/>;
+}
+function LegacyCirclePage() {
   const gallery = useGalleryLightbox(NOTE_STORAGE_BUCKET);
   const [userId, setUserId] = useState<string | null>(null);
   const {

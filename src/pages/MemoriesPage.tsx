@@ -29,6 +29,7 @@ export default function MemoriesPage() {
   const selected=params.get('view')!=='all';
   const requestedYear=params.get('year');
   const year=(requestedYear&&years.includes(requestedYear)?requestedYear:null)||month?.slice(0,4)||years[0];
+  const visibleMonths=months.filter(m=>m.month.startsWith(year||''));
   const yearIndex=years.indexOf(year);
   const previousYear=years[yearIndex+1];
   const nextYear=yearIndex>0?years[yearIndex-1]:undefined;
@@ -74,8 +75,7 @@ export default function MemoriesPage() {
   },[feature,month]);
   if(loading)return <p role="status" className="py-12 text-center">Opening Memories…</p>;
   if(error)return <div role="alert" className="py-12"><p>Couldn't load Memories.</p><button className="underline p-3" onClick={refresh}>Retry</button></div>;
-  return <div className="space-y-8 py-4">
-    <header><h1 className="text-2xl font-semibold">Memories</h1><p className="text-sm text-movenotes-muted mt-1">Your movement moments, across time.</p></header>
+  return <><h1 className="sr-only">Memories</h1><div className="space-y-8 pt-3 pb-4">
     {!!months.length&&<div className="space-y-2">
       <div role="group" aria-label="Activity selection" className="flex rounded-full border border-movenotes-border p-1">
         <button type="button" aria-pressed={selected} onClick={()=>change('view',null)} className={`min-h-11 flex-1 rounded-full px-3 text-sm ${selected?'bg-movenotes-primary/15 text-movenotes-primary':'text-movenotes-muted'}`}>Selected moments</button>
@@ -114,11 +114,11 @@ export default function MemoriesPage() {
         {pageError&&<p role="alert">Couldn't load activities. <button className="underline" onClick={()=>rows.length?void more():refresh()}>Retry</button></p>}
         {hasMore&&<button disabled={pageLoading} className="border rounded-xl p-3 w-full" onClick={()=>void more()}>More activities</button>}
         {selected&&<button type="button" className="min-h-11 underline text-sm" onClick={()=>change('view','all')}>Show all {months.find(m=>m.month===month)?.count||''} activities</button>}
-      </> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">{months.filter(m=>m.month.startsWith(year)).map(m=><MemoryMonthCard key={m.month} month={m} selected={selected} urls={urls}
+      </> : <div className={`grid grid-cols-1 ${visibleMonths.length>1?'sm:grid-cols-2':''} gap-4 items-start`}>{visibleMonths.map(m=><MemoryMonthCard key={m.month} month={m} selected={selected} urls={urls}
         onOpenMonth={()=>openMonth(m.month,selected&&m.personal_count===0)} onShowAll={()=>openMonth(m.month,true)}
         onOpenActivity={activity=>openActivity(activity,m.month,true)}/>)}</div>}
 
     </section>}
     {reader}
-  </div>;
+  </div></>;
 }

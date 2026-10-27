@@ -149,7 +149,7 @@ export default function ConnectionsPage() {
 
       <section className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
         <h2 className="font-semibold text-movenotes-text">Polar Flow</h2>
-        <p className="mt-1 text-sm text-gray-600">Completed workouts are imported into your Journal. You can add MoveNotes details and reflections later.</p>
+        <p className="mt-1 text-sm text-gray-600">Connecting imports completed workouts from the last 90 days into your Journal. New workouts sync when you use MoveNotes. You can add details and reflections later.</p>
         {polarLoading ? <p className="mt-3 text-xs text-gray-500">Checking connection...</p> : (
           <div className="mt-3 flex items-center gap-2 flex-wrap">
             {polarConnection?.connected ? <>

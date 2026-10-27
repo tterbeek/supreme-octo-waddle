@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconShare } from "@tabler/icons-react";
+import { Link } from 'react-router-dom';
+import { SOCIAL_V2_ENABLED,CIRCLE_FILTER } from '../config/social';
 import Toast from "../components/Toast";
 import FormPage from "../components/forms/FormPage";
 import { NOTE_STORAGE_BUCKET, signStorageValues } from "../services/storage.service";
@@ -9,31 +11,19 @@ import {
   CIRCLE_ACCESS_UPDATED_EVENT,
   fetchCircleConnectedFriendLabels,
   fetchCircleConnections,
-  fetchOwnCircleProfile,
   respondToCircleConnection,
-  saveOwnCircleProfile,
   type CircleConnection,
-  uploadCircleProfileImage,
 } from "../services/circle.service";
 
 const shortUserId = (value: string) => value.slice(0, 8);
 export default function ManageCirclePage() {
-  const avatarInput = useRef<HTMLInputElement>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [creatingInviteLink, setCreatingInviteLink] = useState(false);
   const [inviteToast, setInviteToast] = useState<string | null>(null);
-  const [socialDisplayName, setSocialDisplayName] = useState("");
-  const [savedDisplayName, setSavedDisplayName] = useState("");
-  const [profileImagePath, setProfileImagePath] = useState<string | null>(null);
-  const [profileThumbPath, setProfileThumbPath] = useState<string | null>(null);
-  const [profilePreviewUrl, setProfilePreviewUrl] = useState<string | null>(null);
-  const [loginEmail, setLoginEmail] = useState<string | null>(null);
   const [rows, setRows] = useState<CircleConnection[]>([]);
   const [otherUserLabels, setOtherUserLabels] = useState<Record<string, string>>({});
   const [otherUserAvatarUrls, setOtherUserAvatarUrls] = useState<Record<string, string>>({});
@@ -120,17 +110,7 @@ export default function ManageCirclePage() {
           return;
         }
         setUserId(user.id);
-        const [profile] = await Promise.all([fetchOwnCircleProfile(user.id)]);
         await loadConnections(user.id);
-        if (profile) {
-          setSocialDisplayName(profile.social_display_name || "");
-          setSavedDisplayName(profile.social_display_name || "");
-          setProfileImagePath(profile.social_profile_image_path || null);
-          setProfileThumbPath(profile.social_profile_thumb_path || null);
-          setLoginEmail(profile.login_email || user.email || null);
-        } else {
-          setLoginEmail(user.email || null);
-        }
       } catch (err: any) {
         setError(err?.message || "Could not load Circle connections.");
       } finally {
@@ -139,21 +119,6 @@ export default function ManageCirclePage() {
     };
     void load();
   }, [loadConnections]);
-
-  useEffect(() => {
-    const loadProfilePreview = async () => {
-      const path = profileThumbPath || profileImagePath;
-      if (!path) {
-        setProfilePreviewUrl(null);
-        return;
-      }
-      const map = await signStorageValues([path], {
-        primaryBucket: NOTE_STORAGE_BUCKET,
-      });
-      setProfilePreviewUrl(map[path] || null);
-    };
-    void loadProfilePreview();
-  }, [profileImagePath, profileThumbPath]);
 
   const accepted = useMemo(
     () => rows.filter((row) => row.status === "accepted"),
@@ -225,60 +190,6 @@ export default function ManageCirclePage() {
     }
   };
 
-  const handleSaveProfile = async () => {
-    if (!userId) return;
-    setSavingProfile(true);
-    setError(null);
-    setNotice(null);
-    try {
-      await saveOwnCircleProfile({
-        userId,
-        socialDisplayName: socialDisplayName.trim() || null,
-        socialProfileImagePath: profileImagePath,
-        socialProfileThumbPath: profileThumbPath,
-      });
-      setNotice("Mini profile saved.");
-      setSavedDisplayName(socialDisplayName.trim());
-      setSocialDisplayName(socialDisplayName.trim());
-    } catch (err: any) {
-      setError(err?.message || "Could not save mini profile.");
-    } finally {
-      setSavingProfile(false);
-    }
-  };
-
-  const handleAvatarSelected = async (file: File | null) => {
-    if (!userId || !file) return;
-    setUploadingAvatar(true);
-    setSavingProfile(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const uploaded = await uploadCircleProfileImage({
-        userId,
-        file,
-        previousImagePath: profileImagePath,
-        previousThumbPath: profileThumbPath,
-      });
-      setProfileImagePath(uploaded.imagePath);
-      setProfileThumbPath(uploaded.thumbPath || null);
-      await saveOwnCircleProfile({
-        userId,
-        socialDisplayName: socialDisplayName.trim() || null,
-        socialProfileImagePath: uploaded.imagePath,
-        socialProfileThumbPath: uploaded.thumbPath || null,
-      });
-      setNotice("Profile picture saved.");
-      setSavedDisplayName(socialDisplayName.trim());
-      setSocialDisplayName(socialDisplayName.trim());
-    } catch (err: any) {
-      setError(err?.message || "Could not upload profile picture.");
-    } finally {
-      setUploadingAvatar(false);
-      setSavingProfile(false);
-    }
-  };
-
   const handleRespond = async (
     connectionId: string,
     nextStatus: "accepted" | "declined" | "removed" | "blocked"
@@ -302,7 +213,12 @@ export default function ManageCirclePage() {
   };
 
   return (
-    <FormPage title="Manage social circle" ready={!loading} dirty={socialDisplayName !== savedDisplayName} busy={savingProfile || uploadingAvatar || creatingInviteLink || Boolean(mutatingId)}>
+    <FormPage title="Manage social circle" ready={!loading} busy={creatingInviteLink || Boolean(mutatingId)}>
+      {SOCIAL_V2_ENABLED&&<section className="rounded-xl border p-4 space-y-2 text-sm">
+        <p>Circle is your accepted personal connections. New connections can see
+          still-shared history. Connecting does not publish private activities.</p>
+        <Link className="inline-block min-h-11 py-3 underline" to={`/circle?audience=${CIRCLE_FILTER}`}>View Circle and choose your sharing mode</Link>
+      </section>}
 
       {error && (
         <div role="alert" className="mn-error">
@@ -315,65 +231,6 @@ export default function ManageCirclePage() {
           {notice}
         </div>
       )}
-
-      <section className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
-        <h2 className="text-sm font-medium text-gray-800 mb-2">Profile</h2>
-        <p className="text-xs text-gray-500 mb-3">
-          Set your friendly name and profile picture for Circle.
-        </p>
-
-        <div className="flex items-center gap-3 mb-3">
-          {profilePreviewUrl ? (
-            <img
-              src={profilePreviewUrl}
-              alt="Your profile"
-              className="h-14 w-14 rounded-full object-cover border border-warm-300"
-            />
-          ) : (
-            <div className="h-14 w-14 rounded-full bg-warm-300 text-gray-700 border border-warm-300 flex items-center justify-center text-lg font-semibold">
-              {(socialDisplayName || loginEmail || "M").slice(0, 1).toUpperCase()}
-            </div>
-          )}
-
-          <button type="button" onClick={() => avatarInput.current?.click()} disabled={uploadingAvatar} className="px-3 py-2 rounded-full border border-warm-300 text-sm text-gray-700 cursor-pointer">
-            {uploadingAvatar ? "Uploading..." : "Upload picture"}
-          </button>
-            <input
-              ref={avatarInput}
-              aria-label="Profile picture"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0] || null;
-                void handleAvatarSelected(file);
-                e.currentTarget.value = "";
-              }}
-              disabled={uploadingAvatar}
-            />
-        </div>
-
-        <label htmlFor="circle-name" className="text-xs text-gray-600">Friendly name</label>
-        <input
-          id="circle-name"
-          type="text"
-          value={socialDisplayName}
-          onChange={(e) => setSocialDisplayName(e.target.value)}
-          placeholder="How others should see you"
-          className="mt-1 w-full rounded-lg border border-warm-300 bg-white px-3 py-2 text-sm"
-        />
-        <p className="text-xs text-gray-500 mt-2">
-          Account email: {loginEmail || "Unavailable"}
-        </p>
-        <button
-          type="button"
-          onClick={handleSaveProfile}
-          disabled={savingProfile}
-          className="mt-2 px-3 py-2 rounded-full bg-movenotes-primary text-primary-text text-sm font-medium disabled:opacity-60"
-        >
-          {savingProfile ? "Saving..." : "Save profile"}
-        </button>
-      </section>
 
       <section className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
         <h2 className="text-sm font-medium text-gray-800 mb-2">Invite by link</h2>

@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import AddNoteModal from "./AddNoteModal";
 import Toast from "./Toast";
+import { SOCIAL_V2_ENABLED } from '../config/social';
 import type { PostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 
 type PostLogNoteFlowProps = {
@@ -34,7 +35,7 @@ export default function PostLogNoteFlow({
   const [sharedToastActivityId, setSharedToastActivityId] = useState<string | null>(null);
 
   const maybeOpenSharePrompt = useCallback(() => {
-    if (!canPromptCircleShare || !lastActivityId) return;
+    if (SOCIAL_V2_ENABLED || !canPromptCircleShare || !lastActivityId) return;
     setSharePromptActivityId(lastActivityId);
   }, [canPromptCircleShare, lastActivityId]);
 

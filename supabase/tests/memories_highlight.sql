@@ -21,7 +21,7 @@ begin
  delete from activities where id=exact_id;
  update activities set note_image_url='owner/nearby.jpg' where id=near_id;
  assert memory_pick_candidate(photo_day)=near_id,'nearby photo wins over broader archive';
- assert memory_pick_candidate(photo_day+2)=sparse_id,'photo-free entries still get their turn when nearby photos exist';
+ assert memory_pick_candidate(photo_day+2)=near_id,'nearby photos now outrank sparse entries on every rotation day';
  update activities set note_image_url=null where id=near_id;
  insert into memory_dismissals values(uid,far_id);
  assert memory_pick_candidate(photo_day)<>far_id,'broader fallback still excludes hidden photos';

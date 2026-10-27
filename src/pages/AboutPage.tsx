@@ -1,5 +1,6 @@
 import HeaderLogo from "../components/HeaderLogo";
 import PublicTopNav from "../components/PublicTopNav";
+import { SOCIAL_V2_ENABLED } from '../config/social';
 import { IconRun, IconCamera, IconChartBar, IconBrandAndroid, IconBrandApple } from "@tabler/icons-react";
 
 
@@ -108,6 +109,7 @@ export default function AboutPage() {
             the integration running. Activities you imported earlier remain in
             your journal.
           </p>
+
         </section>
 
         {/* A small note */}
@@ -123,11 +125,22 @@ export default function AboutPage() {
             It's a space to share moments, not performances.
           </p>
           <p className="leading-relaxed">
-            No likes. No leaderboards. No comparison metrics. Just glimpses into
+            No leaderboards. No comparison metrics. Just glimpses into
             how others experience movement: a short note after a run, a photo
             from a ride, a simple &quot;this felt good today&quot;. It's designed
             for connection without pressure, a quieter way of being social.
           </p>
+          {SOCIAL_V2_ENABLED&&<p className="leading-relaxed mt-4">
+            Your Circle consists of your accepted personal connections. Closed
+            Communities are separate groups joined by a QR invitation. Choose
+            Manual, all new activities, or selected types for each audience.
+            Your private notes stay private; write a separate shared note and
+            choose photos if you wish. Shared summaries and their activity-wide
+            comments and quiet reactions remain available until unshared or access
+            ends. New eligible members can see still-shared history. Community
+            challenges include all members, with no rankings; membership never publishes
+            a private activity.
+          </p>}
         </section>
 
  {/* Features */}

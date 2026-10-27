@@ -1,11 +1,13 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { IconAdjustmentsAlt, IconAi, IconDatabaseExport, IconFileShredder, IconLogout, IconReload, IconRulerMeasure, IconTemplate } from '@tabler/icons-react';
 import {
   Check,
   ChevronRight,
   Dumbbell,
   Link2,
   Users,
+  UserRound,
 } from "lucide-react";
 import ModalSheet from "../components/ModalSheet";
 import FormPage from "../components/forms/FormPage";
@@ -42,6 +44,7 @@ type LinkRowProps = {
 
 type InlineSettingRowProps = {
   label: string;
+  icon?: ComponentType<{ className?: string }>;
   value: string;
   onClick?: () => void;
   disabled?: boolean;
@@ -113,12 +116,14 @@ function NavigationRow({ label, to, icon }: LinkRowProps) {
 
 function InlineSettingRow({
   label,
+  icon,
   value,
   onClick,
   disabled = false,
 }: InlineSettingRowProps) {
   const content = (
-    <div className="flex w-full items-center gap-4">
+    <div className="flex w-full items-center gap-3">
+      <RowIcon icon={icon} />
       <span className="min-w-0 flex-1 text-[16px] font-medium text-[#1F2A24]">
         {label}
       </span>
@@ -330,21 +335,23 @@ export default function SettingsPage() {
 
         <div className="mt-5 space-y-5">
           <div className="space-y-1.5">
-            <ActionRow label="Restart onboarding" onClick={handleRestartOnboarding} />
+            <NavigationRow label="Profile" to="/settings/profile" icon={UserRound} />
           </div>
 
           <div className="space-y-1.5">
             <NavigationRow
               label="Activity preferences"
               to="/settings/activity-preferences"
+              icon={IconAdjustmentsAlt}
             />
-            <NavigationRow label="Presets" to="/presets" />
-            <ActionRow label="Weekly Companion" badge="Premium" disabled={!companionAllowed} onClick={() => setShowCompanionSheet(true)} />
+            <NavigationRow label="Presets" to="/presets" icon={IconTemplate} />
+            <ActionRow label="Weekly Companion" icon={IconAi} badge="Premium" disabled={!companionAllowed} onClick={() => setShowCompanionSheet(true)} />
           </div>
 
           <div className="space-y-1.5">
             <InlineSettingRow
               label="Units"
+              icon={IconRulerMeasure}
               value={unitLabel}
               onClick={() => setShowUnitsSheet(true)}
               disabled={savingUnit}
@@ -368,13 +375,19 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1.5">
+            <ActionRow label="Restart onboarding" icon={IconReload} onClick={handleRestartOnboarding} />
+          </div>
+
+          <div className="space-y-1.5">
             <ActionRow
               label={exporting ? "Exporting..." : "Export data"}
+              icon={IconDatabaseExport}
               onClick={handleExport}
               disabled={exporting}
             />
             <ActionRow
               label={deleting ? "Opening mail..." : "Delete account"}
+              icon={IconFileShredder}
               onClick={() => setShowDeleteAccountSheet(true)}
               disabled={deleting}
               destructive
@@ -382,7 +395,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1.5">
-            <ActionRow label="Log out" onClick={handleLogout} />
+            <ActionRow label="Log out" icon={IconLogout} onClick={handleLogout} />
           </div>
         </div>
       </FormPage>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../supabaseClient";
+import { SOCIAL_V2_ENABLED } from '../config/social';
 import FormPage from "../components/forms/FormPage";
 import { FormActions } from "../components/forms/FormLayout";
 import { allowFormNavigation } from "../lib/formLifecycle";
@@ -130,6 +131,11 @@ export default function CircleInvitePage() {
             <p className="text-sm text-gray-700">
               Do you want to connect with this user in your social circle?
             </p>
+            {SOCIAL_V2_ENABLED&&<p className="text-sm text-gray-500">
+              Accepted connections can see each other's still-shared Circle
+              history and join those conversations. Connecting does not publish
+              your private activities or change your sharing choices.
+            </p>}
 
             {message && (
               <p className="text-sm text-gray-700 rounded-lg border border-warm-200 bg-warm-100 px-3 py-2">

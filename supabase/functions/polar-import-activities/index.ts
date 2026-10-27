@@ -42,7 +42,9 @@ Deno.serve(async (req) => {
 
     // A small overlap covers delayed Polar processing; the unique external ID handles retries.
     const now = new Date();
-    const earliest = new Date(now.getTime() - 89 * 86400_000);
+    // Date-only API bounds: today plus the previous 89 days = 90 calendar days.
+    const historyDays = 90;
+    const earliest = new Date(now.getTime() - (historyDays - 1) * 86400_000);
     const previous = connection.last_synced_at
       ? new Date(Date.parse(connection.last_synced_at) - 2 * 86400_000)
       : earliest;

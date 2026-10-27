@@ -79,7 +79,7 @@ native `<form>` elements. Shared field-only wrappers are listed with their owner
 | Onboarding wizard | `OnboardingWizard` | First setup / Settings restart; all five steps reuse the same shell; nested forms retain their own save boundaries; cannot advance during an in-flight write |
 | Login + email code | `Login` | `/login`, invitation redirect, signup link; page title/Back, labelled email/OTP, inline validation, footer action, guarded navigation |
 | Signup + email code/consent | `Signup` | `/signup`, login redirect; same page frame; required Privacy/Terms and optional newsletter consent unchanged |
-| Circle mini-profile / avatar | `ManageCirclePage` | `/settings/circle`; page Back guards unsaved friendly name; avatar upload remains immediately saved and is keyboard-operable; profile errors stay visible |
+| Profile name / avatar | `ProfileSettingsPage` | `/settings/profile`; page Back guards unsaved friendly name; avatar upload remains immediately saved and is keyboard-operable; profile errors stay visible |
 | Circle invite creation/sharing | Same page | Share invite; instant operation with OS share/copy fallback, no artificial unsaved draft |
 | Circle invitation acceptance | `CircleInvitePage` | `/circle/invite/:token`; remains an actual page, not a faux backdrop dialog; title/Back in all status states; Accept footer; completion navigation allowed after success |
 | Circle connections / reactions | `ManageCirclePage`, `CircleFeedCard` | Existing connection and inline reaction actions remain instant-save; reaction disclosure has Close/Escape; no draft discard prompt |

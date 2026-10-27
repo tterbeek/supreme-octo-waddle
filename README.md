@@ -1,5 +1,43 @@
 # MoveNotes
 
+## Local development
+
+Start local Supabase with `npx supabase start`, then run `npm run dev`.
+This starts Vite and the local Edge Functions together, using
+`supabase/functions/.env`, so profile pictures and challenge covers can load.
+Stop any separately running `supabase functions serve` command first.
+Ctrl+C stops both development processes without resetting Supabase data.
+Vite options still work, for example `npm run dev -- --host 127.0.0.1`.
+
+## Circle and closed Communities
+
+The new canonical sharing experience is implemented behind an off-by-default
+frontend and database flag. It preserves existing Circle connections and Journal
+records. It adds per-audience sharing rules, explicit shared notes/photos,
+QR-only Community invitations, one conversation per activity and Community-wide challenges.
+See [behavior, local setup, rollout and verification](docs/circles-communities.md).
+This change requires a migration and the new `social-media` Edge Function before
+enabling the frontend; pushing the frontend alone does not enable it.
+
+Production release order (on `main`):
+
+1. Run `npm test`, `npm run build`, and `npm run supabase:verify-local`.
+2. Run `npx supabase db push --linked --dry-run`; expect the eight migrations
+   from `20261025000000` through `20261027010000`. Apply with
+   `npx supabase db push --linked` once the pending list matches.
+3. Deploy `npx supabase functions deploy social-media --project-ref ljthydvstmbcgqdnqkvx --use-api`.
+4. Set `VITE_SOCIAL_V2_ENABLED=true` in Vercel's Production environment.
+5. Commit and push `main` to deploy the frontend. After deployment succeeds, run
+   `update public.social_config set enabled=true where singleton;` in the
+   production Supabase SQL Editor, then refresh the app.
+6. Check sharing, a community invitation, photos, comments and challenge progress.
+
+The new profile settings, Settings icons and Memories layout ship with this
+frontend release. Photo priority and persistent community invites are included
+in the migrations. No new production secrets are required. To roll back sharing,
+disable `social_config.enabled` and redeploy with the frontend flag off; retain
+the schema and user data.
+
 ## Memories
 
 Memories offers a private Timeline, Calendar and Photos with a dedicated activity

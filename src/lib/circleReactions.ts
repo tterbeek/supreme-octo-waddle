@@ -1,18 +1,8 @@
 import type { ComponentType } from "react";
-import {
-  IconHeart,
-  IconPhotoSpark,
-  IconSeedling,
-  IconSunHigh,
-  IconWalk,
-} from "@tabler/icons-react";
+import { IconHeart } from "@tabler/icons-react";
 
 export const CIRCLE_REACTION_OPTIONS = [
-  { type: "CHEER", label: "Cheering you on", Icon: IconHeart },
-  { type: "INSPIRED", label: "Inspired", Icon: IconSeedling },
-  { type: "ENERGY", label: "Good energy", Icon: IconSunHigh },
-  { type: "BEAUTIFUL", label: "Beautiful moment", Icon: IconPhotoSpark },
-  { type: "MOVED", label: "Inspired me to move", Icon: IconWalk },
+  { type: "CHEER", label: "Appreciate", Icon: IconHeart },
 ] as const;
 
 export type CircleReactionType = (typeof CIRCLE_REACTION_OPTIONS)[number]["type"];
@@ -32,10 +22,6 @@ export type CircleReactionGroups = Record<CircleReactionType, CircleReactionActo
 
 const EMPTY_REACTION_GROUPS: CircleReactionGroups = {
   CHEER: [],
-  INSPIRED: [],
-  ENERGY: [],
-  BEAUTIFUL: [],
-  MOVED: [],
 };
 
 export function isCircleReactionType(value: string): value is CircleReactionType {

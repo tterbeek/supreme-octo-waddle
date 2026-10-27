@@ -315,3 +315,12 @@ There is no background schedule: subsequent weekly thoughts are prepared on
 the next Journal visit after a week completes. If you need to pause the feature,
 switch Companion off in Settings; posts are hidden and your responses remain
 stored. Keep the additive schema in place rather than dropping its tables.
+
+## Circle and Communities rollout
+
+See [Circle/Community setup and deployment](../docs/circles-communities.md) for the
+new additive migration, `social-media` function and two off-by-default flags.
+Existing accepted connections and canonical Journal records are preserved. Apply
+the migration and deploy the function before enabling the new frontend. No new
+external secret is required. Do not reset the database or retire legacy tables as
+part of this rollout.

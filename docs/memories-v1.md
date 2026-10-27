@@ -74,7 +74,8 @@ the month's sparse samples. It does not pull every sparse activity into the read
   in the previous 30 days, except the current day's own assigned activity.
 - Within the best tier, rotate with a user/date/activity hash. Every third calendar
   day prefers data-only entries, then recorded details; other days prefer photos
-  or personal notes equally, then details. Among otherwise equal material,
+  first, then personal notes and details. Photo activities take priority even on
+  the sparse rotation day; that rotation applies when the date pool has no photos. Among otherwise equal material,
   prefer a different activity type from the last actual exposure when available.
   Exact anniversaries always remain first. When the nearby
   window has no photos and there is no exact anniversary, one day in each three-day
@@ -179,3 +180,7 @@ Representative fictional screenshots:
 - [Reader on desktop](previews/memories/reader-desktop.png)
 - [Selected month previews](previews/memories/selected-month-mobile.png)
 - [Selected reader with All activities](previews/memories/selected-reader-mobile.png)
+
+Photo priority: apply `20261027000000_memory_photo_priority.sql`. Within the
+selected date pool, photo activities now outrank note-only and sparse activities.
+Existing daily highlights stay assigned; the new priority applies to unassigned days.

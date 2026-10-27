@@ -1,5 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { MapPin, Zap } from "lucide-react";
+import { SOCIAL_V2_ENABLED } from '../config/social';
+import ActivitySharingSheet from './social/ActivitySharingSheet';
 import {
   IconBoxMultiple2,
   IconBoxMultiple3,
@@ -98,7 +100,7 @@ export default function RecentActivityCard({
 }: RecentActivityCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [actionDialog, setActionDialog] = useState<"share" | "delete" | null>(null);
+  const [actionDialog, setActionDialog] = useState<"share" | "delete" | "audiences" | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!actionsOpen) return;
@@ -282,12 +284,13 @@ export default function RecentActivityCard({
 
         {actionDialog && <div onClick={event => event.stopPropagation()} data-swipe-ignore="true">
           {actionDialog === "delete" && <DeleteActivityDialog activityId={activity.id} onClose={() => setActionDialog(null)} onDeleted={() => onDeleted?.()} />}
+          {actionDialog === "audiences" && <ActivitySharingSheet activityId={activity.id} onClose={()=>setActionDialog(null)}/>}
           {actionDialog === "share" && <DialogSheet title="Share activity" presentation="dialog" onClose={() => setActionDialog(null)} busy={sharingWithCircle}>
             <div className="space-y-3">
-              <button type="button" disabled={!showShareWithCircle || sharingWithCircle || sharedWithCircle} className="w-full rounded-xl border border-warm-300 p-4 text-left disabled:opacity-50" onClick={() => { setActionDialog(null); onShareWithCircle?.(activity); }}>
+              {SOCIAL_V2_ENABLED ? <button type="button" className="w-full rounded-xl border border-warm-300 p-4 text-left" onClick={()=>setActionDialog('audiences')}>Choose Circle / Communities</button> : <><button type="button" disabled={!showShareWithCircle || sharingWithCircle || sharedWithCircle} className="w-full rounded-xl border border-warm-300 p-4 text-left disabled:opacity-50" onClick={() => { setActionDialog(null); onShareWithCircle?.(activity); }}>
                 {sharedWithCircle ? "Already shared with Circle" : "Share with Circle"}
               </button>
-              {!showShareWithCircle && <p className="text-sm text-gray-500">Circle sharing disabled. You don’t have any Circle connections.</p>}
+              {!showShareWithCircle && <p className="text-sm text-gray-500">Circle sharing disabled. You don’t have any Circle connections.</p>}</>}
               <button type="button" className="w-full rounded-xl border border-warm-300 p-4 text-left" onClick={() => { setActionDialog(null); onShareImage?.(activity); }}>Share other<span className="block text-sm text-gray-500 mt-1">Create an image to save or share with other apps.</span></button>
               <p className="text-sm text-gray-500">Personal notes stay private.</p>
             </div>

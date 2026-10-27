@@ -22,6 +22,7 @@ import SupportPage from "./pages/Support";
 import ActivityPreferencesPage from "./pages/ActivityPreferencesPage";
 import ManageEquipmentPage from "./pages/ManageEquipmentPage";
 import ManageCirclePage from "./pages/ManageCirclePage";
+import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import CircleInvitePage from "./pages/CircleInvitePage";
 import StravaCallbackPage from "./pages/StravaCallbackPage";
 import PolarCallbackPage from "./pages/PolarCallbackPage";
@@ -32,6 +33,7 @@ import IntroPage from "./pages/IntroPage";
 import { UnitProvider } from "./contexts/UnitContext";
 import CalendarPage from "./pages/CalendarPage";
 import PhotosPage from "./pages/PhotosPage";
+import CommunityJoinPage from './pages/CommunityJoinPage';
 import MemoriesPage from "./pages/MemoriesPage";
 import CirclePage from "./pages/CirclePage";
 
@@ -166,6 +168,7 @@ export default function App() {
               <Route path="/settings/strava/callback" element={<StravaCallbackPage />} />
               <Route path="/settings/polar/callback" element={<PolarCallbackPage />} />
               <Route path="/circle/invite/:token" element={<CircleInvitePage />} />
+              <Route path="/community/join/:token" element={<CommunityJoinPage />} />
 
               {/* 🔐 Auth routes */}
               {!user ? (
@@ -297,6 +300,15 @@ export default function App() {
                     element={
                       <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
                         <ManageEquipmentPage />
+                      </Layout>
+                    }
+                  />
+
+                  <Route
+                    path="/settings/profile"
+                    element={
+                      <Layout menuOpen={menuOpen} setMenuOpen={setMenuOpen}>
+                        <ProfileSettingsPage />
                       </Layout>
                     }
                   />
