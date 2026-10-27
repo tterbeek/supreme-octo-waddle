@@ -23,6 +23,7 @@ function ProfileImage({ name, url, onError }: { name: string; url?: string; onEr
 
 export default function SocialActivityCard({ activity, onConversation, viewerId }: { activity: SocialActivity; onConversation: () => void; viewerId?: string }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [fullUrls, setFullUrls] = useState<Record<string, string>>({});
   const [active, setActive] = useState<number | null>(null);
   const [discussion, setDiscussion] = useState<Conversation | null>(null);
   const [selectedComment, setSelectedComment] = useState<SocialComment | null>(null);
@@ -59,19 +60,37 @@ export default function SocialActivityCard({ activity, onConversation, viewerId 
   useEffect(() => {
     let cancelled = false;
     setUrls({});
-    if (!context) return;
-    const load = async () => {
-      const pairs = await Promise.all(['profile', ...photoKey.split(',').filter(Boolean)].map(async id => {
-        try { return [id, await socialPhoto(context, id)]; } catch { return [id, '']; }
-      }));
-      if (!cancelled) setUrls(Object.fromEntries(pairs));
+    setFullUrls({});
+    if (!context || !visible) return;
+    const load = () => {
+      for (const id of ['profile', ...photoKey.split(',').filter(Boolean)]) {
+        void socialPhoto(context, id, true).then(url => {
+          if (!cancelled && document.visibilityState === 'visible') setUrls(previous => ({ ...previous, [id]: url }));
+        }).catch(() => { if (!cancelled) setUrls(previous => ({ ...previous, [id]: '' })); });
+      }
     };
-    const visibility = () => { if (document.visibilityState === 'visible') void load(); else setUrls({}); };
-    void load();
+    const visibility = () => { if (document.visibilityState === 'visible') load(); else { setUrls({}); setFullUrls({}); } };
+    load();
     const timer = window.setInterval(visibility, 45_000);
     document.addEventListener('visibilitychange', visibility);
     return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', visibility); };
-  }, [context, photoKey]);
+  }, [context, photoKey, visible]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const id = active === null ? undefined : photoKey.split(',')[active];
+    if (!context || !id) return;
+    const load = () => {
+      if (document.visibilityState !== 'visible') { setFullUrls({}); return; }
+      void socialPhoto(context, id).then(url => {
+        if (!cancelled && document.visibilityState === 'visible') setFullUrls(previous => ({ ...previous, [id]: url }));
+      }).catch(() => { if (!cancelled) setFullUrls(previous => ({ ...previous, [id]: '' })); });
+    };
+    load();
+    const timer = window.setInterval(load, 45_000);
+    document.addEventListener('visibilitychange', load);
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', load); };
+  }, [context, photoKey, active]);
 
   useEffect(() => {
     if (!visible) return;
@@ -192,6 +211,6 @@ export default function SocialActivityCard({ activity, onConversation, viewerId 
     {leave.confirm && <DialogSheet title="Unsaved comment" onClose={leave.keep}><DiscardPrompt keep={leave.keep} discard={() => { setBody(''); leave.discard(); }} /></DialogSheet>}
     {selectedComment && <CommentActions activityId={activity.id} comment={selectedComment} onClose={()=>setSelectedComment(null)} onUpdated={value=>{++sequence.current;setDiscussion(value);setRefreshComments(n=>n+1);}}/>}
     {sharingOpen && <ActivitySharingSheet activityId={activity.id} onClose={()=>setSharingOpen(false)}/>}
-    <GalleryLightbox open={active !== null} items={items} activeIndex={active || 0} onActiveIndexChange={setActive} onClose={() => setActive(null)} signedImages={urls} signedThumbs={urls} />
+    <GalleryLightbox open={active !== null} items={items} activeIndex={active || 0} onActiveIndexChange={setActive} onClose={() => setActive(null)} signedImages={fullUrls} signedThumbs={urls} />
   </article>;
 }

@@ -24,6 +24,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let ws;let checks=0;
  await choose('memories');await wait("document.body.innerText.includes('On this day')");await layout();await shot('timeline-mobile');
  await wait("window.formQA.writes.some(w=>w.table==='memory_feature_action'&&!w.payload.p_hide)");
  await wait("!!document.querySelector('button[aria-label=\"Open highlight photo 1\"] img')?.complete");
+ await wait("decodeURIComponent(document.querySelector('button[aria-label=\"Open highlight photo 1\"] img').src).includes('memory-thumb-')");
  await click('Next highlight photo');await wait("!document.querySelector('button[aria-label=\"Previous highlight photo\"]').disabled&&document.querySelector('button[aria-label=\"Next highlight photo\"]').disabled");
  await wait("!location.search.includes('memory=')");
  await click('Open highlight photo 2');await wait("!!document.querySelector('[aria-modal=true] img[alt=\"Activity photo 2\"]')");await click('Back to browsing');

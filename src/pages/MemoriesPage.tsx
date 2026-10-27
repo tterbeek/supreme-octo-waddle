@@ -60,8 +60,12 @@ export default function MemoriesPage() {
   const more=async()=>{if(!month||pageLoading)return;const ticket=request.current;setPageLoading(true);setPageError(false);try{const range=monthRange(month);const data=await memoryPage(range.start,range.end,rows.at(-1),selected);if(ticket!==request.current)return;setRows(prev=>[...prev,...data]);setHasMore(data.length===40);}catch{setPageError(true);}finally{if(ticket===request.current)setPageLoading(false);}};
   useEffect(()=>{
     let cancelled=false;
-    const paths=[...months.filter(m=>m.month.startsWith(year||'')).flatMap(m=>[...(m.thumbs||[]),...(m.moments||[]).flatMap(r=>getActivityPhotos(r).slice(0,1).map(p=>p.thumb_path||p.image_path))]),...rows.flatMap(r=>getActivityPhotos(r).slice(0,1).map(p=>p.thumb_path||p.image_path)),...(feature?.activity?getActivityPhotos(feature.activity).map(p=>p.image_path||p.thumb_path):[])].filter((p):p is string=>!!p);
-    void signStorageValues([...new Set(paths)]).then(signed=>{if(!cancelled)setUrls(signed);}).catch(()=>{});
+    const archivePaths=[...months.filter(m=>m.month.startsWith(year||'')).flatMap(m=>[...(m.thumbs||[]),...(m.moments||[]).flatMap(r=>getActivityPhotos(r).slice(0,1).map(p=>p.thumb_path||p.image_path))]),...rows.flatMap(r=>getActivityPhotos(r).slice(0,1).map(p=>p.thumb_path||p.image_path))].filter((p):p is string=>!!p);
+    const highlightPaths=feature?.activity?getActivityPhotos(feature.activity).flatMap(p=>[p.thumb_path,p.image_path]).filter((p):p is string=>!!p):[];
+    // A large archive batch must not delay the highlight's thumbnail URLs.
+    for(const paths of [highlightPaths,archivePaths]){
+      void signStorageValues([...new Set(paths)]).then(signed=>{if(!cancelled)setUrls(previous=>({...previous,...signed}));}).catch(()=>{});
+    }
     return()=>{cancelled=true;};
   },[months,rows,feature,year]);
   useEffect(()=>{

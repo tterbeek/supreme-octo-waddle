@@ -25,12 +25,12 @@ export default function MemoryHighlightPhotos({ photos, urls, onOpen }: {
         }
       }}>
       {photos.map((photo, position) => {
-        const path = photo.image_path || photo.thumb_path;
+        const path = [photo.thumb_path, photo.image_path].find((value): value is string => !!value && !!urls[value] && !failed.includes(value));
         return <button key={photo.id} type="button" aria-label={`Open highlight photo ${position + 1}`}
           className="w-full shrink-0 snap-center aspect-[4/3] max-h-80 bg-movenotes-bg"
           onClick={() => onOpen(photo.id)}>
           {path && urls[path] && !failed.includes(path)
-            ? <img src={urls[path]} alt={`Activity photo ${position + 1}`} loading="lazy" className="w-full h-full object-contain"
+            ? <img src={urls[path]} alt={`Activity photo ${position + 1}`} loading={position === 0 ? "eager" : "lazy"} className="w-full h-full object-contain"
               onError={() => setFailed(previous => [...previous, path])} />
             : <span className="text-sm text-movenotes-muted">Photo unavailable</span>}
         </button>;

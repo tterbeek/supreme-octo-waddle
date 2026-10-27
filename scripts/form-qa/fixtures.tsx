@@ -76,7 +76,7 @@ const memoryContext={start:'2024-10-01',end:'2024-11-01'};
 const memoryRows=Array.from({length:45},(_,i)=>({...activity,id:`memory-${i}`,created_at:`2024-10-24T12:00:${String(59-i).padStart(2,'0')}`,date:'2024-10-24',title:i===1?'Polar walk':i===2?'A feeling remembered':i===3?'A photo without a note':`An October walk ${i+1}`,
  notes:i===0?'We took the quieter path.\n\nThere was time to stop and talk.\n'+('These are my original words. '.repeat(40)):i===1||i===2||i===3||i>=35?null:activity.notes,
  feeling_during:i===1||i===3||i>=35?null:'smile',feeling_after:i===1||i===3||i>=35?null:'happy',effort:i===1||i===3?null:2,distance_km:i===1?null:4,duration_min:i===1?null:45,
- source:i===1?'polar':'manual',photos:i===0||i===3?[1,2].map(n=>({id:`photo-${n}`,image_path:`fictional-owner/memory-${n}.svg`,thumb_path:`fictional-owner/memory-${n}.svg`,sort_order:n,created_at:'2024-10-24'})):[]}));
+ source:i===1?'polar':'manual',photos:i===0||i===3?[1,2].map(n=>({id:`photo-${n}`,image_path:`fictional-owner/memory-${n}.svg`,thumb_path:`fictional-owner/memory-thumb-${n}.svg`,sort_order:n,created_at:'2024-10-24'})):[]}));
 let memoryHidden=false;
 const olderMemory={...activity,id:'memory-older',date:'2023-06-10',created_at:'2023-06-10T12:00:00',notes:null,photos:[],feeling_during:null,feeling_after:null};
 function fixtureSelected(rows: typeof memoryRows) {
@@ -233,7 +233,7 @@ Object.defineProperty(supabase, "functions", { value: { invoke: async (name: str
   } } : {}) }, error: qa.fail ? { message: "Simulated generation error" } : null };
   return { data: { connected: false, fetched: 0, inserted: 0, skipped: 0 }, error: null };
 } } });
-(supabase.storage as any).from = () => ({ createSignedUrls: async (paths:string[]) => ({ data: paths.filter(p=>p.includes('memory-')||p.includes('circle-profile')).map(path=>({path,signedUrl:'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${path.includes('1')?600:450}" height="${path.includes('1')?450:600}" viewBox="0 0 600 450"><rect width="600" height="450" fill="${path.includes('1')?'#b4c9b8':'#e4c9ad'}"/><circle cx="300" cy="210" r="110" fill="#f3ede4"/><text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#374d44">Fictional activity photo ${path.includes('1')?'1':'2'}</text></svg>`)})), error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
+(supabase.storage as any).from = () => ({ createSignedUrls: async (paths:string[]) => ({ data: paths.filter(p=>p.includes('memory-')||p.includes('circle-profile')).map(path=>({path,signedUrl:'data:image/svg+xml,'+encodeURIComponent(`<svg data-fixture-path="${path}" xmlns="http://www.w3.org/2000/svg" width="${path.includes('1')?600:450}" height="${path.includes('1')?450:600}" viewBox="0 0 600 450"><rect width="600" height="450" fill="${path.includes('1')?'#b4c9b8':'#e4c9ad'}"/><circle cx="300" cy="210" r="110" fill="#f3ede4"/><text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#374d44">Fictional activity photo ${path.includes('1')?'1':'2'}</text></svg>`)})), error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
 HTMLMediaElement.prototype.play = async () => {};
 
 function Scenario({ name, close, saved }: { name: string; close: () => void; saved: () => void }) {
