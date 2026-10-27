@@ -20,7 +20,7 @@ export function SocialRuleSheet({audience,onClose,onSaved}:{audience:SocialAudie
   <p className="text-sm text-movenotes-muted">Choose what to share automatically from now on. Existing activities stay as they are. Old imported workouts stay private.</p>
   <fieldset className="space-y-2"><legend className="sr-only">Sharing mode</legend>{(['manual','all','types'] as const).map(m=><label key={m} className="flex gap-3 items-center border rounded-xl p-4"><input type="radio" name={group} checked={mode===m} onChange={()=>setMode(m)}/>{m==='manual'?'Manual':m==='all'?'All activities':'Selected activity types'}</label>)}</fieldset>
   {mode==='types'&&<TypeChoices value={types} onChange={setTypes}/>}
-  <p className="text-sm">Shared summaries stay available until unshared or access ends. New accepted connections or Community members can see still-shared history, including existing comments and reactions. Every audience reads the same activity thread. Private notes, feelings and equipment stay private. Photos require a separate choice.</p>
+  <p className="text-sm">Shared summaries stay available until unshared or access ends. New accepted connections or Community members can see still-shared history, including existing comments and reactions. Every audience reads the same activity thread. Private notes, feelings and equipment stay private. Photos are included by default when an activity is shared. You can unshare individual photos in Modify sharing.</p>
   <FormError>{error}</FormError><FormActions><button disabled={busy||mode==='types'&&!types.length} onClick={()=>void save()}>Save sharing choice</button></FormActions>
  </div></ModalSheet>;
 }

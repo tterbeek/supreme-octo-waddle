@@ -78,9 +78,10 @@ or storage access to recipients. Apply this migration as well as the foundation.
   the current rule. **Keep this activity private** suppresses every audience until
   explicitly changed. Insert-based delete/undo restores the activity privately.
 - The optional **Shared note** is separate from private notes/reflections and is
-  never populated from them. It is the same across audiences. Photos start
-  unselected; new/replaced images require explicit consent. Sharing without photos
-  remains useful.
+  never populated from them. It is the same across audiences. New photos are
+  included by default when the activity is shared. Owners can
+  unselect individual photos in Modify sharing; exclusions persist on replacement.
+  Existing saved photo choices are preserved by the migration.
 - Shared summaries expose only identity/display name, title, type, date,
   distance/duration, the shared note, selected photo IDs and authorized audience
   labels. Private notes, feelings, effort, equipment, routes and integration
@@ -327,3 +328,13 @@ The visible link and Copy link action use the same token as the QR.
 
 Checked with rollback-only SQL tests for persistence, rotation, expiry and
 unauthorized reads, plus TypeScript compilation. No production changes applied.
+
+## Default photo sharing
+
+`20261027020000_shared_photos_by_default.sql` selects new activity photos and
+new legacy attachments by default. This does not create a sharing audience or
+expose a private activity. Modify sharing still controls each photo; replacing
+an existing image preserves its selection. Existing stored selections are left
+unchanged. Private notes/reflections remain separate from the shared note.
+Deploy the migration before the frontend wording update; no Edge Function
+redeployment is needed for this change.

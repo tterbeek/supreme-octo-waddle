@@ -63,7 +63,7 @@ do $$ declare activity uuid:='44444444-4444-4444-8444-444444444444';result jsonb
   jsonb_build_object('id',current_setting('test.ax'),'share',true),jsonb_build_object('id',current_setting('test.ay'),'share',true))));
  assert result->>'public_note'='A note intended for sharing','public note explicitly authored';
  result:=social_feed(null,null,activity);
- assert result->0->'photos'='[]'::jsonb,'private photos are not shared by default';
+ assert jsonb_array_length(result->0->'photos')=1,'photos are included by default once activity is shared';
  result:=social_activity(activity,'{"photos":["55555555-5555-4555-8555-555555555555"]}');
  perform set_config('test.cc',(select c->>'id' from jsonb_array_elements(social_feed(null,null,activity)->0->'contexts') c where c->>'kind'='circle'),true);
  perform set_config('test.cx',(select c->>'id' from jsonb_array_elements(social_feed(null,null,activity)->0->'contexts') c where c->>'community'=current_setting('test.x')),true);

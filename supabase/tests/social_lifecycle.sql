@@ -67,11 +67,11 @@ insert into activity_photos(id,activity_id,user_id,image_path,thumb_path,is_shar
  ('a3000000-0000-4000-8000-000000000001','a2000000-0000-4000-8000-000000000001',auth.uid(),auth.uid()||'/photo.jpg',auth.uid()||'/thumb.jpg',true);
 update activity_photos set image_path=auth.uid()||'/new-photo.jpg' where id='a3000000-0000-4000-8000-000000000001';
 do $$ begin
- assert not(select is_shared from activity_photos where id='a3000000-0000-4000-8000-000000000001'),'replaced attachment requires fresh consent';
+ assert (select is_shared from activity_photos where id='a3000000-0000-4000-8000-000000000001'),'replaced attachment keeps its shared state';
  begin perform social_activity('a2000000-0000-4000-8000-000000000001',jsonb_build_object('audiences',jsonb_build_array(jsonb_build_object('id',current_setting('life.foreign_circle'),'share',true))));raise exception 'foreign Circle accepted';exception when raise_exception then
   if SQLERRM='foreign Circle accepted' then raise;end if;end;
  update activities set note_image_url=auth.uid()||'/replacement.jpg' where id='a2000000-0000-4000-8000-000000000001';
- assert not(select share_legacy_photo from activities where id='a2000000-0000-4000-8000-000000000001'),'replacement cover requires fresh photo consent';
+ assert (select share_legacy_photo from activities where id='a2000000-0000-4000-8000-000000000001'),'replacement cover keeps its shared state';
  perform social_community('transfer',current_setting('life.community')::uuid,'{"user_id":"b1000000-0000-4000-8000-000000000001"}');
  perform social_community('leave',current_setting('life.community')::uuid);
  assert jsonb_array_length(social_feed(null,null,'a2000000-0000-4000-8000-000000000001')->0->'contexts')=1,'leaving removes Community shares but retains Circle';
