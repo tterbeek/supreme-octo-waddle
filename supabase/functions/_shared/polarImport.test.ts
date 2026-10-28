@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { normalizePolarSession, polarList, polarRangeDateTime, type PolarSport } from "./polarImport";
+import { normalizePolarSession, polarList, polarRangeDateTime, polarRouteDayQuery, polarTitleInput, type PolarSport } from "./polarImport";
+import { generateImportedActivityTitle } from './importedActivityTitle';
 
 const sports = new Map<string, PolarSport>([
   ["101", { id: { id: "101" }, name: "TRAIL_RUNNING" }],
@@ -52,5 +53,28 @@ describe("Polar session normalization", () => {
       .toBe("ride");
     expect(normalizePolarSession({ ...workout, stopTime: undefined }, sports, "user-1", "now"))
       .toBeNull();
+  });
+
+  it('replaces generic Polar names with a time-of-day title but keeps meaningful names', () => {
+    expect(normalizePolarSession({ ...workout, name: 'TRAIL_RUNNING' }, sports, 'user-1', 'now')?.title).toBe('Morning run');
+    expect(normalizePolarSession({ ...workout, name: 'A run with Sam' }, sports, 'user-1', 'now')?.title).toBe('A run with Sam');
+  });
+
+  it('uses Polar timezone offsets for local titles/dates and stores UTC start instants', () => {
+    const session = { ...workout, name: 'Running', startTime: '2026-10-12T23:30:00Z', timezoneOffsetMinutes: 120 };
+    expect(normalizePolarSession(session, sports, 'user-1', 'now')).toEqual(expect.objectContaining({ title: 'Night run', date: '2026-10-13', started_at: '2026-10-12T23:30:00.000Z' }));
+    expect(normalizePolarSession({ ...session, startTime: '2026-10-12T06:30:00' }, sports, 'user-1', 'now')).toEqual(expect.objectContaining({ title: 'Early morning run', started_at: '2026-10-12T04:30:00.000Z' }));
+  });
+
+  it('keeps the recorded route available for locality enrichment', async () => {
+    const session = { ...workout, name: 'Running', exercises: [{ routes: { route: { wayPoints: [{ latitude: 50.83, longitude: 4.43 }, { latitude: 50.84, longitude: 4.43 }] } } }] };
+    const input = polarTitleInput(session, 'run', sports);
+    expect(input.route).toHaveLength(2);
+    expect(await generateImportedActivityTitle(input, { resolveLocality: async () => 'Woluwe-Saint-Lambert' })).toBe('Morning run Woluwe-Saint-Lambert');
+  });
+
+  it('builds one-day route queries across year boundaries', () => {
+    const query = polarRouteDayQuery('2026-12-31');
+    expect(Object.fromEntries(query)).toEqual({ from: '2026-12-31T00:00:00', to: '2027-01-01T00:00:00', features: 'routes' });
   });
 });

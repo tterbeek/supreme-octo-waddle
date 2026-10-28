@@ -1,3 +1,4 @@
+import { trackImportSync } from './activityImport.service';
 import { supabase } from "../supabaseClient";
 
 const STATE_KEY = "polar_oauth_state";
@@ -64,7 +65,7 @@ export function disconnectPolar() {
 }
 
 export async function importPolarActivities() {
-  const result = await invoke<{ ok: boolean; fetched: number; inserted: number; skipped: number }>("polar-import-activities", {});
+  const result = await trackImportSync(() => invoke<{ ok: boolean; fetched: number; inserted: number; skipped: number }>("polar-import-activities", {}));
   if (result.inserted > 0) window.dispatchEvent(new Event(POLAR_SYNC_COMPLETED_EVENT));
   return result;
 }

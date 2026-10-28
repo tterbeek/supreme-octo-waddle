@@ -67,6 +67,11 @@ export type Database = {
       }
       activities: {
         Row: {
+          route_polyline: string | null
+          import_status: string
+          import_updated_at: string | null
+          import_token: string | null
+          route_checked_at: string | null
           public_note: string | null
           social_private: boolean
           share_legacy_photo: boolean
@@ -97,6 +102,11 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          route_polyline?: string | null
+          import_status?: string
+          import_updated_at?: string | null
+          import_token?: string | null
+          route_checked_at?: string | null
           public_note?: string | null
           social_private?: boolean
           share_legacy_photo?: boolean
@@ -127,6 +137,11 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          route_polyline?: string | null
+          import_status?: string
+          import_updated_at?: string | null
+          import_token?: string | null
+          route_checked_at?: string | null
           public_note?: string | null
           social_private?: boolean
           share_legacy_photo?: boolean

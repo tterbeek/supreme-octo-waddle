@@ -1,3 +1,4 @@
+import { useActivityImports } from '../hooks/useActivityImports';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from 'react-router-dom';
 import { List } from "react-window";
@@ -476,6 +477,7 @@ export default function CalendarPage() {
     }
   }, [fetchFirstEntryDate, todayMonthIndex, userId]);
 
+  useActivityImports(userId, refreshLoadedCalendarData, false);
   const { openMemory, reader } = useMemoryReader(refreshLoadedCalendarData);
 
   const playWritingSound = () => {

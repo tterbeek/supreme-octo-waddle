@@ -7,7 +7,7 @@ export async function fetchCalendarActivities(userId: string, start: string, end
   const rows = [];
   for (let offset = 0; ; offset += 500) {
     const result = await supabase.from('activities').select(
-      'id, user_id, type, source, user_enrichment_status, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, feeling_during, feeling_after, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))'
+      'id, user_id, type, source, external_source, import_status, import_updated_at, imported_at, route_polyline, route_checked_at, user_enrichment_status, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, feeling_during, feeling_after, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))'
     ).eq('user_id', userId).gte('date', start).lt('date', end)
       .order('date', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true })
       .range(offset, offset + 499);
@@ -49,13 +49,23 @@ export async function fetchFeedPage(
   if (importedIds.length > 0) {
     const statusResult = await supabase
       .from("activities")
-      .select("id, user_enrichment_status")
+      .select("id, user_enrichment_status, route_polyline, route_checked_at, import_status, import_updated_at, imported_at, external_source")
       .in("id", importedIds);
-    if (statusResult.error) return { data: rows, error: statusResult.error };
-    const statuses = new Map(statusResult.data.map((row) => [row.id, row.user_enrichment_status]));
+    // Never expose an editable imported card when its completion state is unknown.
+    if (statusResult.error) return {
+      data: rows.filter(row => row.entry_kind !== 'activity' || row.source === 'manual'),
+      error: statusResult.error,
+    };
+    const statuses = new Map(statusResult.data.map((row) => [row.id, row]));
     enrichedRows = rows.map((row) => ({
       ...row,
-      user_enrichment_status: statuses.get(row.id) ?? "completed",
+      import_status: statuses.get(row.id)?.import_status ?? 'ready',
+      import_updated_at: statuses.get(row.id)?.import_updated_at ?? null,
+      imported_at: statuses.get(row.id)?.imported_at ?? null,
+      external_source: statuses.get(row.id)?.external_source ?? row.external_source,
+      user_enrichment_status: statuses.get(row.id)?.user_enrichment_status ?? "completed",
+      route_polyline: statuses.get(row.id)?.route_polyline ?? null,
+      route_checked_at: statuses.get(row.id)?.route_checked_at ?? null,
     }));
   }
   const taggedRows = await attachLocationTagsToActivities(enrichedRows);

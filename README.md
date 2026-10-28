@@ -1,5 +1,14 @@
 # MoveNotes
 
+## Journal route maps
+
+Optional Mapbox Outdoors previews give photo-free activities a route image.
+Add a public `VITE_MAPBOX_ACCESS_TOKEN`, apply
+`20261028000000_private_activity_routes.sql`, and serve the new
+`polar-activity-route` function. See [setup, behavior and limits](docs/activity-route-maps.md).
+New imports display a preparation card until naming and maps are ready. See
+[import lifecycle and local migration steps](docs/activity-import-lifecycle.md).
+
 ## Insights Trends
 
 Trends offers Year / Month / Week grouping: every recorded year, up to twelve

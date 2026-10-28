@@ -1,10 +1,13 @@
+import { generateImportedActivityBaseTitle, importedLocalDate, importedStartInstant, type ImportedTitleInput, type RoutePoint } from "./importedActivityTitle.ts";
+
 export type PolarSession = {
   identifier?: { id?: string };
   startTime?: string;
   stopTime?: string;
   durationMillis?: number;
   distanceMeters?: number;
-  exercises?: Array<{ distanceMeters?: number }>;
+  timezoneOffsetMinutes?: number;
+  exercises?: Array<{ distanceMeters?: number; timezoneOffsetMinutes?: number; routes?: { route?: { wayPoints?: { latitude: number; longitude: number }[] } } }>;
   name?: string;
   sport?: { id?: string | number };
 };
@@ -14,6 +17,26 @@ export type PolarSport = {
   name?: string;
   parentSport?: { id?: string | number };
 };
+
+export function polarSessionRoute(session: PolarSession): RoutePoint[] {
+  return (session.exercises ?? []).flatMap(exercise => exercise.routes?.route?.wayPoints ?? [])
+    .map(point => ({ lat: point.latitude, lng: point.longitude }));
+}
+
+export function polarTitleInput(session: PolarSession, activityType: string, sports: Map<string, PolarSport>): ImportedTitleInput {
+  const sport = sports.get(String(session.sport?.id));
+  const parent = sports.get(String(sport?.parentSport?.id));
+  return { activityType, startedAt: session.startTime, timezone: session.timezoneOffsetMinutes ?? session.exercises?.[0]?.timezoneOffsetMinutes,
+    providerTitle: session.name, genericTitles: [sport?.name, parent?.name].filter((name): name is string => Boolean(name)),
+    route: polarSessionRoute(session) };
+}
+
+/** Polar routes are fetched with features, for one local calendar day at a time. */
+export function polarRouteDayQuery(day: string) {
+  const next = new Date(`${day}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return new URLSearchParams({ from: `${day}T00:00:00`, to: `${next.toISOString().slice(0, 10)}T00:00:00`, features: "routes" });
+}
 
 // Polar v4 list endpoints can return a bare array, despite some examples showing wrappers.
 export function polarList<T>(value: T[] | Record<string, unknown>, key: string): T[] {
@@ -29,11 +52,11 @@ export function polarRangeDateTime(value: Date): string {
 
 export function moveNotesType(sportName: string): string {
   const name = sportName.toLowerCase().replace(/[_-]/g, " ");
-  if (/hiking|trekking/.test(name)) return "hike";
-  if (/running|jogging|trail run/.test(name)) return "run";
-  if (/cycling|biking|spinning|bike/.test(name)) return "ride";
-  if (/walking|nordic walk/.test(name)) return "walk";
-  if (/swimming|aqua/.test(name)) return "swim";
+  if (/hiking|trekking|^hike$/.test(name)) return "hike";
+  if (/running|jogging|trail run|^run$/.test(name)) return "run";
+  if (/cycling|biking|spinning|bike|^ride$/.test(name)) return "ride";
+  if (/walking|nordic walk|^walk$/.test(name)) return "walk";
+  if (/swimming|aqua|^swim$/.test(name)) return "swim";
   if (/yoga/.test(name)) return "yoga";
   if (/strength|weight|gym|circuit|crossfit|pilates|hiit/.test(name)) return "strength";
   if (/meditation|mindfulness/.test(name)) return "meditation";
@@ -69,9 +92,9 @@ export function normalizePolarSession(
   return {
     user_id: userId,
     type,
-    date: session.startTime.slice(0, 10),
-    started_at: new Date(startMs).toISOString(),
-    title: session.name?.trim() || sportName,
+    date: importedLocalDate(polarTitleInput(session, type, sports)) ?? session.startTime.slice(0, 10),
+    started_at: importedStartInstant(session.startTime, session.timezoneOffsetMinutes ?? session.exercises?.[0]?.timezoneOffsetMinutes),
+    title: generateImportedActivityBaseTitle(polarTitleInput(session, type, sports)),
     distance_km: distanceKm,
     duration_min: durationMin,
     effort: null,

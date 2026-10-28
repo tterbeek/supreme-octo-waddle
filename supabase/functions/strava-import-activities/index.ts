@@ -1,3 +1,6 @@
+import { finishActivityImport, importCanRetry, type ImportAttempt } from "../_shared/activityImport.ts";
+import { scheduleImportedTitleJobs } from "../_shared/importedTitleEnrichment.ts";
+import { decodeRoute, encodeRoute } from '../_shared/activityRoute.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import polyline from "npm:@mapbox/polyline";
 import {
@@ -523,6 +526,7 @@ const fetchStravaActivityDetail = async (
   activityId: number
 ): Promise<StravaActivity> => {
   const res = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+    signal: AbortSignal.timeout(15_000),
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -536,25 +540,6 @@ const fetchStravaActivityDetail = async (
   }
 
   return (await res.json()) as StravaActivity;
-};
-
-const ensureRouteData = async (
-  activity: StravaActivity,
-  accessToken: string
-): Promise<StravaActivity> => {
-  if (hasRouteData(activity)) {
-    return activity;
-  }
-
-  try {
-    return await fetchStravaActivityDetail(accessToken, activity.id);
-  } catch (error) {
-    console.warn(
-      "[strava-import-activities] activity detail fallback failed",
-      error
-    );
-    return activity;
-  }
 };
 
 Deno.serve(async (req) => {
@@ -596,10 +581,13 @@ Deno.serve(async (req) => {
     return jsonResponse(401, { error: "Not authenticated." });
   }
 
+  if (!serviceClient) return jsonResponse(500, { error: 'Import service is not configured.' });
+  let retryActivityId: string | undefined;
   let perPage = 50;
   let page = 1;
   try {
-    const body = (await req.json()) as { perPage?: number; page?: number };
+    const body = (await req.json()) as { perPage?: number; page?: number; retryActivityId?: string };
+    retryActivityId = body.retryActivityId;
     if (typeof body?.perPage === "number") {
       perPage = Math.max(1, Math.min(100, Math.trunc(body.perPage)));
     }
@@ -655,7 +643,12 @@ Deno.serve(async (req) => {
 
   let stravaActivities: StravaActivity[];
   try {
-    stravaActivities = await fetchStravaActivities(
+    if (retryActivityId) {
+      const { data: retry, error } = await serviceClient.from('activities').select('external_id,import_status,import_updated_at')
+        .eq('id', retryActivityId).eq('user_id', user.id).eq('external_source', 'strava').maybeSingle();
+      if (error || !retry || !importCanRetry(retry.import_status, retry.import_updated_at)) return jsonResponse(409, { error: 'This import is not ready to retry.' });
+      stravaActivities = [await fetchStravaActivityDetail(validConnection.access_token, Number(retry.external_id))];
+    } else stravaActivities = await fetchStravaActivities(
       validConnection.access_token,
       perPage,
       page
@@ -668,68 +661,60 @@ Deno.serve(async (req) => {
   let inserted = 0;
   let skippedExisting = 0;
 
+  const jobs: (() => Promise<void>)[] = [];
   for (const listItem of stravaActivities) {
-    const item = await ensureRouteData(listItem, validConnection.access_token);
-    const rawSportType = item.sport_type ?? null;
-    const rawType = item.type ?? null;
-    const activityType = mapStravaSportTypeToMoveNotesType(rawSportType, rawType);
-    const smartTitle = await getSmartActivityTitle(item, activityType, {
-      serviceClient,
-      googleMapsApiKey,
-    });
-    const normalized = normalizeStravaActivity(user.id, item, smartTitle);
-
-    const { data: existing, error: existingError } = await supabase
-      .from("activities")
-      .select("id")
-      .eq("external_source", "strava")
-      .eq("external_id", normalized.external_id)
-      .maybeSingle();
-
-    if (existingError) {
-      return jsonResponse(400, { error: existingError.message });
-    }
-
-    const factualPayload = {
-      type: normalized.type,
-      date: normalized.date,
-      started_at: normalized.started_at,
-      distance_km: normalized.distance_km,
-      duration_min: normalized.duration_min,
-      title: normalized.title,
-      source: "strava",
-      raw_sport_type: normalized.raw_sport_type,
-      raw_type: normalized.raw_type,
-      last_synced_at: nowIso,
-    };
-
-    if (existing?.id) {
+    const normalized = normalizeStravaActivity(user.id, listItem, null);
+    const { data: existing, error: existingError } = await serviceClient.from('activities')
+      .select('id,import_status,import_updated_at,import_token,route_polyline').eq('user_id', user.id)
+      .eq('external_source', 'strava').eq('external_id', normalized.external_id).maybeSingle();
+    if (existingError) return jsonResponse(400, { error: existingError.message });
+    const state = { import_status: 'processing', import_token: crypto.randomUUID(), import_updated_at: new Date().toISOString() };
+    let attempt: ImportAttempt | null = null;
+    if (existing) {
       skippedExisting += 1;
-      continue;
-    }
-
-    const { error: insertError } = await supabase.from("activities").insert({
-      user_id: user.id,
-      ...factualPayload,
-      feeling: null,
-      effort: null,
-      external_source: "strava",
-      external_id: normalized.external_id,
-      imported_at: nowIso,
-    });
-
-    if (insertError) {
-      if (insertError.code === "23505") {
-        skippedExisting += 1;
+      if (!importCanRetry(existing.import_status, existing.import_updated_at)) {
+        // Keep the existing route backfill for older, already editable imports.
+        if (existing.import_status === 'ready' && !existing.route_polyline) jobs.push(async () => {
+          const item = listItem.map?.summary_polyline ? listItem : await fetchStravaActivityDetail(validConnection.access_token, listItem.id);
+          const route = encodeRoute(decodeRoute(item.map?.summary_polyline));
+          const { error } = await serviceClient.from('activities').update({ route_polyline: route, route_checked_at: new Date().toISOString() })
+            .eq('id', existing.id).eq('user_id', user.id).eq('import_status', 'ready').is('route_polyline', null);
+          if (error) throw error;
+        });
         continue;
       }
-      return jsonResponse(400, { error: insertError.message });
+      let claim = serviceClient.from('activities').update(state).eq('id', existing.id).eq('user_id', user.id)
+        .eq('import_status', existing.import_status);
+      claim = existing.import_token ? claim.eq('import_token', existing.import_token) : claim.is('import_token', null);
+      const { data, error } = await claim.select('id,user_id,import_token').maybeSingle();
+      if (error) return jsonResponse(400, { error: error.message });
+      attempt = data;
+    } else {
+      const { data, error } = await serviceClient.from('activities').insert({
+        ...normalized, source: 'strava', feeling: null, effort: null,
+        external_source: 'strava', imported_at: nowIso, ...state,
+      }).select('id,user_id,import_token').single();
+      if (error?.code === '23505') { skippedExisting += 1; continue; }
+      if (error) return jsonResponse(400, { error: error.message });
+      inserted += 1;
+      attempt = data;
     }
-
-    inserted += 1;
+    if (!attempt) continue;
+    const currentAttempt = attempt;
+    jobs.push(() => finishActivityImport(serviceClient, currentAttempt, async () => {
+      const item = hasRouteData(listItem) && listItem.map?.summary_polyline
+        ? listItem : await fetchStravaActivityDetail(validConnection.access_token, listItem.id);
+      const activityType = mapStravaSportTypeToMoveNotesType(item.sport_type ?? null, item.type ?? null);
+      const title = await getSmartActivityTitle(item, activityType, { serviceClient, googleMapsApiKey });
+      return {
+        title: title ?? item.name ?? normalized.title,
+        route_polyline: encodeRoute(decodeRoute(item.map?.summary_polyline)), route_checked_at: new Date().toISOString(),
+      };
+    }));
   }
+  scheduleImportedTitleJobs(jobs);
 
-  const { error: connectionSyncError } = await supabase
+  const { error: connectionSyncError } = retryActivityId ? { error: null } : await supabase
     .from("user_strava_connections")
     .update({
       last_synced_at: nowIso,

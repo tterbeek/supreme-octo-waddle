@@ -1,4 +1,6 @@
+import ImportingActivityCard from './ImportingActivityCard';
 import ActivityPhotoPreview from './ActivityPhotoPreview';
+import ActivityRouteMap from './ActivityRouteMap';
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { MapPin, Zap } from "lucide-react";
 import { SOCIAL_V2_ENABLED } from '../config/social';
@@ -62,7 +64,14 @@ type RecentActivityCardProps = {
   disableSwipe?: boolean;
 };
 
-export default function RecentActivityCard({
+export default function RecentActivityCard(props: RecentActivityCardProps) {
+  if (props.activity.import_status && props.activity.import_status !== 'ready') {
+    return <ImportingActivityCard activity={props.activity} />;
+  }
+  return <ReadyActivityCard {...props} />;
+}
+
+function ReadyActivityCard({
   activity,
   signedNoteImages,
   signedNoteThumbs,
@@ -438,6 +447,8 @@ export default function RecentActivityCard({
 
           </div>
         )}
+
+        <ActivityRouteMap key={activity.id} activityId={activity.id} source={activity.external_source || activity.source || 'manual'} polyline={activity.route_polyline} checkedAt={activity.route_checked_at} preview={photoCount === 0}/>
 
         {showOptionalNotePrompt && !showQuickEffortPrompt && (
           <div className="mt-3 flex items-center justify-center">

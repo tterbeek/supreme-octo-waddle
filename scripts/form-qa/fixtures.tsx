@@ -1,5 +1,9 @@
+import { useActivityImports } from "../../src/hooks/useActivityImports";
+import ImportingActivityCard from "../../src/components/ImportingActivityCard";
 // Dev-only fictional fixtures. Not imported by the app or included in dist.
 import { useState } from "react";
+import RecentActivityCard from "../../src/components/RecentActivityCard";
+import { encodeRoute } from "../../supabase/functions/_shared/activityRoute";
 import TrendsTab from "../../src/components/stats/TrendsTab";
 import { useActivityTrends, type TrendPeriod } from "../../src/hooks/useActivityTrends";
 import { createRoot } from "react-dom/client";
@@ -120,6 +124,7 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     if (op !== "read") { qa.writes.push({ table, op, payload, filters }); await wait(); }
     if (op !== "read" && qa.fail) return { data: null, error: { message: "Simulated save error" }, count: 0 };
     let data = rows[table] || [];
+    if (qa.case.startsWith('import-') && table === 'activities') data = qa.importRows ?? [];
     if(qa.case.startsWith('memor')&&table==='activities') {
       data=[...memoryRows,olderMemory].filter(row=>filters.every(([key,value])=>row[key as keyof typeof row]===value)&&ranges.every(([op,key,value])=>op==='gte'?String(row[key as keyof typeof row])>=String(value):op==='lt'?String(row[key as keyof typeof row])<String(value):true));
       if(qa.case==='memories-missing')data=[];
@@ -233,6 +238,13 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
 };
 Object.defineProperty(supabase, "functions", { value: { invoke: async (name: string, options: unknown) => {
   qa.invocations.push({ name, options }); await wait();
+  if(name.endsWith('-import-activities') && qa.case.startsWith('import-')) {
+    if(qa.fail)return {data:null,error:{message:'Simulated retry failure'}};
+    qa.importRows.forEach((row:any)=>Object.assign(row,{import_status:'processing',import_updated_at:new Date().toISOString()}));
+    qa.importNotify?.();
+    return {data:{ok:true},error:null};
+  }
+  if(name==='polar-activity-route')return {data:{polyline:qa.case==='map-none'?null:encodeRoute([[50.835,4.435],[50.837,4.438],[50.839,4.436],[50.838,4.431],[50.835,4.435]])},error:qa.fail?{message:'Simulated route failure'}:null};
   if(name==='social-media'&&(options as any)?.body?.challenge)return {data:{url:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="330"><rect width="900" height="330" fill="#bad3c4"/><circle cx="450" cy="165" r="135" fill="#5a7c6d"/><path d="M0 280 900 90" stroke="#f3dfae" stroke-width="15"/><text x="450" y="175" text-anchor="middle" font-family="sans-serif" font-size="36" fill="#fff">Fictional Community cover</text></svg>'),expires_in:60},error:null};
   if(name==='social-media'&&(options as any)?.body?.photo?.startsWith('qa-')){const portrait=(options as any).body.photo==='qa-portrait';return {data:{url:'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${portrait?400:600}" height="${portrait?600:400}" viewBox="0 0 600 400"><rect width="600" height="400" fill="#b7c9ac"/><path d="M0 400 280 150 600 400" fill="#6e8b73"/><circle cx="460" cy="85" r="45" fill="#f3dfae"/><text x="300" y="365" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#fff">Fictional shared photo</text></svg>`),expires_in:60},error:null};}
   if(name==='social-media'&&((options as any)?.body?.photo==='profile'||(options as any)?.body?.author))return {data:{url:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#5a7c6d"/><circle cx="16" cy="12" r="6" fill="#f3ede4"/></svg>'),expires_in:60},error:null};
@@ -252,7 +264,56 @@ function TrendsScenario() {
   return <div className="mx-auto max-w-3xl px-4 py-3"><button onClick={()=>setUnits(v=>v==='metric'?'imperial':'metric')}>Switch units</button><TrendsTab {...trends} period={period} onPeriodChange={setPeriod} unitSystem={units}/></div>;
 }
 
+// A connected fictional import journey using the production hook and cards.
+function ImportScenario({ name }: { name: string }) {
+  const [feed, setFeed] = useState<any[]>([]);
+  const imports = useActivityImports(user.id, () => setFeed([...(qa.importRows ?? [])]));
+  const source = name === 'import-strava' ? 'strava' : 'polar';
+  qa.importAction = (action:string) => {
+    if (action === 'discover') qa.importRows = [{ ...activity, id:'fa000000-0000-4000-8000-000000000010',
+      external_source:source, source, import_status:'processing', imported_at:new Date().toISOString(),
+      import_updated_at:new Date().toISOString(), title:'Running', route_polyline:null }];
+    else if(action === 'ready' || action === 'no-gps') Object.assign(qa.importRows[0], {
+      import_status:'ready', import_updated_at:new Date().toISOString(), title:'Morning run Brussels',
+      route_polyline:action==='ready'?encodeRoute([[50.835,4.435],[50.837+(qa.routeVariant??0),4.438],[50.839,4.436]]):null,
+      route_checked_at:new Date().toISOString(),
+    });
+    else if(action === 'failed') qa.importRows[0].import_status='failed';
+    else if(action === 'stalled') qa.importRows[0].import_updated_at=new Date(Date.now()-180_000).toISOString();
+    qa.importNotify?.();
+  };
+  return <div className="mx-auto max-w-xl space-y-4 px-4">
+    <section aria-label="Importing activities" className="space-y-3">{imports.pending.map(row=><ImportingActivityCard key={row.id} activity={row} onMapLoaded={imports.mapLoaded}/>)}</section>
+    <h2>Previously logged activities</h2>
+    {feed.filter(row=>!imports.blockedIds.has(row.id)&&row.import_status==='ready').map(row=><RecentActivityCard key={row.id}
+      activity={row} signedNoteImages={{}} signedNoteThumbs={{}} noteImageOrientation={{}}
+      onEdit={()=>{qa.edited=(qa.edited??0)+1;}} onDeleted={()=>{}} onNoteImageLoad={()=>{}} unitSystem="metric" tooltipVisible={false} onTooltipClose={()=>{}} onOpenGallery={()=>{}}/>)}
+    <p>A previously logged manual activity</p>
+  </div>;
+}
+const originalChannel = supabase.channel.bind(supabase);
+(supabase as any).channel = (...args:any[]) => {
+  if(!qa.case.startsWith('import-'))return (originalChannel as any)(...args);
+  const channel:any={on:(_event:string,_filter:any,callback:()=>void)=>{qa.importNotify=callback;return channel;},subscribe:()=>channel,unsubscribe:async()=>{},topic:'fixture'};
+  return channel;
+};
+
+function MapScenario({ name }: { name: string }) {
+  const photo=name==='map-photos';
+  const source=['map-stored','map-image-error'].includes(name)?'strava':'polar';
+  const id='fa000000-0000-4000-8000-000000000010';
+  const image='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#b7c9ac"/><text x="30" y="150">Fictional activity photo</text></svg>');
+  const route=source==='strava'?encodeRoute([[50.835,4.435],[50.837,name==='map-image-error'?4.439:4.438],[50.839,4.436],[50.838,4.431],[50.835,4.435]]):null;
+  return <div className="mx-auto max-w-xl px-4" style={name==='map-offscreen'?{paddingTop:2000}:undefined}><RecentActivityCard
+    activity={{...activity,id,title:'A fictional park loop',notes:'',source,external_source:source,user_enrichment_status:'completed',route_polyline:route,route_checked_at:route?new Date().toISOString():null,photos:photo?[{id:'one',image_path:'fake.jpg',thumb_path:'fake-thumb.jpg'}]:[]}}
+    signedNoteImages={photo?{[id]:image}:{}} signedNoteThumbs={photo?{[id]:image}:{}} noteImageOrientation={{}}
+    onEdit={()=>{}} onNoteImageLoad={()=>{}} unitSystem="metric" tooltipVisible={false} onTooltipClose={()=>{}} onOpenGallery={()=>{}}/>
+  </div>;
+}
+
 function Scenario({ name, close, saved }: { name: string; close: () => void; saved: () => void }) {
+  if(name.startsWith("import-"))return <ImportScenario key={name} name={name}/>;
+  if(name.startsWith("map-"))return <MapScenario name={name}/>;
   switch (name) {
     case "trends": return <TrendsScenario/>;
     case 'social-page': return <SocialPage/>;

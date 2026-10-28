@@ -1,3 +1,4 @@
+import { trackImportSync } from './activityImport.service';
 import { supabase } from "../supabaseClient";
 
 const STRAVA_AUTHORIZE_URL = "https://www.strava.com/oauth/authorize";
@@ -238,12 +239,12 @@ export const disconnectUserStrava = async () => {
 
 export const importRecentStravaActivities = async (perPage = 50, page = 1) => {
   if (STRAVA_INTEGRATION_PAUSED) throw new Error(STRAVA_PAUSED_NOTICE);
-  const { data, error } = await supabase.functions.invoke(
+  const { data, error } = await trackImportSync(() => supabase.functions.invoke(
     "strava-import-activities",
     {
       body: { perPage, page },
     }
-  );
+  ));
 
   if (error) {
     const message = await getFunctionErrorMessage(

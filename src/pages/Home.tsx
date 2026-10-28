@@ -1,3 +1,5 @@
+import { useActivityImports } from '../hooks/useActivityImports';
+import ImportingActivityCard from '../components/ImportingActivityCard';
 // src/pages/Home.tsx
 import { lazy, Suspense, useEffect, useMemo, useState, useRef } from "react";
 import AddActivityModal from "../features/activities/AddActivityModal";
@@ -100,6 +102,7 @@ export default function Home() {
     searchTerm,
     setSearchTerm,
   } = useHomeFeed(userId);
+  const importing = useActivityImports(userId, refreshFeed);
   const companion = useWeeklyCompanion(userId);
   useEffect(() => {
     const logoEl = document.getElementById("layout-header-logo");
@@ -222,7 +225,7 @@ export default function Home() {
   const hasDoneOnboarding =
     typeof window !== "undefined" &&
     localStorage.getItem("movenotes_onboarding_done") === "true";
-  const showFirstLogPrompt = initialFeedLoaded && activities.length === 0;
+  const showFirstLogPrompt = initialFeedLoaded && activities.length === 0 && importing.pending.length === 0;
 
   useEffect(() => {
     if (!hasDoneOnboarding || !initialFeedLoaded) return;
@@ -448,7 +451,7 @@ export default function Home() {
       .filter((post) => !hasMoreFeed || (oldestLoadedDay ? post.created_at.slice(0, 10) >= oldestLoadedDay : post.id === companion.posts[0]?.id))
       .filter((post) => !search || `${post.thought ?? ""} ${post.user_reflection ?? ""}`.toLowerCase().includes(search))
       .map((post) => ({ ...post, entry_kind: "companion", day: post.created_at.slice(0, 10), within_day_ts: post.created_at }));
-    const feedRows = [...filteredActivities, ...companionRows].sort((a, b) =>
+    const feedRows = [...filteredActivities.filter(activity => !importing.blockedIds.has(activity.id) && (!activity.import_status || activity.import_status === 'ready')), ...companionRows].sort((a, b) =>
       getEntryDayKey(b).localeCompare(getEntryDayKey(a)) ||
       String(b.within_day_ts ?? "").localeCompare(String(a.within_day_ts ?? ""))
     );
@@ -484,7 +487,7 @@ export default function Home() {
     });
 
     return months;
-  }, [filteredActivities, activities, hasMoreFeed, companion.posts, searchTerm]);
+  }, [filteredActivities, activities, hasMoreFeed, companion.posts, searchTerm, importing.blockedIds]);
   let activityRenderIndex = 0;
 
   return (
@@ -507,6 +510,9 @@ export default function Home() {
         />
 
         <div className="flex flex-col gap-8">
+          {importing.pending.length > 0 && <section className="space-y-3" aria-label="Importing activities">
+            {importing.pending.map(activity => <ImportingActivityCard key={activity.id} activity={activity} onMapLoaded={importing.mapLoaded} />)}
+          </section>}
           {companion.enabled && !searchTerm && (companion.message || (companion.preparing && companion.posts.length === 0)) && (
             <div role="status" className="text-sm text-movenotes-text/60 px-3">
               {companion.message || "Preparing your weekly thought…"}

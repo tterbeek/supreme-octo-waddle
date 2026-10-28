@@ -42,6 +42,7 @@ export default {
         movenotes: {
           bg: "#F3EDE4",        // soft sand (main background)
           surface: "#F3EEE8",   // light cards
+          map: "#F7FAFC",       // cool off-white map surface
           bgoverlay: "#F9F6F1",
           primary: "#5A7A69",   // forest green (buttons/icons)
           accent: "#E48A6C",    // warm coral (highlights)

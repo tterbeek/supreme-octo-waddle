@@ -1,8 +1,13 @@
 import { authorizedUser, corsHeaders, json, requestPolarTokens, tokenExpiresAt } from "../_shared/polar.ts";
-import { normalizePolarSession, polarList, polarRangeDateTime, type PolarSession, type PolarSport } from "../_shared/polarImport.ts";
+import { normalizePolarSession, polarList, polarRangeDateTime, polarRouteDayQuery, polarTitleInput, type PolarSession, type PolarSport } from "../_shared/polarImport.ts";
+import { generateImportedActivityTitle } from "../_shared/importedActivityTitle.ts";
+import { polarRoutePolyline } from "../_shared/activityRoute.ts";
+import { finishActivityImport, importCanRetry, type ImportAttempt } from "../_shared/activityImport.ts";
+import { importedLocalityResolver, scheduleImportedTitleJobs } from "../_shared/importedTitleEnrichment.ts";
 
 async function polarGet<T>(path: string, token: string): Promise<T> {
   const response = await fetch(`https://www.polaraccesslink.com/v4/data/${path}`, {
+    signal: AbortSignal.timeout(10_000),
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
   if (!response.ok) {
@@ -40,6 +45,15 @@ Deno.serve(async (req) => {
       if (error) throw error;
     }
 
+    const body = await req.json().catch(() => ({}));
+    let retry: { id: string; date: string; external_id: string } | null = null;
+    if (body.retryActivityId) {
+      const { data, error } = await context.admin.from('activities').select('id,date,external_id,import_status,import_updated_at')
+        .eq('id', body.retryActivityId).eq('user_id', context.user.id).eq('external_source', 'polar').maybeSingle();
+      if (error) throw error;
+      if (!data || !importCanRetry(data.import_status, data.import_updated_at)) return json(409, { error: 'This import is not ready to retry.' });
+      retry = data;
+    }
     // A small overlap covers delayed Polar processing; the unique external ID handles retries.
     const now = new Date();
     // Date-only API bounds: today plus the previous 89 days = 90 calendar days.
@@ -54,38 +68,72 @@ Deno.serve(async (req) => {
       from: polarRangeDateTime(from), to: polarRangeDateTime(to),
     });
     const [sessionsResult, sportsResult] = await Promise.all([
-      polarGet<PolarSession[] | { trainingSessions?: PolarSession[] }>(`training-sessions/list?${sessionsUrl}`, accessToken),
+      polarGet<PolarSession[] | { trainingSessions?: PolarSession[] }>(`training-sessions/list?${retry ? polarRouteDayQuery(retry.date) : sessionsUrl}`, accessToken),
       polarGet<PolarSport[] | { sports?: PolarSport[] }>("sports/list", accessToken),
     ]);
-    const sessions = polarList<PolarSession>(sessionsResult, "trainingSessions");
+    const sessions = polarList<PolarSession>(sessionsResult, "trainingSessions").filter(session => !retry || String(session.identifier?.id) === retry.external_id);
+    if (retry && !sessions.length) return json(404, { error: "Polar no longer returned this workout. Please try again later." });
     const sports = new Map(polarList<PolarSport>(sportsResult, "sports").map((sport) => [String(sport.id?.id), sport]));
     let inserted = 0;
     let skipped = 0;
+    const jobs: (() => Promise<void>)[] = [];
+    // Share a route lookup between activities on the same local day.
+    const days = new Map<string, Promise<PolarSession[]>>();
     for (const session of sessions) {
       const activity = normalizePolarSession(session, sports, context.user.id, new Date().toISOString());
       if (!activity) continue;
-      const { error } = await context.admin.from("activities").insert(activity);
-      if (error?.code === "23505" && error.message?.includes("activities_external_source_external_id_idx")) {
-        // A later Polar response may supply distance that was absent at first import.
-        // Only fill a missing value while the activity is still awaiting enrichment.
-        if (activity.distance_km !== null) {
-          const { error: updateError } = await context.admin.from("activities")
-            .update({ distance_km: activity.distance_km })
-            .eq("user_id", context.user.id)
-            .eq("external_source", "polar")
-            .eq("external_id", activity.external_id)
-            .eq("user_enrichment_status", "pending")
-            .is("distance_km", null);
-          if (updateError) throw updateError;
+      const token = crypto.randomUUID();
+      const state = { import_status: 'processing', import_token: token, import_updated_at: new Date().toISOString() };
+      let attempt: ImportAttempt | null = null;
+      const { data: saved, error } = await context.admin.from('activities').insert({ ...activity, ...state })
+        .select('id,user_id,import_token').single();
+      if (error?.code === '23505') {
+        const { data: existing, error: lookupError } = await context.admin.from('activities')
+          .select('id,import_status,import_updated_at,import_token').eq('user_id', context.user.id)
+          .eq('external_source', 'polar').eq('external_id', activity.external_id).maybeSingle();
+        if (lookupError) throw lookupError;
+        if (existing && importCanRetry(existing.import_status, existing.import_updated_at)) {
+          let claim = context.admin.from('activities').update(state).eq('id', existing.id).eq('user_id', context.user.id)
+            .eq('import_status', existing.import_status);
+          claim = existing.import_token ? claim.eq('import_token', existing.import_token) : claim.is('import_token', null);
+          const { data: claimed, error: claimError } = await claim.select('id,user_id,import_token').maybeSingle();
+          if (claimError) throw claimError;
+          attempt = claimed;
+        } else if (activity.distance_km !== null) {
+          // Preserve the existing missing-distance backfill, without touching edited data.
+          const { error: fillError } = await context.admin.from('activities').update({ distance_km: activity.distance_km })
+            .eq('user_id', context.user.id).eq('external_source', 'polar').eq('external_id', activity.external_id)
+            .eq('user_enrichment_status', 'pending').eq('import_status', 'ready').is('distance_km', null);
+          if (fillError) throw fillError;
         }
         skipped += 1;
-        continue;
+      } else {
+        if (error) throw error;
+        attempt = saved;
+        inserted += 1;
       }
-      if (error) throw error;
-      inserted += 1;
+      if (!attempt) continue;
+      const currentAttempt = attempt;
+      jobs.push(() => finishActivityImport(context.admin, currentAttempt, async () => {
+        let detailed = days.get(activity.date);
+        if (!detailed) {
+          detailed = polarGet<PolarSession[] | { trainingSessions?: PolarSession[] }>(
+            `training-sessions/list?${polarRouteDayQuery(activity.date)}`, accessToken,
+          ).then(result => polarList<PolarSession>(result, 'trainingSessions'));
+          days.set(activity.date, detailed);
+        }
+        const withRoute = (await detailed).find(item => String(item.identifier?.id) === String(session.identifier?.id));
+        if (!withRoute) throw new Error('Workout details not available yet.');
+        const complete = { ...session, ...withRoute };
+        const title = await generateImportedActivityTitle(polarTitleInput(complete, activity.type, sports), {
+          resolveLocality: importedLocalityResolver(context.admin, Deno.env.get('GOOGLE_MAPS_API_KEY')),
+        });
+        return { title, route_polyline: polarRoutePolyline(complete), route_checked_at: new Date().toISOString() };
+      }));
     }
+    scheduleImportedTitleJobs(jobs);
     const syncedAt = new Date().toISOString();
-    const { error: syncError } = await context.admin.from("user_polar_connections")
+    const { error: syncError } = retry ? { error: null } : await context.admin.from("user_polar_connections")
       .update({ last_synced_at: syncedAt, updated_at: syncedAt })
       .eq("user_id", context.user.id);
     if (syncError) throw syncError;
