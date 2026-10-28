@@ -43,13 +43,23 @@ export default function TrendsTab({
 }: TrendsTabProps) {
   return (
     <>
-      <div className="mb-4 flex justify-end">
-        <label className="flex items-center gap-2 text-sm text-movenotes-muted">
-          <span className="sr-only">Trend period</span>
-          <select aria-label="Trend period" value={period} onChange={event => onPeriodChange(event.target.value as TrendPeriod)} className="min-h-11 rounded-full border border-movenotes-border bg-movenotes-surface px-4 text-movenotes-text">
-            <option value="year">Year</option><option value="month">Month</option><option value="week">Week</option>
-          </select>
-        </label>
+      <div className="mb-6 space-y-3">
+        <h2 className="text-lg font-bold text-movenotes-primary text-center">
+          Your movement over time
+        </h2>
+        <div role="group" aria-label="Trend period" className="mx-auto flex w-full max-w-sm rounded-full border border-movenotes-border p-1">
+          {([['week', 'Week'], ['month', 'Month'], ['year', 'Year']] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={period === value}
+              onClick={() => onPeriodChange(value)}
+              className={`min-h-11 min-w-0 flex-1 rounded-full px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary ${period === value ? 'bg-movenotes-primary/15 text-movenotes-primary' : 'text-movenotes-muted'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       {trendsLoading && !error && (
         <p className="text-sm text-gray-500 text-center">Loading trends…</p>
@@ -67,10 +77,6 @@ export default function TrendsTab({
 
       {!error && (
         <div className="space-y-8 mt-3">
-          <h2 className="text-lg font-bold text-movenotes-primary mb-1 text-center">
-            Your movement over time
-          </h2>
-
           {!hasTrendRows && !trendsLoading && (
             <p className="text-center text-movenotes-muted mt-8">
               Not enough activity yet to show trends 🌱

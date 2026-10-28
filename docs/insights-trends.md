@@ -1,6 +1,8 @@
 # Insights: Trends periods
 
-The top-right Year / Month / Week dropdown controls all activity trend charts.
+The Week / Month / Year segmented control below “Your movement over time”
+controls all activity trend charts. It uses the same pill styling as Memories,
+with an accessible pressed state for the selected period.
 Week remains the default and retains the current week plus nine previous weeks.
 Month includes the current calendar month and eleven previous months, showing
 only buckets with a logged measurement. Year includes every recorded year with
