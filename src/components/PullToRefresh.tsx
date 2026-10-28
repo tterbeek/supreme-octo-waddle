@@ -81,15 +81,18 @@ export default function PullToRefresh({ children, onRefresh, disabled = false }:
     };
   }, [disabled]);
 
-  return <div ref={root}>
-    <div className="flex items-center justify-center gap-2 overflow-hidden text-sm text-movenotes-primary" style={{ height: busy ? 48 : distance }} aria-hidden="true">
-      {busy ? <IconRefresh size={19} className="animate-spin motion-reduce:animate-none" /> : <IconArrowDown size={19} className={distance >= THRESHOLD ? 'rotate-180' : ''} />}
-      <span>{busy ? 'Checking for activities…' : distance >= THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}</span>
-    </div>
-    <div className="flex min-h-8 items-center justify-end gap-2 px-1">
-      <span role="status" className={busy ? 'sr-only' : 'text-xs text-movenotes-muted'}>{busy ? 'Checking for activities…' : message}</span>
-      <button type="button" onClick={() => void refresh()} disabled={disabled || busy} aria-label="Refresh Journal" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-movenotes-primary/70 hover:bg-movenotes-primary/10 disabled:opacity-40"><IconRefresh size={17} aria-hidden="true" /></button>
-    </div>
+  const failed = Boolean(message && message !== 'Journal refreshed');
+  return <div ref={root} className="relative">
+    {(busy || distance > 0 || failed) && <div
+      data-refresh-indicator
+      className={`pointer-events-none absolute top-1 z-30 flex max-w-full items-center gap-2 rounded-xl bg-movenotes-bg/95 px-3 py-2 text-sm text-movenotes-primary shadow-sm ${busy || failed ? 'right-1' : 'left-1/2 -translate-x-1/2'}`}
+      aria-hidden="true"
+    >
+      {busy ? <IconRefresh size={19} className="shrink-0 animate-spin motion-reduce:animate-none" /> : !failed && <IconArrowDown size={19} className={`shrink-0 ${distance >= THRESHOLD ? 'rotate-180' : ''}`} />}
+      <span>{busy ? 'Checking for activities…' : failed ? message : distance >= THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}</span>
+    </div>}
+    <span role="status" className="sr-only">{busy ? 'Checking for activities…' : message}</span>
+    <button type="button" onClick={() => void refresh()} disabled={disabled || busy} aria-label="Refresh Journal" className="sr-only focus:not-sr-only focus:absolute focus:right-1 focus:top-1 focus:z-30 focus:rounded-lg focus:bg-movenotes-bg focus:p-3">Refresh Journal</button>
     {children}
   </div>;
 }

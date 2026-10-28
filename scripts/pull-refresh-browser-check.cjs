@@ -25,7 +25,8 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let ws;let checks=0;
  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
  await send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
  await send('Page.navigate',{url:'http://127.0.0.1:5182/scripts/form-qa/index.html'});await wait('!!window.formQA');await choose('pull-refresh');
- await evaluate('window.formQA.clock=Date.now();Date.now=()=>window.formQA.clock');
+ await evaluate('window.formQA.clock=Date.now();Date.now=()=>window.formQA.clock;window.formQA.feedTop=document.querySelector("[data-pull-target]").getBoundingClientRect().top');
+ await wait("!document.querySelector('[data-refresh-indicator]')");
  const importCount=()=>evaluate("window.formQA.invocations.filter(i=>i.name==='polar-import-activities').length");
  const gesture=async({dy=170,dx=0,selector='[data-pull-target]',cancel=false,release=true}={})=>{
   const point=await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return{x:r.left+40,y:Math.max(110,r.top+30)}})()`);
@@ -36,12 +37,12 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let ws;let checks=0;
  await gesture({dy:55});await delay(150);await wait('!window.formQA.pullRefreshCalls');
  await gesture({dx:150,dy:40});await wait('!window.formQA.pullRefreshCalls');
  await gesture({cancel:true});await wait('!window.formQA.pullRefreshCalls');
- await gesture({release:false});await wait("document.body.innerText.includes('Release to refresh')");await shot('pull-release-mobile');
- await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await wait("document.body.innerText.includes('Journal refreshed')");await wait('window.formQA.pullRefreshCalls===1');
+ await gesture({release:false});await wait("document.body.innerText.includes('Release to refresh')");await wait("document.querySelector('[data-pull-target]').getBoundingClientRect().top===window.formQA.feedTop");await shot('pull-release-mobile');
+ await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await wait("document.body.innerText.includes('Journal refreshed')");await wait('window.formQA.pullRefreshCalls===1');await wait("!document.querySelector('[data-refresh-indicator]')&&document.querySelector('[data-pull-target]').getBoundingClientRect().top===window.formQA.feedTop");
  if(await importCount()!==1)throw Error('First pull did not import exactly once');
  await gesture();await wait('window.formQA.pullRefreshCalls===2');if(await importCount()!==1)throw Error('One-minute cooldown not applied');
  await evaluate('window.formQA.clock+=61000;window.formQA.delay=600');
- await gesture();await wait("document.body.innerText.includes('Checking for activities')");await gesture();await wait('window.formQA.pullRefreshCalls===3');
+ await gesture();await wait("document.body.innerText.includes('Checking for activities')");await wait("document.querySelector('[data-pull-target]').getBoundingClientRect().top===window.formQA.feedTop");await gesture();await wait('window.formQA.pullRefreshCalls===3');
  await wait("document.body.innerText.includes('Journal refreshed')");if(await importCount()!==2)throw Error('Concurrent pull started an extra import');
  await evaluate('window.formQA.delay=0');
  // Scrolling through old activities, nested controls and modal interactions do not refresh.

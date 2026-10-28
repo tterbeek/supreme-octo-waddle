@@ -2,8 +2,9 @@
 
 Pull down at the top of the Journal feed, then release after “Release to
 refresh” appears. The Journal refreshes immediately, and Polar is checked if
-the last sync/attempt is at least 60 seconds old. The small Refresh Journal
-button provides the same action for desktop and keyboard users.
+the last sync/attempt is at least 60 seconds old. The refresh indicator appears only during the gesture or active refresh,
+overlaid above the feed without changing its position. A keyboard-focusable
+Refresh Journal action provides the same behavior without a persistent icon.
 
 Repeated pulls within the cooldown still refresh the Journal. Automatic Polar
 checks retain their existing 30-minute default. Overlapping pulls, automatic
