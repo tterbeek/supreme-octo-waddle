@@ -64,22 +64,63 @@ export function disconnectPolar() {
   return invoke<PolarConnection>("polar-connection", { disconnect: true });
 }
 
-export async function importPolarActivities() {
-  const result = await trackImportSync(() => invoke<{ ok: boolean; fetched: number; inserted: number; skipped: number }>("polar-import-activities", {}));
-  if (result.inserted > 0) window.dispatchEvent(new Event(POLAR_SYNC_COMPLETED_EVENT));
-  return result;
+type ImportResult = { ok: boolean; fetched: number; inserted: number; skipped: number };
+export const POLAR_PULL_COOLDOWN_MS = 60_000;
+const importPromises = new Map<string, Promise<ImportResult>>();
+const syncPromises = new Map<string, { cooldownMs: number; promise: Promise<boolean> }>();
+const lastAttempts = new Map<string, number>();
+const backoffs = new Map<string, number>();
+
+async function currentUserId() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user.id ?? null;
 }
 
-let syncPromise: Promise<boolean> | null = null;
-export async function syncPolarIfStale() {
-  if (syncPromise) return syncPromise;
-  syncPromise = (async () => {
+export async function importPolarActivities() {
+  const userId = await currentUserId();
+  if (!userId) throw new Error('Sign in to sync Polar.');
+  const running = importPromises.get(userId);
+  if (running) return running;
+  const work = (async () => {
+    if (Date.now() < (backoffs.get(userId) ?? 0)) throw new Error('Polar is temporarily limiting requests. Please try again later.');
+    lastAttempts.set(userId, Date.now());
+    try {
+      const result = await trackImportSync(() => invoke<ImportResult>('polar-import-activities', {}));
+      if (result.inserted > 0) window.dispatchEvent(new Event(POLAR_SYNC_COMPLETED_EVENT));
+      return result;
+    } catch (error) {
+      // The importer currently forwards provider errors as messages. Avoid
+      // hammering a shared client limit until the short-term window resets.
+      if (error instanceof Error && /\b429\b/.test(error.message)) backoffs.set(userId, Date.now() + 15 * 60_000);
+      throw error;
+    }
+  })().finally(() => { importPromises.delete(userId); });
+  importPromises.set(userId, work);
+  return work;
+}
+
+/** Pull refresh uses 60s; existing automatic callers retain the 30-minute default. */
+export async function syncPolarIfStale(cooldownMs = STALE_MS): Promise<boolean> {
+  const userId = await currentUserId();
+  if (!userId) return false;
+  const runningImport = importPromises.get(userId);
+  if (runningImport) { await runningImport; return true; }
+  const running = syncPromises.get(userId);
+  if (running) {
+    const synced = await running.promise;
+    // A manual pull can follow a less frequent automatic check that skipped.
+    return synced || cooldownMs >= running.cooldownMs ? synced : syncPolarIfStale(cooldownMs);
+  }
+  const work = (async () => {
+    if (Date.now() < (backoffs.get(userId) ?? 0)) throw new Error('Polar is temporarily limiting requests. Please try again later.');
+    if (Date.now() - (lastAttempts.get(userId) ?? 0) < cooldownMs) return false;
     const connection = await fetchPolarConnection();
     if (!connection.connected) return false;
     const last = connection.last_synced_at ? Date.parse(connection.last_synced_at) : 0;
-    if (Number.isFinite(last) && Date.now() - last < STALE_MS) return false;
+    if (Number.isFinite(last) && Date.now() - last < cooldownMs) return false;
     await importPolarActivities();
     return true;
-  })().finally(() => { syncPromise = null; });
-  return syncPromise;
+  })().finally(() => { syncPromises.delete(userId); });
+  syncPromises.set(userId, { cooldownMs, promise: work });
+  return work;
 }

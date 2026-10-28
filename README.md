@@ -1,5 +1,9 @@
 # MoveNotes
 
+The Journal supports pull-to-refresh at the top of the feed, with a 60-second
+cooldown for user-triggered Polar checks. Automatic checks retain their
+30-minute interval. See [behavior and verification](docs/journal-pull-refresh.md).
+
 ## Journal route maps
 
 Optional Mapbox Outdoors previews give photo-free activities a route image.

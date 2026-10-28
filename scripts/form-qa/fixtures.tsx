@@ -1,3 +1,5 @@
+import PullToRefresh from "../../src/components/PullToRefresh";
+import { syncPolarIfStale, POLAR_PULL_COOLDOWN_MS } from "../../src/services/polar.service";
 import { useActivityImports } from "../../src/hooks/useActivityImports";
 import ImportingActivityCard from "../../src/components/ImportingActivityCard";
 // Dev-only fictional fixtures. Not imported by the app or included in dist.
@@ -238,6 +240,8 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
 };
 Object.defineProperty(supabase, "functions", { value: { invoke: async (name: string, options: unknown) => {
   qa.invocations.push({ name, options }); await wait();
+  if(qa.case==='pull-refresh' && name==='polar-connection')return {data:{connected:true,last_synced_at:null},error:null};
+  if(qa.case==='pull-refresh' && name==='polar-import-activities')return {data:{ok:true,inserted:0},error:qa.fail?{message:'Simulated Polar failure'}:null};
   if(name.endsWith('-import-activities') && qa.case.startsWith('import-')) {
     if(qa.fail)return {data:null,error:{message:'Simulated retry failure'}};
     qa.importRows.forEach((row:any)=>Object.assign(row,{import_status:'processing',import_updated_at:new Date().toISOString()}));
@@ -262,6 +266,22 @@ function TrendsScenario() {
   const [units,setUnits]=useState<'metric'|'imperial'>('metric');
   const trends=useActivityTrends(user.id,true,period);
   return <div className="mx-auto max-w-3xl px-4 py-3"><button onClick={()=>setUnits(v=>v==='metric'?'imperial':'metric')}>Switch units</button><TrendsTab {...trends} period={period} onPeriodChange={setPeriod} unitSystem={units}/></div>;
+}
+
+function PullRefreshScenario() {
+  const [count,setCount]=useState(0);
+  const [overlay,setOverlay]=useState(false);
+  return <div className="mx-auto max-w-xl px-4"><PullToRefresh onRefresh={async()=>{
+    qa.pullRefreshCalls=(qa.pullRefreshCalls??0)+1;
+    setCount(value=>value+1);
+    await syncPolarIfStale(POLAR_PULL_COOLDOWN_MS);
+  }}>
+    <div data-pull-target className="rounded-xl border p-5"><h2>Fictional Journal</h2><p>Pull down here to check for missing activities.</p><p>Feed refreshes: {count}</p></div>
+    <button onClick={()=>setOverlay(true)}>Open overlay</button>
+    <div data-swipe-ignore className="my-4 rounded border p-4">Photo/swipe control</div>
+    <div style={{height:1800}}>Previously logged activities</div>
+    {overlay&&<div role="dialog" aria-modal="true" aria-label="Fictional overlay" className="fixed inset-0 bg-white p-8"><button onClick={()=>setOverlay(false)}>Close overlay</button><p>Overlay content</p></div>}
+  </PullToRefresh></div>;
 }
 
 // A connected fictional import journey using the production hook and cards.
@@ -312,6 +332,7 @@ function MapScenario({ name }: { name: string }) {
 }
 
 function Scenario({ name, close, saved }: { name: string; close: () => void; saved: () => void }) {
+  if(name==='pull-refresh')return <PullRefreshScenario/>;
   if(name.startsWith("import-"))return <ImportScenario key={name} name={name}/>;
   if(name.startsWith("map-"))return <MapScenario name={name}/>;
   switch (name) {

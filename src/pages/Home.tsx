@@ -1,3 +1,4 @@
+import PullToRefresh from '../components/PullToRefresh';
 import { useActivityImports } from '../hooks/useActivityImports';
 import ImportingActivityCard from '../components/ImportingActivityCard';
 // src/pages/Home.tsx
@@ -33,7 +34,7 @@ import { resolveFeelingState, type FeelingAfter, type FeelingDuring } from "../l
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
-import { POLAR_SYNC_COMPLETED_EVENT, syncPolarIfStale } from "../services/polar.service";
+import { POLAR_PULL_COOLDOWN_MS, POLAR_SYNC_COMPLETED_EVENT, syncPolarIfStale } from "../services/polar.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
 import { NOTE_STORAGE_BUCKET } from "../services/storage.service";
 import { useCircleAccessState } from "../hooks/useCircleAccessState";
@@ -128,6 +129,11 @@ export default function Home() {
     if (!userId) return;
 
     await refreshFeed();
+  }
+
+  async function pullRefreshJournal() {
+    const [, synced] = await Promise.all([refreshFeed(), syncPolarIfStale(POLAR_PULL_COOLDOWN_MS)]);
+    if (synced) await refreshFeed();
   }
 
   const shareableActivityIds = useMemo(
@@ -491,6 +497,7 @@ export default function Home() {
   let activityRenderIndex = 0;
 
   return (
+    <PullToRefresh onRefresh={pullRefreshJournal} disabled={!userId}>
     <div className="min-h-screen bg-movenotes-bg p-1">
       <div className="mt-2">
 
@@ -911,5 +918,6 @@ export default function Home() {
 
       </div>
     </div>
+    </PullToRefresh>
   );
 }
