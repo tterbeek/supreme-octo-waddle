@@ -74,6 +74,7 @@ const socialSharing:any={private:false,public_note:'',legacy_photo:false,has_leg
 const socialRows:any[]=[{id:'social-activity',date:'2026-10-25',shared_at:'2026-10-25T09:00:00Z',author_id:'fictional-friend',author:'Fictional friend',title:'A morning walk',type:'walk',distance_km:4,duration_min:45,public_note:'Some shared words.',photos:[],contexts:[{id:'circle-context',audience:'circle-owner',kind:'circle',community:null,name:'Circle'},{id:'community-context',audience:'audience-community',kind:'community',community:'community-one',name:'Brussels Runners'}]}];
 const socialComments:any={'social-activity':[{id:'thread-comment',author_id:'fictional-friend',author:'Fictional friend',body:'One shared conversation',created_at:'2026-10-25T09:00:00Z',can_delete:false,has_avatar:true}]};
 const socialReactions:Record<string,string|null>={};const fixtureChallenges:any[]=[];
+qa.setChallengeTotal=(total:number)=>{fixtureChallenges[0].total=total;};
 qa.setChallengeDemo=()=>{qa.challengeDemo=true;if(!socialRows[0].contexts.some((c:any)=>c.community==='community-one'))socialRows[0].contexts.push({id:'community-context',audience:'audience-community',kind:'community',community:'community-one',name:'Brussels Runners'});fixtureChallenges.length=0;fixtureChallenges.push({id:'challenge-demo',title:'Around the world together',metric:'distance',target:10,scope:'collective',types:['walk','run','ride'],starts_on:'2026-10-19',ends_on:'2026-11-02',time_zone:'Europe/Brussels',state:'active',total:16,mine:4,has_cover:true,cover_updated_at:'2026-10-26T10:00:00Z'});};
 qa.setCardOwner=(owner:boolean)=>{socialRows[0].author_id=owner?user.id:'fictional-friend';};
 qa.setCardDemo=(orientation:string,total=8,photoCount=1)=>{
@@ -128,6 +129,11 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     if (op !== "read" && qa.fail) return { data: null, error: { message: "Simulated save error" }, count: 0 };
     let data = rows[table] || [];
     if (qa.case.startsWith('import-') && table === 'activities') data = qa.importRows ?? [];
+    if(qa.case.startsWith('share-map') && table==='activities') data=[{...activity,source:qa.case==='share-map-none'?'manual':'polar',
+      route_polyline:['share-map-none','share-map-legacy'].includes(qa.case)?null:encodeRoute(qa.case==='share-map-short'?[[50.83,4.43],[50.831,4.43]]:[[50.83,4.43],[50.85,4.43],[50.85,4.46],[50.87,4.46]]),
+      route_checked_at:qa.case==='share-map-legacy'?null:new Date().toISOString()}];
+    if(qa.case.startsWith('share-map') && table==='activities')qa.shareSourceRoute=data[0].route_polyline;
+    if(qa.case.startsWith('share-map') && table==='activity_photos') data=[{id:'share-photo',image_path:'share-photo.jpg',thumb_path:'share-photo-thumb.jpg',sort_order:0,created_at:'2026-10-28'}];
     if(qa.case.startsWith('memor')&&table==='activities') {
       data=[...memoryRows,olderMemory].filter(row=>filters.every(([key,value])=>row[key as keyof typeof row]===value)&&ranges.every(([op,key,value])=>op==='gte'?String(row[key as keyof typeof row])>=String(value):op==='lt'?String(row[key as keyof typeof row])<String(value):true));
       if(qa.case==='memories-missing')data=[];
@@ -166,6 +172,7 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     return {data:dates.map((period_start,i)=>({activity_type:'run',period_start,distance_value:10+i,duration_value:30+i})),error:null};
   }
   if(name.startsWith('social_')){
+    if(qa.socialReadDelay)await new Promise(resolve=>setTimeout(resolve,qa.socialReadDelay));
     if(qa.fail)return {data:null,error:{message:'Simulated social error'}};
     const read=name==='social_home'||name==='social_feed'||name==='social_activity'&&!args.p_change||name==='social_community'&&args.p_action==='get'||name==='social_discussion'&&args.p_action==='read'||name==='social_own_comments'||name==='social_challenges'&&args.p_action==='list'||name==='social_invite'&&['preview','get'].includes(args.p_action);
     if(!read){qa.writes.push({table:name,payload:args});await wait();}
@@ -250,6 +257,7 @@ Object.defineProperty(supabase, "functions", { value: { invoke: async (name: str
     qa.importNotify?.();
     return {data:{ok:true},error:null};
   }
+  if(name==='polar-activity-route'&&qa.case==='share-map-legacy')return {data:{polyline:encodeRoute([[50.83,4.43],[50.85,4.43],[50.85,4.46],[50.87,4.46]])},error:null};
   if(name==='polar-activity-route')return {data:{polyline:qa.case==='map-none'?null:encodeRoute([[50.835,4.435],[50.837,4.438],[50.839,4.436],[50.838,4.431],[50.835,4.435]])},error:qa.fail?{message:'Simulated route failure'}:null};
   if(name==='social-media'&&(options as any)?.body?.challenge)return {data:{url:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="330"><rect width="900" height="330" fill="#bad3c4"/><circle cx="450" cy="165" r="135" fill="#5a7c6d"/><path d="M0 280 900 90" stroke="#f3dfae" stroke-width="15"/><text x="450" y="175" text-anchor="middle" font-family="sans-serif" font-size="36" fill="#fff">Fictional Community cover</text></svg>'),expires_in:60},error:null};
   if(name==='social-media'&&(options as any)?.body?.photo?.startsWith('qa-')){const portrait=(options as any).body.photo==='qa-portrait';return {data:{url:'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${portrait?400:600}" height="${portrait?600:400}" viewBox="0 0 600 400"><rect width="600" height="400" fill="#b7c9ac"/><path d="M0 400 280 150 600 400" fill="#6e8b73"/><circle cx="460" cy="85" r="45" fill="#f3dfae"/><text x="300" y="365" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#fff">Fictional shared photo</text></svg>`),expires_in:60},error:null};}
@@ -260,7 +268,7 @@ Object.defineProperty(supabase, "functions", { value: { invoke: async (name: str
   } } : {}) }, error: qa.fail ? { message: "Simulated generation error" } : null };
   return { data: { connected: false, fetched: 0, inserted: 0, skipped: 0 }, error: null };
 } } });
-(supabase.storage as any).from = () => ({ createSignedUrls: async (paths:string[]) => ({ data: paths.filter(p=>p.includes('memory-')||p.includes('circle-profile')).map(path=>({path,signedUrl:'data:image/svg+xml,'+encodeURIComponent(`<svg data-fixture-path="${path}" xmlns="http://www.w3.org/2000/svg" width="${path.includes('1')?600:450}" height="${path.includes('1')?450:600}" viewBox="0 0 600 450"><rect width="600" height="450" fill="${path.includes('1')?'#b4c9b8':'#e4c9ad'}"/><circle cx="300" cy="210" r="110" fill="#f3ede4"/><text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#374d44">Fictional activity photo ${path.includes('1')?'1':'2'}</text></svg>`)})), error: null }), download: async () => ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
+(supabase.storage as any).from = () => ({ createSignedUrls: async (paths:string[]) => ({ data: paths.filter(p=>p.includes('memory-')||p.includes('circle-profile')).map(path=>({path,signedUrl:'data:image/svg+xml,'+encodeURIComponent(`<svg data-fixture-path="${path}" xmlns="http://www.w3.org/2000/svg" width="${path.includes('1')?600:450}" height="${path.includes('1')?450:600}" viewBox="0 0 600 450"><rect width="600" height="450" fill="${path.includes('1')?'#b4c9b8':'#e4c9ad'}"/><circle cx="300" cy="210" r="110" fill="#f3ede4"/><text x="300" y="380" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#374d44">Fictional activity photo ${path.includes('1')?'1':'2'}</text></svg>`)})), error: null }), download: async () => qa.case.startsWith('share-map') ? ({data:new Blob(['<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600"><rect width="400" height="600" fill="#b7c9ac"/><text x="25" y="300">Fictional portrait photo</text></svg>'],{type:'image/svg+xml'}),error:null}) : ({ data: null, error: { message: "Fictional missing photo" } }), upload: async () => ({ data: {}, error: null }), remove: async () => ({ error: null }) });
 HTMLMediaElement.prototype.play = async () => {};
 
 function TrendsScenario() {
@@ -337,6 +345,7 @@ function MapScenario({ name }: { name: string }) {
 }
 
 function Scenario({ name, close, saved }: { name: string; close: () => void; saved: () => void }) {
+  if(name.startsWith('share-map'))return <ActivityImageSheet activityId={activity.id} onClose={close}/>;
   if(name==='pull-refresh')return <PullRefreshScenario/>;
   if(name.startsWith("import-"))return <ImportScenario key={name} name={name}/>;
   if(name.startsWith("map-"))return <MapScenario name={name}/>;

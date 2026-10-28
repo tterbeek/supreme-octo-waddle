@@ -36,7 +36,8 @@ export default function SocialPage() {
  const [showAllChallenges,setShowAllChallenges]=useState(false);
  useEffect(()=>{
   let cancel=false;
-  setChallengeIndicators([]);
+  // Keep existing cards mounted while the same feed refreshes in the background.
+  if(audience||!home?.enabled)setChallengeIndicators([]);
   if(!audience&&home?.enabled){
    const communities=home.audiences.filter(a=>a.kind==='community'&&a.community_id);
    void Promise.all(communities.map(async a=>{
@@ -48,7 +49,8 @@ export default function SocialPage() {
   }
   return()=>{cancel=true;};
  },[audience,home]);
- useEffect(()=>{let cancel=false;setChallenges([]);if(community)void socialChallenges(community).then(value=>{if(!cancel)setChallenges(value);}).catch(e=>{if(!cancel)setError(e.message);});return()=>{cancel=true;};},[community,version]);
+ useEffect(()=>{setChallenges([]);},[community]);
+ useEffect(()=>{let cancel=false;if(community)void socialChallenges(community).then(value=>{if(!cancel)setChallenges(value);}).catch(e=>{if(!cancel){setChallenges([]);setError(e.message);}});return()=>{cancel=true;};},[community,version]);
  useEffect(()=>{let cancel=false;setDetail(previous=>previous?.id===activityId?previous:null);if(activityId)void socialFeed(undefined,undefined,activityId).then(value=>{if(!cancel){setDetail(value[0]||null);if(!value.length)setError('Shared activity unavailable. Access may have changed.');}}).catch(()=>{if(!cancel)setError('Shared activity unavailable.');});return()=>{cancel=true;};},[activityId,version]);
  const openConversation=(activity:string)=>{const next=new URLSearchParams(params);next.set('activity',activity);next.delete('context');setParams(next,{state:{socialOpened:true}});};
  const closeConversation=()=>{const next=new URLSearchParams(params);next.delete('activity');next.delete('context');setParams(next,{replace:true});};

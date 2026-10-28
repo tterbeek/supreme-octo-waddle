@@ -41,7 +41,7 @@ export function wrapImageTitle(text: string, measure: (s: string) => number, max
   return lines;
 }
 
-export async function renderActivityImage(model: ActivityImageModel, photo?: Blob): Promise<File> {
+export async function renderActivityImage(model: ActivityImageModel, photo?: Blob, imageKind: 'photo' | 'map' = 'photo'): Promise<File> {
   const fonts = [`600 42px ${FONT}`, `700 54px ${FONT}`, `italic 500 54px "Playfair Display"`];
   await Promise.all(fonts.map(async font => {
     const loaded = await document.fonts.load(font);
@@ -115,7 +115,9 @@ export async function renderActivityImage(model: ActivityImageModel, photo?: Blo
     ctx.textAlign = "center";
   }
   if (image) {
-    ctx.save(); ctx.beginPath(); ctx.roundRect(96, photoY, 888, photoHeight, 24); ctx.clip();
+    ctx.save();
+    // Preserve the complete map image, including its corner logo/attribution.
+    if (imageKind === 'photo') { ctx.beginPath(); ctx.roundRect(96, photoY, 888, photoHeight, 24); ctx.clip(); }
     ctx.drawImage(image, 96, photoY, 888, photoHeight);
     ctx.restore();
   }

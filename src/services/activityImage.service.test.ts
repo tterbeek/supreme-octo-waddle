@@ -1,10 +1,13 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mock = vi.hoisted(() => ({ getUser: vi.fn(), from: vi.fn(), storageFrom: vi.fn() }));
 vi.mock("../supabaseClient", () => ({ supabase: { auth: { getUser: mock.getUser }, from: mock.from, storage: { from: mock.storageFrom } } }));
-import { loadActivityImagePhoto, loadOwnedActivityImage } from "./activityImage.service";
+vi.mock('../lib/mapbox', () => ({ mapboxToken: 'pk.fixture', mapboxStyle: 'mapbox/outdoors-v12' }));
+import { loadActivityImageMap, loadActivityImagePhoto, loadOwnedActivityImage } from "./activityImage.service";
+import { encodeRoute } from '../../supabase/functions/_shared/activityRoute';
 
 beforeEach(() => { vi.resetAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); });
 
 it("requires a real authenticated user before looking up an activity", async () => {
   mock.getUser.mockResolvedValue({ data: { user: null }, error: null });
@@ -52,4 +55,23 @@ it("downloads through authenticated storage, not an old signed URL or arbitrary 
   expect(download).toHaveBeenCalledExactlyOnceWith("owner/photo.jpg");
   await expect(loadActivityImagePhoto("https://other-host/photo.jpg")).rejects.toThrow();
   expect(download).toHaveBeenCalledTimes(1);
+});
+
+it('does not send short hidden routes to Mapbox and never silently falls back to the full route', async () => {
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  const route = encodeRoute([[50, 4], [50.001, 4]])!;
+  await expect(loadActivityImageMap(route, true)).rejects.toThrow('Not enough route remains');
+  expect(fetch).not.toHaveBeenCalled();
+  fetch.mockResolvedValue(new Response(new Blob(['fictional map'], { type: 'image/png' })));
+  expect((await loadActivityImageMap(route, false)).type).toBe('image/png');
+  expect(fetch).toHaveBeenCalledOnce();
+});
+
+it('fetches only clipped geometry, omits credentials, and rejects map errors', async () => {
+  const fetch = vi.fn().mockResolvedValue(new Response('Unavailable', { status: 503 }));
+  vi.stubGlobal('fetch', fetch);
+  const route = encodeRoute([[50, 4], [50.02, 4], [50.04, 4]])!;
+  await expect(loadActivityImageMap(route, true)).rejects.toThrow('The map could not load');
+  expect(fetch.mock.calls[0][0]).not.toContain(encodeURIComponent(route));
+  expect(fetch.mock.calls[0][1]).toMatchObject({ credentials: 'omit' });
 });

@@ -14,6 +14,12 @@ Add a public `VITE_MAPBOX_ACCESS_TOKEN`, apply
 New imports display a preparation card until naming and maps are ready. See
 [import lifecycle and local migration steps](docs/activity-import-lifecycle.md).
 
+## Share activity maps
+
+Share → Share other now offers Map. Start and finish hiding defaults to on
+(approximately 500 m); users can turn it off before sharing the previewed PNG.
+See [behavior, privacy and verification](docs/activity-map-sharing.md).
+
 ## Insights Trends
 
 Trends offers Year / Month / Week grouping: every recorded year, up to twelve

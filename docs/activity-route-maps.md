@@ -47,7 +47,9 @@ the UI does not show maps or make route/API requests.
 - `20261028000000_private_activity_routes.sql` adds nullable `route_polyline`
   and `route_checked_at` columns to canonical activities. Existing owner RLS is
   unchanged. Circle/Community safe projections do not expose these columns.
-  Maps are not shared to social audiences or included in share-image exports.
+  Maps are not automatically shared to social audiences. Users can explicitly
+  export a map through [Share other](activity-map-sharing.md), with start/finish
+  hiding on by default.
 - The Journal supplements its existing imported-activity status read with these
   fields. It does not put raw routes in every journal RPC response.
 - Polar's `features=routes` requests cover one local calendar day at a time.
