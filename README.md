@@ -6,7 +6,8 @@ cooldown for user-triggered Polar checks. Automatic checks retain their
 
 ## Journal route maps
 
-Optional Mapbox Outdoors previews give photo-free activities a route image.
+Optional Mapbox previews give photo-free activities a route image. The
+bottom-right maximize icon opens a fullscreen interactive map with zoom and pan.
 Add a public `VITE_MAPBOX_ACCESS_TOKEN`, apply
 `20261028000000_private_activity_routes.sql`, and serve the new
 `polar-activity-route` function. See [setup, behavior and limits](docs/activity-route-maps.md).

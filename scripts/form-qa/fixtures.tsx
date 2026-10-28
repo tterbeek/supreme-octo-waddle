@@ -332,7 +332,7 @@ function MapScenario({ name }: { name: string }) {
   return <div className="mx-auto max-w-xl px-4" style={name==='map-offscreen'?{paddingTop:2000}:undefined}><RecentActivityCard
     activity={{...activity,id,title:'A fictional park loop',notes:'',source,external_source:source,user_enrichment_status:'completed',route_polyline:route,route_checked_at:route?new Date().toISOString():null,photos:photo?[{id:'one',image_path:'fake.jpg',thumb_path:'fake-thumb.jpg'}]:[]}}
     signedNoteImages={photo?{[id]:image}:{}} signedNoteThumbs={photo?{[id]:image}:{}} noteImageOrientation={{}}
-    onEdit={()=>{}} onNoteImageLoad={()=>{}} unitSystem="metric" tooltipVisible={false} onTooltipClose={()=>{}} onOpenGallery={()=>{}}/>
+    onEdit={()=>{qa.mapEdits=(qa.mapEdits??0)+1;}} onNoteImageLoad={()=>{}} unitSystem="metric" tooltipVisible={false} onTooltipClose={()=>{}} onOpenGallery={()=>{}}/>
   </div>;
 }
 

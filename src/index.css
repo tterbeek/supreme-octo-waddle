@@ -93,3 +93,10 @@ body::-webkit-scrollbar {
 .compact-date-input::-webkit-inner-spin-button {
   display: none;
 }
+
+/* Fullscreen route viewer reuses the shared overlay's close/focus/scroll rules. */
+.mn-route-map-panel { height: 100%; }
+.mn-route-map-panel > .mn-form-body { flex: 1; padding: 0; overflow: hidden; scrollbar-gutter: auto; }
+.mn-interactive-route .mapboxgl-ctrl-group button { width: 44px; height: 44px; }
+.mn-interactive-route .mapboxgl-ctrl-bottom-left,
+.mn-interactive-route .mapboxgl-ctrl-bottom-right { padding-bottom: env(safe-area-inset-bottom); }

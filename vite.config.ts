@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  worker: { format: "es" },
+  optimizeDeps: { exclude: ["mapbox-gl/esm"] },
   server: {
     host: true, // 👈 THIS is what you need
     port: 5173
