@@ -141,6 +141,7 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
       if (op === "delete") rows[table] = rows[table].filter(row => !data.includes(row));
       return { data: single ? data[0] || null : data, error: null };
     }
+    if (qa.case === 'pull-refresh' && table === 'micro_adjustments' && filters.some(([key,value])=>key==='status'&&value==='active')) data=[{id:'pull-tweak',text:'Leave room for a short walk',started_at:new Date().toISOString()}];
     if (table === "micro_adjustments" && filters.some(([key, value]) => key === "status" && value === "ended")) data = [tweak];
     if (table === "activities" && selection === "id"&&!qa.case.startsWith('memories')) data = [];
     if (op !== "read") data = [{ ...(data[0] || {}), ...(Array.isArray(payload) ? payload[0] : payload), id: data[0]?.id || "fictional-saved" }];
@@ -280,6 +281,7 @@ function PullRefreshScenario() {
     <SwipeActions onEdit={()=>{qa.cardEdits=(qa.cardEdits??0)+1;}}>
       <div data-pull-target onClick={event=>{event.stopPropagation();qa.cardEdits=(qa.cardEdits??0)+1;}} className="rounded-xl border p-5"><h2>Fictional Journal</h2><p>Pull down here to check for missing activities.</p><p>Feed refreshes: {count}</p></div>
     </SwipeActions>
+    <TinyTweakStrip userId={user.id}/>
     <button onClick={()=>setOverlay(true)}>Open overlay</button>
     <div data-swipe-ignore className="my-4 rounded border p-4">Photo/swipe control</div>
     <div style={{height:1800}}>Previously logged activities</div>

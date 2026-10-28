@@ -42,7 +42,11 @@ export default function PullToRefresh({ children, onRefresh, disabled = false }:
       start = null; pull = 0; dragged = false; suppressClickUntil = 0;
       if (refreshing.current || event.touches.length !== 1 || !atTop() || document.querySelector('[aria-modal="true"]')) return;
       const target = event.target as HTMLElement;
-      if (target.closest('input,textarea,select,button,a,[contenteditable="true"],[data-swipe-ignore]')) return;
+      if (target.closest('input,textarea,select,a,[contenteditable="true"],[data-swipe-ignore]')) return;
+      // Full-card buttons can opt into pulling; ordinary controls keep their
+      // gestures. The consumed release still prevents their tap action.
+      const button = target.closest('button');
+      if (button && !button.hasAttribute('data-pull-refresh')) return;
       // Nested controls keep their own scrolling/gestures.
       for (let node = target; node && node !== element; node = node.parentElement!) {
         if (node.scrollHeight > node.clientHeight && /auto|scroll/.test(getComputedStyle(node).overflowY)) return;

@@ -56,6 +56,17 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let ws;let checks=0;
  await send('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});await click('Refresh Journal');await wait("document.body.innerText.includes('Journal refreshed')");await layout();await shot('pull-desktop');
  await send('Emulation.setDeviceMetricsOverride',{width:320,height:720,deviceScaleFactor:1,mobile:true});await evaluate("document.documentElement.style.fontSize='24px'");await layout();await shot('pull-enlarged-text');
  await wait('window.formQA.cardEdits===2');
+ // The actual Tiny Tweak card is a full-card button: pull refreshes, tap edits.
+ await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+ await evaluate("document.documentElement.style.fontSize='16px';window.scrollTo(0,0)");
+ await wait("!!document.querySelector('button[data-pull-refresh]')");
+ const beforeTweak=await evaluate('window.formQA.pullRefreshCalls');
+ await gesture({selector:'button[data-pull-refresh]'});
+ await wait(`window.formQA.pullRefreshCalls===${beforeTweak+1}`);
+ await wait("!document.querySelector('[aria-modal=true]')");
+ await gesture({selector:'button[data-pull-refresh]',dy:0});
+ await wait("!!document.querySelector('[aria-modal=true]')&&document.body.innerText.includes('Adjust tiny tweak')");
+ await click('Close Adjust tiny tweak');await wait("!document.querySelector('[aria-modal=true]')");
  await choose('');await wait("document.documentElement.style.overscrollBehaviorY===''&&document.body.style.overscrollBehaviorY===''");
  if(await evaluate('window.formQA.network.length'))throw Error('Unexpected Supabase network request');
  if(errors.length)throw Error(JSON.stringify(errors));

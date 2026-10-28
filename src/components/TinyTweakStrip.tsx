@@ -294,6 +294,7 @@ export default function TinyTweakStrip({
           <button
             type="button"
             onClick={() => setModalMode("adjust")}
+            data-pull-refresh
             className={cardClassName}
           >
             <div className="text-[11px] uppercase tracking-[0.2em] text-movenotes-text/70">
