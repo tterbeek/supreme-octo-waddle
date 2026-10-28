@@ -1,6 +1,8 @@
+import FloatingAddButton from '../components/FloatingAddButton';
+import ModalSheet from '../components/ModalSheet';
 import { useCallback,useEffect,useRef,useState } from 'react';
-import { Link,useLocation,useSearchParams } from 'react-router-dom';
-import { IconDotsVertical,IconPlus,IconChevronRight } from '@tabler/icons-react';
+import { Link,useLocation,useNavigate,useSearchParams } from 'react-router-dom';
+import { IconDotsVertical,IconPlus,IconChevronRight,IconUserPlus,IconUsersGroup } from '@tabler/icons-react';
 import FormPage from '../components/forms/FormPage';
 import { socialHome,socialFeed,socialChallenges,type SocialHome,type SocialActivity,type Challenge } from '../services/social.service';
 import { CIRCLE_FILTER,SOCIAL_UPDATED_EVENT } from '../config/social';
@@ -19,7 +21,8 @@ import { allowFormNavigation } from '../lib/formLifecycle';
 
 export default function SocialPage() {
  const [params,setParams]=useSearchParams();const audience=params.get('audience')||undefined;
- const {pathname}=useLocation();const configure=params.get('configure')==='true';
+ const navigate=useNavigate();const [addOpen,setAddOpen]=useState(false);
+ const {pathname,search}=useLocation();const configure=params.get('configure')==='true';
  const [ownComments,setOwnComments]=useState(false);const [menuOpen,setMenuOpen]=useState(false);const menu=useRef<HTMLDivElement>(null);const menuButton=useRef<HTMLButtonElement>(null);
  useEffect(()=>{if(!menuOpen)return;menu.current?.querySelector<HTMLButtonElement>('[role=menuitem]')?.focus();const outside=(event:PointerEvent)=>{if(!menu.current?.contains(event.target as Node))setMenuOpen(false);};const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setMenuOpen(false);menuButton.current?.focus();}};document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};},[menuOpen]);
  const [home,setHome]=useState<SocialHome|null>(null);const [feed,setFeed]=useState<SocialActivity[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState('');const [more,setMore]=useState(false);const [loadingMore,setLoadingMore]=useState(false);const [version,setVersion]=useState(0);
@@ -98,6 +101,13 @@ export default function SocialPage() {
    {more&&<button className="min-h-11 w-full rounded-full border" disabled={loadingMore} onClick={()=>void loadMore()}>{loadingMore?'Loading…':'Older activities'}</button>}
   </>}
   </>}
+  {!configure&&home?.enabled&&uid&&<FloatingAddButton onClick={()=>setAddOpen(true)} expanded={addOpen}/>}
+  {addOpen&&<ModalSheet title="Add to Circle & Communities" onClose={()=>setAddOpen(false)}>
+   <div className="space-y-3">
+    <button type="button" className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-warm-200 bg-warm-100 px-4 py-4 text-left shadow-sm" onClick={()=>{setAddOpen(false);navigate('/settings/circle',{state:{circleReturnTo:pathname+search}});}}><IconUserPlus size={24} className="shrink-0 text-movenotes-primary" aria-hidden="true"/><span>Add connection</span></button>
+    <button type="button" className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-warm-200 bg-warm-100 px-4 py-4 text-left shadow-sm" onClick={()=>{setAddOpen(false);setCreate(true);}}><IconUsersGroup size={24} className="shrink-0 text-movenotes-primary" aria-hidden="true"/><span>Create Community</span></button>
+   </div>
+  </ModalSheet>}
   {ownComments&&<OwnSocialComments onClose={()=>setOwnComments(false)}/>}
   {rule&&home?.audiences.find(a=>a.id===rule)&&<SocialRuleSheet audience={home.audiences.find(a=>a.id===rule)!} onClose={()=>setRule(null)} onSaved={refresh}/>}
   {create&&<CommunityForm onClose={()=>setCreate(false)} onSaved={id=>{refresh();void socialHome().then(h=>{setHome(h);const a=h.audiences.find(a=>a.community_id===id);if(a)allowFormNavigation(()=>setParams({audience:a.id}));setSettings(id);}).catch(e=>setError(e.message));}}/>}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconShare } from "@tabler/icons-react";
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { SOCIAL_V2_ENABLED,CIRCLE_FILTER } from '../config/social';
 import Toast from "../components/Toast";
 import FormPage from "../components/forms/FormPage";
@@ -17,6 +17,9 @@ import {
 
 const shortUserId = (value: string) => value.slice(0, 8);
 export default function ManageCirclePage() {
+  const { state } = useLocation();
+  const returnTo = state?.circleReturnTo;
+  const backTo = typeof returnTo === 'string' && /^\/circle(?:\?|$)/.test(returnTo) ? returnTo : '/settings';
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -213,7 +216,7 @@ export default function ManageCirclePage() {
   };
 
   return (
-    <FormPage title="Manage social circle" ready={!loading} busy={creatingInviteLink || Boolean(mutatingId)}>
+    <FormPage title="Manage social circle" backTo={backTo} ready={!loading} busy={creatingInviteLink || Boolean(mutatingId)}>
       {SOCIAL_V2_ENABLED&&<section className="rounded-xl border p-4 space-y-2 text-sm">
         <p>Circle is your accepted personal connections. New connections can see
           still-shared history. Connecting does not publish private activities.</p>

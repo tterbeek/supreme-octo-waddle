@@ -1,3 +1,4 @@
+import FloatingAddButton from '../components/FloatingAddButton';
 import PullToRefresh from '../components/PullToRefresh';
 import { useActivityImports } from '../hooks/useActivityImports';
 import ImportingActivityCard from '../components/ImportingActivityCard';
@@ -684,19 +685,7 @@ export default function Home() {
           })}
         </div>
 
-        <button
-          type="button"
-          aria-label="Add"
-          onClick={openQuickLog}
-          className="fixed z-40 rounded-full bg-movenotes-primary text-primary-text shadow-lg shadow-movenotes-primary/30 active:scale-95 transition flex items-center justify-center gap-2 text-lg px-4 h-14 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-movenotes-primary"
-          style={{
-            right: "calc(16px + env(safe-area-inset-right))",
-            bottom: "calc(90px + env(safe-area-inset-bottom))",
-          }}
-        >
-          <span className="text-2xl leading-none">+</span>
-          <span className="text-sm font-semibold">Add</span>
-        </button>
+        <FloatingAddButton onClick={openQuickLog} expanded={showAddSheet} />
 
         {/* -------------------------------------------------- */}
         {/* MODALS & TOASTS                                    */}

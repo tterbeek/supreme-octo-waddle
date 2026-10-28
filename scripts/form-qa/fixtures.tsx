@@ -415,7 +415,7 @@ function Harness() {
   const close = () => { qa.closed++; setOpen(false); };
   return <UnitContext.Provider value={{ unitSystem, setUnitSystem }}><FormNavigationGuard />
     <main className="p-4" style={{ minHeight: 1800 }}><button type="button" onClick={() => setOpen(true)}>Open form</button><p>Fictional form QA only</p>
-      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(["/forms","/settings","/settings/profile","/settings/circle"].includes(location.pathname) || location.pathname.startsWith("/circle/invite/") || location.pathname.startsWith('/community/join/')) && open && <Scenario key={key+location.pathname} name={location.pathname==="/settings/profile"?"profile-settings":location.pathname==="/settings"?"settings":location.pathname==="/settings/circle"?"circle-connections":name} close={close} saved={() => qa.saved++} />}
+      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(["/forms","/settings","/settings/profile","/settings/circle","/circle"].includes(location.pathname) || location.pathname.startsWith("/circle/invite/") || location.pathname.startsWith('/community/join/')) && open && <Scenario key={key+location.pathname} name={location.pathname==="/settings/profile"?"profile-settings":location.pathname==="/settings"?"settings":location.pathname==="/settings/circle"?"circle-connections":name} close={close} saved={() => qa.saved++} />}
     </main>
   </UnitContext.Provider>;
 }
