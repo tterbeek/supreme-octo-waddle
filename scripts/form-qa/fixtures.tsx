@@ -1,3 +1,4 @@
+import SwipeActions from "../../src/components/SwipeActions";
 import PullToRefresh from "../../src/components/PullToRefresh";
 import { syncPolarIfStale, POLAR_PULL_COOLDOWN_MS } from "../../src/services/polar.service";
 import { useActivityImports } from "../../src/hooks/useActivityImports";
@@ -276,7 +277,9 @@ function PullRefreshScenario() {
     setCount(value=>value+1);
     await syncPolarIfStale(POLAR_PULL_COOLDOWN_MS);
   }}>
-    <div data-pull-target className="rounded-xl border p-5"><h2>Fictional Journal</h2><p>Pull down here to check for missing activities.</p><p>Feed refreshes: {count}</p></div>
+    <SwipeActions onEdit={()=>{qa.cardEdits=(qa.cardEdits??0)+1;}}>
+      <div data-pull-target onClick={event=>{event.stopPropagation();qa.cardEdits=(qa.cardEdits??0)+1;}} className="rounded-xl border p-5"><h2>Fictional Journal</h2><p>Pull down here to check for missing activities.</p><p>Feed refreshes: {count}</p></div>
+    </SwipeActions>
     <button onClick={()=>setOverlay(true)}>Open overlay</button>
     <div data-swipe-ignore className="my-4 rounded border p-4">Photo/swipe control</div>
     <div style={{height:1800}}>Previously logged activities</div>

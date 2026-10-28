@@ -35,9 +35,11 @@ export default function PullToRefresh({ children, onRefresh, disabled = false }:
     if (!element || disabled) return;
     let start: { x: number; y: number } | null = null;
     let pull = 0;
+    let dragged = false;
+    let suppressClickUntil = 0;
     const atTop = () => window.scrollY <= 0 && (document.scrollingElement?.scrollTop ?? 0) <= 0;
     const startTouch = (event: TouchEvent) => {
-      start = null; pull = 0;
+      start = null; pull = 0; dragged = false; suppressClickUntil = 0;
       if (refreshing.current || event.touches.length !== 1 || !atTop() || document.querySelector('[aria-modal="true"]')) return;
       const target = event.target as HTMLElement;
       if (target.closest('input,textarea,select,button,a,[contenteditable="true"],[data-swipe-ignore]')) return;
@@ -54,30 +56,48 @@ export default function PullToRefresh({ children, onRefresh, disabled = false }:
       const dx = Math.abs(event.touches[0].clientX - start.x);
       if (dy < 0 || (dx > 10 && dx > dy)) { start = null; pull = 0; setDistance(0); return; }
       if (dy < 8) return;
+      dragged = true;
       if (event.cancelable) event.preventDefault();
       pull = Math.min(84, dy * 0.5);
       setDistance(pull); setMessage('');
     };
-    const end = () => {
+    const consumeDrag = (event: TouchEvent) => {
+      if (!dragged) return;
+      // Consume the release before card touch handlers can interpret it as a
+      // tap, and also suppress delayed compatibility clicks from the browser.
+      if (event.cancelable) event.preventDefault();
+      event.stopPropagation();
+      suppressClickUntil = performance.now() + 750;
+      dragged = false;
+    };
+    const end = (event: TouchEvent) => {
+      consumeDrag(event);
       const shouldRefresh = start && pull >= THRESHOLD;
       start = null; pull = 0; setDistance(0);
       if (shouldRefresh) void run.current();
     };
-    const cancel = () => { start = null; pull = 0; setDistance(0); };
+    const cancel = (event: TouchEvent) => { consumeDrag(event); start = null; pull = 0; setDistance(0); };
+    const click = (event: MouseEvent) => {
+      if (event.detail > 0 && performance.now() < suppressClickUntil) {
+        event.preventDefault(); event.stopPropagation();
+      }
+    };
     const previous = [document.documentElement.style.overscrollBehaviorY, document.body.style.overscrollBehaviorY];
     document.documentElement.style.overscrollBehaviorY = 'contain';
     document.body.style.overscrollBehaviorY = 'contain';
     element.addEventListener('touchstart', startTouch, { passive: true });
     element.addEventListener('touchmove', move, { passive: false });
-    element.addEventListener('touchend', end);
-    element.addEventListener('touchcancel', cancel);
+    element.addEventListener('touchend', end, { capture: true, passive: false });
+    element.addEventListener('touchcancel', cancel, { capture: true, passive: false });
+    element.addEventListener('click', click, true);
     return () => {
       document.documentElement.style.overscrollBehaviorY = previous[0];
       document.body.style.overscrollBehaviorY = previous[1];
       element.removeEventListener('touchstart', startTouch);
       element.removeEventListener('touchmove', move);
-      element.removeEventListener('touchend', end);
-      element.removeEventListener('touchcancel', cancel);
+      element.removeEventListener('touchend', end, true);
+      element.removeEventListener('touchcancel', cancel, true);
+      element.removeEventListener('click', click, true);
     };
   }, [disabled]);
 
