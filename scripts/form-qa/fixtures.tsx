@@ -120,7 +120,7 @@ const auth: any = supabase.auth;
 auth.getUser = async () => ({ data: { user: (qa as any).signedOut?null:qa.case === "admin-weekly" ? { ...user, email: "me@thijsterbeek.com" } : user }, error: null });
 auth.getSession = async () => ({ data: { session: { user, access_token: "fictional-not-a-token" } }, error: null });
 auth.onAuthStateChange = () => ({ data: { subscription: { unsubscribe() {} } } });
-auth.signInWithOtp = async () => { await wait(); return { error: qa.fail ? { message: "Simulated auth error" } : null }; };
+auth.signInWithOtp = async (options:any) => { qa.authRequests=(qa.authRequests||[]).concat([options]);await wait(); return { error: qa.authError ? {message:qa.authError} : qa.fail ? { message: "Simulated auth error" } : null }; };
 auth.verifyOtp = async () => { await wait(); return { data: { session: { user }, user }, error: qa.fail ? { message: "Simulated auth error" } : null }; };
 (supabase as any).from = (table: string) => {
   let op = "read"; let payload: any; let filters: any[] = []; const ranges: Array<[string,string,unknown]> = []; let selection = "";
@@ -415,7 +415,7 @@ function Harness() {
   const close = () => { qa.closed++; setOpen(false); };
   return <UnitContext.Provider value={{ unitSystem, setUnitSystem }}><FormNavigationGuard />
     <main className="p-4" style={{ minHeight: 1800 }}><button type="button" onClick={() => setOpen(true)}>Open form</button><p>Fictional form QA only</p>
-      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(["/forms","/settings","/settings/profile","/settings/circle","/circle"].includes(location.pathname) || location.pathname.startsWith("/circle/invite/") || location.pathname.startsWith('/community/join/')) && open && <Scenario key={key+location.pathname} name={location.pathname==="/settings/profile"?"profile-settings":location.pathname==="/settings"?"settings":location.pathname==="/settings/circle"?"circle-connections":name} close={close} saved={() => qa.saved++} />}
+      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(["/forms","/settings","/settings/profile","/settings/circle","/circle","/signup","/login"].includes(location.pathname) || location.pathname.startsWith("/circle/invite/") || location.pathname.startsWith('/community/join/')) && open && <Scenario key={key+location.pathname} name={location.pathname==="/signup"?"signup":location.pathname==="/login"?"login":location.pathname==="/settings/profile"?"profile-settings":location.pathname==="/settings"?"settings":location.pathname==="/settings/circle"?"circle-connections":name} close={close} saved={() => qa.saved++} />}
     </main>
   </UnitContext.Provider>;
 }

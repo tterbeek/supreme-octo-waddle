@@ -20,7 +20,7 @@ export default function Sidebar({
   const [localToast, setLocalToast] = useState<string | null>(null);
   const handleShare = async () => {
     const text =
-      "I’ve been using MoveNotes — a simple, private movement journal. No GPS, no pressure, just movement and reflection.";
+      "I’ve been using MoveNotes — a simple, private movement journal. Activities, photos, maps and reflection, without pressure.";
     const url = "https://movenotes.app";
     const payload = `${text}\n\n${url}`;
 

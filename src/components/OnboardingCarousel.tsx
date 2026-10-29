@@ -27,7 +27,7 @@ export default function OnboardingCarousel({
     },
     {
       title: "Movement, not performance",
-      body: "Log any activity without pressure. No GPS. No pace. Just how it felt.",
+      body: "Log any activity without pressure. No HRM. No pace. Just how it felt.",
       Icon: IconWalk,
     },
     {

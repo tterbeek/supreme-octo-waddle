@@ -44,7 +44,7 @@ export default function Login({ onLogin }: { onLogin?: (session: any) => void })
 
       if (error.message.includes("Signups not allowed")) {
         setError("Email not found — redirecting to signup.");
-        navigate(signupHref, { state: { email } });
+        allowFormNavigation(() => navigate(signupHref, { state: { email } }));
       } else {
         setError(error.message);
       }

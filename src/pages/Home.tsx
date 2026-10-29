@@ -626,14 +626,13 @@ export default function Home() {
                                 showCircleShareOnboardingTooltip ? (
                                   <div>
                                     <div className="font-semibold text-gray-900">
-                                      Share with your Circle
+                                      Share your way
                                     </div>
                                     <p className="mt-2 text-sm leading-5 text-gray-700">
-                                      When you choose to share an activity, your Circle can
-                                      see the activity title, distance and duration if
-                                      available, and photos if you added them. Your notes
-                                      always stay private. You can unshare any activity
-                                      anytime.
+                                      Share an activity with your Circle or a Community,
+                                      or send an image with a photo or map. Your personal
+                                      notes stay private. You can change or stop sharing
+                                      with Circle and Communities at any time.
                                     </p>
                                     <button
                                       type="button"

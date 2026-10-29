@@ -13,7 +13,7 @@ export default function Privacy() {
           Privacy Policy
         </h1>
         <p className="text-sm text-movenotes-muted mb-8 text-center">
-          Last updated: 16 March 2026
+          Last updated: 28 October 2026
         </p>
 
         <p className="mb-6 leading-relaxed">
@@ -47,6 +47,7 @@ export default function Privacy() {
           <li>Start date and time</li>
           <li>Distance</li>
           <li>Duration</li>
+          <li>A simplified route from connected activities, when available</li>
         </ul>
 
         <p className="mb-2 leading-relaxed">
@@ -90,7 +91,7 @@ export default function Privacy() {
         </p>
 
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
-          3. Use of Strava Data
+          3. Connected activity services
         </h2>
 
         <p className="mb-4 leading-relaxed">
@@ -99,25 +100,30 @@ export default function Privacy() {
         </p>
 
         <p className="mb-2 leading-relaxed">
-          When the integration is available and a user connects Strava, MoveNotes may access the following information
-          via the Strava API:
+          When you connect a supported activity service, such as Polar, MoveNotes
+          may import the following information:
         </p>
         <ul className="list-disc list-inside space-y-1 ml-4 mb-4">
           <li>Activity name</li>
           <li>Activity type</li>
           <li>Start date and time</li>
           <li>Duration</li>
+          <li>A simplified route from connected activities, when available</li>
           <li>Distance</li>
         </ul>
 
         <p className="mb-4 leading-relaxed">
-          This information is used solely to create activity entries within the
-          MoveNotes training journal.
+          This information is used to create activity entries and display their
+          routes in your MoveNotes journal.
         </p>
 
         <p className="mb-4 leading-relaxed">
-          MoveNotes does not store GPS tracks, segment data, or other detailed
-          performance analytics from Strava.
+          MoveNotes does not record GPS tracks itself. When you connect a supported
+          activity service, it may import and store a simplified route to display
+          your activity on a map. Route coordinates are sent to Mapbox to render
+          maps, and route locations may be sent to Google to generate locality
+          names. Routes are not shared with Circle or Communities. You can choose
+          to export a map image, with start and finish hiding enabled by default.
         </p>
 
         <p className="mb-4 leading-relaxed">
@@ -125,9 +131,9 @@ export default function Privacy() {
         </p>
 
         <p className="mb-4 leading-relaxed">
-          Users may disconnect their Strava account at any time in the application
-          settings. When a Strava account is disconnected, MoveNotes will stop
-          importing new activities.
+          You may disconnect an activity service at any time in the application
+          settings. MoveNotes will then stop importing new activities from that
+          service.
         </p>
 
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">

@@ -23,7 +23,7 @@ export default function IntroPage() {
         </ul>
 
         <p className="text-movenotes-muted">
-          No GPS. No performance metrics. No pressure.
+          Your movement. Your memories. No pressure to perform.
         </p>
 
         <div className="space-y-3 pt-4">
