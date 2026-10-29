@@ -4,5 +4,5 @@ type ActivitySourceConfig = { label: string; icon?: typeof IconLayersLinked };
 
 export const activitySources: Record<string, ActivitySourceConfig> = {
   polar: { label: "Polar", icon: IconLayersLinked },
-  strava: { label: "Strava" },
+  strava: { label: "Strava", icon: IconLayersLinked },
 };

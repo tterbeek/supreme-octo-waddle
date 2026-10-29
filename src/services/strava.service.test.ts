@@ -56,6 +56,26 @@ describe("active Strava integration", () => {
     });
   });
 
+  it("skips imports when Strava is disconnected", async () => {
+    from.mockReturnValue({ select: vi.fn().mockReturnValue({
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }) });
+    await expect(syncStravaIfStale({ staleMinutes: 1 })).resolves.toBe(false);
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("pull refresh syncs after one minute while default automatic checks wait thirty", async () => {
+    from.mockReturnValue({ select: vi.fn().mockReturnValue({
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { strava_athlete_id: 1, last_synced_at: new Date(Date.now() - 120_000).toISOString() },
+        error: null,
+      }),
+    }) });
+    await expect(syncStravaIfStale()).resolves.toBe(false);
+    await expect(syncStravaIfStale({ staleMinutes: 1 })).resolves.toBe(true);
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
   it("syncs stale connections but preserves the sync cooldown", async () => {
     const maybeSingle = vi.fn()
       .mockResolvedValueOnce({ data: { strava_athlete_id: 1, last_synced_at: null }, error: null })

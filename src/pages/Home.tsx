@@ -29,8 +29,9 @@ import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import { buildGalleryItemsForActivity } from "../lib/photos";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
+import { refreshJournalWithImports } from "../services/journalRefresh.service";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
-import { POLAR_PULL_COOLDOWN_MS, POLAR_SYNC_COMPLETED_EVENT, syncPolarIfStale } from "../services/polar.service";
+import { POLAR_SYNC_COMPLETED_EVENT, syncPolarIfStale } from "../services/polar.service";
 import { useCircleActivitySharing } from "../hooks/useCircleActivitySharing";
 import { NOTE_STORAGE_BUCKET } from "../services/storage.service";
 import { useCircleAccessState } from "../hooks/useCircleAccessState";
@@ -125,8 +126,8 @@ export default function Home() {
   }
 
   async function pullRefreshJournal() {
-    const [, synced] = await Promise.all([refreshFeed(), syncPolarIfStale(POLAR_PULL_COOLDOWN_MS)]);
-    if (synced) await refreshFeed();
+    if (!userId) return;
+    await refreshJournalWithImports(refreshFeed);
   }
 
   const shareableActivityIds = useMemo(
