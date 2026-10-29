@@ -10,7 +10,7 @@ import ChallengeCoverPicker from './ChallengeCoverPicker';
 import { saveChallengeWithCover } from '../../services/challengeCover.service';
 
 export function TypeChoices({value,onChange}:{value:string[];onChange:(next:string[])=>void}) {
- return <fieldset className="space-y-2"><legend className="text-sm mb-2">Activity types</legend><div className="grid grid-cols-2 gap-2">{Object.values(ACTIVITY_TYPES).map(t=><label key={t.id} className="flex items-center gap-2 rounded-xl border border-warm-200 p-3"><input type="checkbox" checked={value.includes(t.id)} onChange={e=>onChange(e.target.checked?[...value,t.id]:value.filter(v=>v!==t.id))}/>{t.label}</label>)}</div></fieldset>;
+ return <fieldset className="space-y-2"><legend className="text-sm mb-2">Activity types</legend><div className="grid grid-cols-2 gap-2">{Object.values(ACTIVITY_TYPES).filter(t=>t.id!=='any').map(t=><label key={t.id} className="flex items-center gap-2 rounded-xl border border-warm-200 p-3"><input type="checkbox" checked={value.includes(t.id)} onChange={e=>onChange(e.target.checked?[...value,t.id]:value.filter(v=>v!==t.id))}/>{t.label}</label>)}</div></fieldset>;
 }
 export function SocialRuleSheet({audience,onClose,onSaved}:{audience:SocialAudience;onClose:()=>void;onSaved:()=>void}) {
  const group=useId();
