@@ -185,14 +185,11 @@ Deno.serve(async (req) => {
     }
   }
 
-  const { error: deleteError } = await supabase
-    .from("user_strava_connections")
-    .delete()
-    .eq("user_id", user.id);
-
-  if (deleteError) {
-    return jsonResponse(400, { error: deleteError.message });
-  }
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceKey) return jsonResponse(503, { error: "Disconnect cleanup is not configured." });
+  const admin = createClient(supabaseUrl, serviceKey);
+  const { error: cleanupError } = await admin.rpc("disconnect_strava_account", { p_user_id: user.id });
+  if (cleanupError) return jsonResponse(503, { error: "Could not remove Strava workout data. Please retry." });
 
   return jsonResponse(200, { ok: true });
 });

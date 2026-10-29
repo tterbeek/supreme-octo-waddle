@@ -167,6 +167,7 @@ export default function ConnectionsPage() {
       </section>
 
       <div className="w-full bg-warm-100 border border-warm-200 px-4 py-3 rounded-xl mb-4">
+        <p className="text-sm text-gray-600">New Strava activities can arrive automatically. Sync checks for missed activities. Disconnecting or removing a workout from Strava removes its imported workout data; your MoveNotes notes, feelings and uploaded photos stay private.</p>
         {STRAVA_INTEGRATION_PAUSED && (
           <div role="status" className="rounded-lg border border-warm-300 bg-movenotes-surface p-3 text-sm text-gray-700">
             <p className="font-semibold text-movenotes-text">Strava integration paused</p>

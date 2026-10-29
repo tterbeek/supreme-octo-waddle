@@ -422,3 +422,9 @@ verify_jwt = false # The handler validates the viewer's JWT with auth.getUser.
 
 [functions.polar-activity-route]
 verify_jwt = false # Handler explicitly verifies auth.getUser before owner lookup.
+
+[functions.strava-webhook]
+verify_jwt = false # Strava handshake plus secret callback URL and subscription ID.
+
+[functions.strava-webhook-worker]
+verify_jwt = false # Requires the server-only x-worker-secret header.

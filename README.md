@@ -225,3 +225,10 @@ export default defineConfig([
 
 - Default home `/` now uses the `stats_goal_progress` RPC for the top goals section (rest of the feed/quick-log behavior is unchanged).
 - Legacy client-side home remains available at `/home-legacy` (not linked in the sidebar). `/home-rpc` is an alias to the new default.
+
+### Strava webhooks
+
+For automatic new-activity imports while the app is closed, see
+[Strava webhook setup and verification](docs/strava-webhooks.md).
+Requires the webhook migration, receiver/worker functions, server secrets and a
+one-time Strava subscription. Pull-to-refresh and Sync remain available.

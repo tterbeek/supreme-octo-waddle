@@ -95,8 +95,10 @@ export default function Privacy() {
         </h2>
 
         <p className="mb-4 leading-relaxed">
-          Connecting an activity service is optional. Imported activities remain
-          in your journal when you disconnect.
+          Connecting an activity service is optional. Strava can notify MoveNotes
+          when a new activity is available. If you disconnect Strava or remove a
+          workout there, its imported workout data is removed; your own MoveNotes
+          notes, feelings and uploaded photos are retained privately.
         </p>
 
         <p className="mb-2 leading-relaxed">
