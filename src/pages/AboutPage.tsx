@@ -105,9 +105,8 @@ export default function AboutPage() {
             moment.
           </p>
           <p className="leading-relaxed">
-            Strava importing is currently paused while we seek funding to keep
-            the integration running. Activities you imported earlier remain in
-            your journal.
+            Connect Polar or Strava to import your activities into your journal,
+            then add your own details, notes and photos.
           </p>
 
         </section>

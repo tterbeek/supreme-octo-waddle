@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 const { invoke, from } = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -17,24 +17,52 @@ import {
   syncStravaIfStale,
 } from "./strava.service";
 
-describe("paused Strava integration", () => {
+describe("active Strava integration", () => {
   beforeEach(() => {
-    invoke.mockClear();
-    from.mockClear();
+    vi.clearAllMocks();
+    vi.stubEnv("VITE_STRAVA_CLIENT_ID", "209776");
+    vi.stubGlobal("window", {
+      location: { origin: "https://movenotes.app" },
+      dispatchEvent: vi.fn(),
+    });
+    vi.stubGlobal("sessionStorage", { setItem: vi.fn() });
+    vi.stubGlobal("localStorage", { setItem: vi.fn() });
+    invoke.mockResolvedValue({ data: { ok: true }, error: null });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
-  it("blocks new connections, callbacks, and imports without contacting Supabase", async () => {
-    expect(STRAVA_INTEGRATION_PAUSED).toBe(true);
-    expect(() => startStravaOAuth()).toThrow(/paused/);
-    await expect(exchangeStravaCode("unused-code")).rejects.toThrow(/paused/);
-    await expect(importRecentStravaActivities()).rejects.toThrow(/paused/);
-    expect(invoke).not.toHaveBeenCalled();
-    expect(from).not.toHaveBeenCalled();
+  it("allows OAuth and requests activity access", () => {
+    expect(STRAVA_INTEGRATION_PAUSED).toBe(false);
+    const url = new URL(startStravaOAuth());
+    expect(url.hostname).toBe("www.strava.com");
+    expect(url.searchParams.get("client_id")).toBe("209776");
+    expect(url.searchParams.get("scope")).toContain("activity:read");
   });
 
-  it("skips automatic syncing without reading the connection", async () => {
+  it("exchanges the authorization code using the existing function", async () => {
+    await exchangeStravaCode("test-code");
+    expect(invoke).toHaveBeenCalledWith("strava-exchange-token", {
+      body: { code: "test-code", redirectUri: "https://movenotes.app/settings/strava/callback" },
+    });
+  });
+
+  it("imports through the existing function", async () => {
+    await importRecentStravaActivities();
+    expect(invoke).toHaveBeenCalledWith("strava-import-activities", {
+      body: { perPage: 50, page: 1 },
+    });
+  });
+
+  it("syncs stale connections but preserves the sync cooldown", async () => {
+    const maybeSingle = vi.fn()
+      .mockResolvedValueOnce({ data: { strava_athlete_id: 1, last_synced_at: null }, error: null })
+      .mockResolvedValueOnce({ data: { strava_athlete_id: 1, last_synced_at: new Date().toISOString() }, error: null });
+    from.mockReturnValue({ select: vi.fn().mockReturnValue({ maybeSingle }) });
+    await expect(syncStravaIfStale()).resolves.toBe(true);
     await expect(syncStravaIfStale()).resolves.toBe(false);
-    expect(invoke).not.toHaveBeenCalled();
-    expect(from).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 });

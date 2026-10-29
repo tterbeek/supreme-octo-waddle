@@ -95,12 +95,12 @@ export default function Privacy() {
         </h2>
 
         <p className="mb-4 leading-relaxed">
-          Strava connection and importing are currently paused. Existing imported
-          activities remain in users' journals.
+          Connecting an activity service is optional. Imported activities remain
+          in your journal when you disconnect.
         </p>
 
         <p className="mb-2 leading-relaxed">
-          When you connect a supported activity service, such as Polar, MoveNotes
+          When you connect a supported activity service, such as Polar or Strava, MoveNotes
           may import the following information:
         </p>
         <ul className="list-disc list-inside space-y-1 ml-4 mb-4">

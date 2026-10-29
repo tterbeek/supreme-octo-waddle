@@ -8,7 +8,7 @@ const STRAVA_OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 const STRAVA_AUTO_SYNC_STALE_MS = 30 * 60 * 1000;
 
 export const STRAVA_SYNC_COMPLETED_EVENT = "movenotes:strava-sync-completed";
-export const STRAVA_INTEGRATION_PAUSED = true;
+export const STRAVA_INTEGRATION_PAUSED = false;
 export const STRAVA_PAUSED_NOTICE =
   "Strava connection and syncing are paused while we seek funding to keep the integration running. You can still log activities manually, and previously imported activities remain available.";
 

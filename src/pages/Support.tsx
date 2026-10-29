@@ -25,9 +25,8 @@ export default function Support() {
         </p>
 
         <p className="mb-6 rounded-xl border border-warm-200 bg-warm-100 p-4 text-sm leading-relaxed">
-          Strava connection and syncing are paused while we seek funding to keep
-          the integration running. You can still log activities manually, and
-          previously imported activities remain available.
+          Connect Polar or Strava in Settings → External connections to import
+          activities. You can also log activities manually.
         </p>
 
         <h2 className="text-xl font-semibold text-movenotes-primary mt-8 mb-2">
