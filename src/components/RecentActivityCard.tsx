@@ -138,22 +138,11 @@ function ReadyActivityCard({
   );
   const thumbUrl = signedNoteThumbs[activity.id] || signedNoteImages[activity.id];
   const photoCount = getActivityPhotos(activity).length;
-  const stravaSource = activity.source === "strava";
   const isImportedActivity =
     (typeof activity.source === "string" && activity.source !== "manual") ||
     Boolean(activity.external_source);
-  const stravaSportLabel = (() => {
-    if (!stravaSource) return null;
-    const raw = activity.raw_sport_type || activity.raw_type;
-    if (!raw || typeof raw !== "string") return "Strava";
-    const spaced = raw
-      .replace(/_/g, " ")
-      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-      .trim();
-    return `Strava · ${spaced}`;
-  })();
-  const importedSource = isImportedActivity && !stravaSource
-    ? String(activity.source || activity.external_source)
+  const importedSource = isImportedActivity
+    ? String(activity.external_source || activity.source)
     : null;
   const { during: feelingDuring, after: feelingAfter } = resolveFeelingState(activity);
   const quickFeelingStage: "during" | "after" = feelingDuring ? "after" : "during";
@@ -263,7 +252,6 @@ function ReadyActivityCard({
           </span>
         </div>
 
-        {stravaSportLabel && <div className="text-xs text-gray-500 mb-1">{stravaSportLabel}</div>}
         {importedSource && (
           <div className="mb-1 flex items-center justify-center gap-1.5 text-xs text-gray-600">
             <ActivitySourceMark source={importedSource} />

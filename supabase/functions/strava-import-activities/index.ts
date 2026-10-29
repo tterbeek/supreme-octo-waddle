@@ -692,7 +692,7 @@ Deno.serve(async (req) => {
     } else {
       const { data, error } = await serviceClient.from('activities').insert({
         ...normalized, source: 'strava', feeling: null, effort: null,
-        external_source: 'strava', imported_at: nowIso, ...state,
+        external_source: 'strava', user_enrichment_status: 'pending', imported_at: nowIso, ...state,
       }).select('id,user_id,import_token').single();
       if (error?.code === '23505') { skippedExisting += 1; continue; }
       if (error) return jsonResponse(400, { error: error.message });

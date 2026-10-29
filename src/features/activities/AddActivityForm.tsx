@@ -131,7 +131,7 @@ export default function AddActivityForm({
         <div className="space-y-4">
           {existingActivity && (
             <div className="mb-4 rounded-xl border border-warm-200 bg-warm-100 p-3 text-sm text-gray-700">
-              <p className="font-medium">Imported from {existingActivity.source === "polar" ? "Polar" : existingActivity.source}</p>
+              <p className="font-medium">Imported from {existingActivity.source === "polar" ? "Polar" : existingActivity.source === "strava" ? "Strava" : existingActivity.source}</p>
               <p>{ACTIVITY_TYPES[activityType]?.label ?? activityType} · Add your own details, or keep the imported workout as-is.</p>
             </div>
           )}

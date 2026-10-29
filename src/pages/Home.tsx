@@ -21,17 +21,12 @@ import JournalEntryModal from "../components/JournalEntryModal";
 import { useTooltipManager } from "../hooks/useTooltipManager";
 import { useUnitSystem } from "../contexts/UnitContext";
 import { getCurrentUser } from "../services/auth.service";
-import {
-  restoreActivity,
-  updateActivityEffort,
-  updateActivityFeeling,
-} from "../services/activities.service";
+import { restoreActivity } from "../services/activities.service";
 import { useHomeFeed } from "../hooks/useHomeFeed";
 import { useNoteImages } from "../hooks/useNoteImages";
 import GalleryLightbox from "../components/GalleryLightbox";
 import { useGalleryLightbox } from "../hooks/useGalleryLightbox";
 import { buildGalleryItemsForActivity } from "../lib/photos";
-import { resolveFeelingState, type FeelingAfter, type FeelingDuring } from "../lib/feelings";
 import { usePostLogNoteFlow } from "../hooks/usePostLogNoteFlow";
 import { useHomeModals } from "../hooks/useHomeModals";
 import { STRAVA_SYNC_COMPLETED_EVENT } from "../services/strava.service";
@@ -83,8 +78,6 @@ export default function Home() {
   const [noteOnlyActivityId, setNoteOnlyActivityId] = useState<string | null>(null);
   const [journalEntryDraftOpen, setJournalEntryDraftOpen] = useState(false);
   const [editingJournalEntry, setEditingJournalEntry] = useState<any | null>(null);
-  const [quickFeelingSavingId, setQuickFeelingSavingId] = useState<string | null>(null);
-  const [quickEffortSavingId, setQuickEffortSavingId] = useState<string | null>(null);
   const noteFlow = usePostLogNoteFlow();
 
   // Sidebar
@@ -94,7 +87,6 @@ export default function Home() {
   // Infinite scroll feed
   const {
     activities,
-    setActivities,
     filteredActivities,
     refresh: refreshFeed,
     initialFeedLoaded,
@@ -293,122 +285,6 @@ export default function Home() {
     audio.play().catch(() => {
       // Ignore autoplay restrictions.
     });
-  };
-
-  const latestStravaQuickPrompt = useMemo(() => {
-    const imported = activities.filter(
-      (item) => item?.entry_kind !== "journal_entry" && item?.source === "strava"
-    );
-    if (imported.length === 0) {
-      return {
-        activityId: null as string | null,
-        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
-      };
-    }
-
-    const latest = imported[0];
-    const rawDate = latest.started_at || latest.created_at || latest.date;
-    if (!rawDate) {
-      return {
-        activityId: null as string | null,
-        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
-      };
-    }
-    const timeMs = new Date(rawDate).getTime();
-    if (!Number.isFinite(timeMs)) {
-      return {
-        activityId: null as string | null,
-        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
-      };
-    }
-
-    const ageHours = (Date.now() - timeMs) / (1000 * 60 * 60);
-    if (ageHours > 48) {
-      return {
-        activityId: null as string | null,
-        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
-      };
-    }
-
-    const hasNote = Boolean(latest.notes?.trim?.());
-    if (hasNote) {
-      return {
-        activityId: null as string | null,
-        mode: null as "feeling_during" | "feeling_after" | "effort" | null,
-      };
-    }
-
-    const feelingState = resolveFeelingState(latest);
-    if (!feelingState.during) {
-      return { activityId: latest.id as string, mode: "feeling_during" as const };
-    }
-
-    if (!feelingState.after) {
-      return { activityId: latest.id as string, mode: "feeling_after" as const };
-    }
-
-    const hasEffort =
-      typeof latest.effort === "number" &&
-      Number.isFinite(latest.effort) &&
-      latest.effort > 0;
-    if (!hasEffort) {
-      return { activityId: latest.id as string, mode: "effort" as const };
-    }
-
-    return {
-      activityId: null as string | null,
-      mode: null as "feeling_during" | "feeling_after" | "effort" | null,
-    };
-  }, [activities]);
-
-  const handleQuickFeelingSelect = async (
-    activity: any,
-    selection: {
-      stage: "during" | "after";
-      value: FeelingDuring | FeelingAfter;
-    }
-  ) => {
-    if (!activity?.id) return;
-    setQuickFeelingSavingId(activity.id);
-    try {
-      const { error } = await updateActivityFeeling(activity.id, {
-        ...(selection.stage === "during" ? { during: selection.value as FeelingDuring } : {}),
-        ...(selection.stage === "after" ? { after: selection.value as FeelingAfter } : {}),
-      });
-      if (error) throw error;
-      setActivities((prev) =>
-        prev.map((item) =>
-          item.id === activity.id
-            ? {
-                ...item,
-                ...(selection.stage === "during"
-                  ? { feeling_during: selection.value }
-                  : { feeling_after: selection.value }),
-              }
-            : item
-        )
-      );
-    } catch (err: any) {
-      setToastMessage(err?.message || "Could not save feeling.");
-    } finally {
-      setQuickFeelingSavingId(null);
-    }
-  };
-
-  const handleQuickEffortSelect = async (activity: any, effort: number) => {
-    if (!activity?.id) return;
-    setQuickEffortSavingId(activity.id);
-    try {
-      const { error } = await updateActivityEffort(activity.id, effort);
-      if (error) throw error;
-      setActivities((prev) =>
-        prev.map((item) => (item.id === activity.id ? { ...item, effort } : item))
-      );
-    } catch (err: any) {
-      setToastMessage(err?.message || "Could not save effort.");
-    } finally {
-      setQuickEffortSavingId(null);
-    }
   };
 
   const handleQuickAddNote = (activity: any) => {
@@ -651,19 +527,6 @@ export default function Home() {
                               }}
                               onAddReflection={(activity) => setReflectionActivity(activity)}
                               onAddNoteOnly={handleQuickAddNote}
-                              showQuickFeelingPrompt={
-                                a.id === latestStravaQuickPrompt.activityId &&
-                                (latestStravaQuickPrompt.mode === "feeling_during" ||
-                                  latestStravaQuickPrompt.mode === "feeling_after")
-                              }
-                              showQuickEffortPrompt={
-                                a.id === latestStravaQuickPrompt.activityId &&
-                                latestStravaQuickPrompt.mode === "effort"
-                              }
-                              onQuickFeelingSelect={handleQuickFeelingSelect}
-                              onQuickEffortSelect={handleQuickEffortSelect}
-                              quickFeelingSaving={quickFeelingSavingId === a.id}
-                              quickEffortSaving={quickEffortSavingId === a.id}
                               canShareWithCircle={circleEnabled}
                               onShareWithCircle={handleShareWithCircle}
                               sharedWithCircle={Boolean(sharedWithCircleByActivity[a.id])}

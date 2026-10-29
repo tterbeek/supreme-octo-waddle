@@ -13,6 +13,11 @@ describe("imported activity completion routing", () => {
     expect(needsImportedEnrichment({ ...activity, source: "manual", user_enrichment_status: "pending" })).toBe(false);
   });
 
+  it("opens the same completion flow for pending Strava imports", () => {
+    expect(needsImportedEnrichment({ ...activity, source: "strava", external_source: "strava", user_enrichment_status: "pending" })).toBe(true);
+    expect(needsImportedEnrichment({ ...activity, source: "strava", user_enrichment_status: "completed" })).toBe(false);
+  });
+
   it("is provider-neutral", () => {
     expect(needsImportedEnrichment({ ...activity, source: "garmin", user_enrichment_status: "pending" })).toBe(true);
   });
