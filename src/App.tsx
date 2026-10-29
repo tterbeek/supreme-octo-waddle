@@ -23,6 +23,7 @@ import ActivityPreferencesPage from "./pages/ActivityPreferencesPage";
 import ManageEquipmentPage from "./pages/ManageEquipmentPage";
 import ManageCirclePage from "./pages/ManageCirclePage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import EmailChangePage from "./pages/EmailChangePage";
 import CircleInvitePage from "./pages/CircleInvitePage";
 import StravaCallbackPage from "./pages/StravaCallbackPage";
 import PolarCallbackPage from "./pages/PolarCallbackPage";
@@ -165,6 +166,7 @@ export default function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/support" element={<SupportPage />} />
+              <Route path="/auth/email-change" element={<EmailChangePage />} />
               <Route path="/settings/strava/callback" element={<StravaCallbackPage />} />
               <Route path="/settings/polar/callback" element={<PolarCallbackPage />} />
               <Route path="/circle/invite/:token" element={<CircleInvitePage />} />

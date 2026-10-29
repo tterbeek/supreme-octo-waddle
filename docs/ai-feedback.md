@@ -99,12 +99,11 @@ are plain text in the UI and are not logged or sent to analytics.
 
 ## Explicit admin rerun and card deletion
 
-`/admin` includes **Run weekly now** only for the confirmed auth account
-`me@thijsterbeek.com`. The Edge Function checks the verified account as well as
+`/admin` includes **Run weekly now** only for the confirmed owner auth accounts
+[pinned by user ID](account-email-changes.md#owner-identities). The Edge Function checks the verified account as well as
 existing Premium access. The new manual-claim SQL helper is service-role-only
-and checks the same confirmed owner. Existing analytics SQL permissions are
-unchanged; permitting the confirmed owner onto the admin page in local dev does
-not grant other accounts access to analytics.
+and checks the same confirmed owner. Admin reporting RPCs authorize the same pinned production/dev user IDs; other
+accounts cannot gain analytics access by changing their email or profile.
 
 This one-shot action, with a paid-call confirmation in the shared sheet, reruns
 the most recent completed Monday–Sunday in the saved time zone. It does not
@@ -150,7 +149,7 @@ In **Admin → Run weekly now**, the confirmation offers **Store the complete
 request and response in OpenAI for this test**. It starts unchecked and resets
 on the next opening. It adds `store_test_request: true` to that manual request.
 The handler only sends `store: true` when the verified, confirmed auth account
-is `me@thijsterbeek.com`, `manual === true`, and the explicit storage flag is
+has a pinned owner user ID, `manual === true`, and the explicit storage flag is
 also exactly `true`. Scheduled/ordinary Journal calls and unchecked manual runs
 continue sending `store: false`. This does not change any persistent preference.
 

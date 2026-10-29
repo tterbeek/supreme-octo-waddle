@@ -2,7 +2,7 @@ import { canRunWeeklyNow } from "./companion.ts";
 
 /** Explicit per-request test flag. No environment-wide or persistent switch. */
 export function storeCompanionTestRequest(
-  user: { email?: string | null; email_confirmed_at?: string | null },
+  user: { id?: string | null; email_confirmed_at?: string | null },
   input: { manual?: unknown; store_test_request?: unknown } | null,
 ) {
   return canRunWeeklyNow(user) && input?.manual === true && input?.store_test_request === true;

@@ -1,4 +1,5 @@
 import type { DirectionProgress } from "./companionDirectionProgress.ts";
+import { isOwnerAccount } from './accountAccess.ts';
 
 export type CompanionSource = {
   kind: "direction" | "tweak" | "tweak_reflection" | "companion_reflection" | "activity" | "totals";
@@ -32,8 +33,8 @@ export type CompanionActivity = {
 };
 export type CompanionGoal = { activity_type: string; metric: string; period: string; target: number; name: string | null };
 
-export function canRunWeeklyNow(user: { email?: string | null; email_confirmed_at?: string | null }) {
-  return user.email?.toLowerCase() === "me@thijsterbeek.com" && Boolean(user.email_confirmed_at);
+export function canRunWeeklyNow(user: { id?: string | null; email_confirmed_at?: string | null }) {
+  return isOwnerAccount(user) && Boolean(user.email_confirmed_at);
 }
 
 export const COMPANION_INSTRUCTIONS = `You write a private weekly Companion post for MoveNotes, a low-pressure movement journal.

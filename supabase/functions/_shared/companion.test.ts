@@ -3,11 +3,11 @@ import { buildCompanionSources, canRunWeeklyNow, COMPANION_INSTRUCTIONS, previou
 import { calculateDirectionProgress } from "./companionDirectionProgress";
 
 describe("manual weekly eligibility", () => {
-  it("requires the authenticated confirmed owner email, never profile metadata or arbitrary accounts", () => {
-    expect(canRunWeeklyNow({ email: "me@thijsterbeek.com", email_confirmed_at: "2026-01-01" })).toBe(true);
-    expect(canRunWeeklyNow({ email: "ME@THIJSTERBEEK.COM", email_confirmed_at: "2026-01-01" })).toBe(true);
-    expect(canRunWeeklyNow({ email: "other@example.test", email_confirmed_at: "2026-01-01" })).toBe(false);
-    expect(canRunWeeklyNow({ email: "me@thijsterbeek.com" })).toBe(false);
+  it("uses the confirmed production/dev account IDs regardless of their current email", () => {
+    expect(canRunWeeklyNow({ id: '589c83df-8ee7-4319-9203-5b5c9aae0d07', email_confirmed_at: '2026-01-01' })).toBe(true);
+    expect(canRunWeeklyNow({ id: '7725b4a2-16df-47dd-bae0-c7695717a342', email_confirmed_at: '2026-01-01' })).toBe(true);
+    expect(canRunWeeklyNow({ id: 'another-user', email_confirmed_at: '2026-01-01' })).toBe(false);
+    expect(canRunWeeklyNow({ id: '589c83df-8ee7-4319-9203-5b5c9aae0d07' })).toBe(false);
     expect(canRunWeeklyNow({})).toBe(false);
   });
 });

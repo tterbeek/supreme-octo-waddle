@@ -27,6 +27,13 @@ calendar months with data, or the existing weekly range. Apply
 `20261027050000_trend_periods.sql` before deploying the frontend. No Edge Function
 deployment is needed. See [behavior and verification](docs/insights-trends.md).
 
+## Login email and owner access
+
+Settings → Profile supports confirmed login-email changes, pending status and
+resending confirmation. Companion and admin reporting access are pinned to the
+production/dev user IDs, so changing email does not transfer or remove access.
+See [setup, migration and release steps](docs/account-email-changes.md).
+
 ## Local development
 
 Start local Supabase with `npx supabase start`, then run `npm run dev`.
@@ -79,8 +86,8 @@ with **Save feedback**. This stays separate from journal reflections and never
 regenerates the current thought. The next generated thought can use up to three
 recent comments, not bare ratings. See [feedback behavior and checks](docs/ai-feedback.md).
 
-The AI card also has a three-dot **Delete** action. The confirmed owner account
-`me@thijsterbeek.com` can use **Admin → Run weekly now** to explicitly rerun the
+The AI card also has a three-dot **Delete** action. The confirmed owner accounts
+[pinned by user ID](docs/account-email-changes.md#owner-identities) can use **Admin → Run weekly now** to explicitly rerun the
 most recent completed week. It asks before making a paid call and keeps your
 written reflection when replacing a thought.
 
@@ -119,7 +126,7 @@ root, in this order:
    deploy only the `weekly-companion` Edge Function.
 5. Commit the reviewed changes directly on `main`, then push `main` to trigger
    Vercel. Complete the Supabase steps **before** this push.
-6. Sign in as the confirmed account `me@thijsterbeek.com`, enable Companion in
+6. Sign in as the confirmed owner account (identified by user ID), enable Companion in
    Settings, and check the weekly thought and optional response. Other accounts
    should see a greyed-out **Premium** row.
 

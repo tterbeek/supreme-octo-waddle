@@ -1,17 +1,17 @@
 begin;
 insert into auth.users(id, email, email_confirmed_at, raw_user_meta_data) values
-  ('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', 'ME@THIJSTERBEEK.COM', now(), '{}'),
+  ('589c83df-8ee7-4319-9203-5b5c9aae0d07', 'ME@THIJSTERBEEK.COM', now(), '{}'),
   ('bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb', 'other@example.test', now(), '{"premium":true,"email":"me@thijsterbeek.com"}');
 -- Seed pre-existing enabled preferences to prove UI hiding is not the restriction.
 insert into public.companion_preferences(user_id, enabled) values
-  ('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', true), ('bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb', true);
+  ('589c83df-8ee7-4319-9203-5b5c9aae0d07', true), ('bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb', true);
 insert into public.companion_posts(user_id, week_start, week_end, time_zone, status, thought) values
   ('bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb', '2026-10-05', '2026-10-11', 'UTC', 'ready', 'Hidden from an ineligible account');
 
 set local role authenticated;
-set local request.jwt.claim.sub = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
+set local request.jwt.claim.sub = '589c83df-8ee7-4319-9203-5b5c9aae0d07';
 do $$ begin
-  assert public.has_companion_access(), 'confirmed owner account has Premium access, case-insensitively';
+  assert public.has_companion_access(), 'confirmed owner user ID has Premium access';
 end $$;
 set local request.jwt.claim.sub = 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb';
 do $$ begin
@@ -31,12 +31,12 @@ begin
     'service callers cannot bypass entitlement through the internal reservation function';
   assert not has_function_privilege('service_role', 'public.finish_weekly_companion_internal(uuid,date,uuid,boolean,text,jsonb,text)', 'EXECUTE'),
     'service callers cannot bypass entitlement through the internal publish function';
-  token := public.claim_weekly_companion('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', '2026-10-12', 'UTC', false);
+  token := public.claim_weekly_companion('589c83df-8ee7-4319-9203-5b5c9aae0d07', '2026-10-12', 'UTC', false);
   assert token is not null, 'owner can reserve a weekly thought';
-  update auth.users set email = 'changed@example.test' where id = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
-  assert not public.finish_weekly_companion('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', '2026-10-12', token, false, 'Late result', '[]', 'test'),
-    'a result cannot publish after the account loses access';
-  update auth.users set email = 'me@thijsterbeek.com', email_confirmed_at = null where id = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
-  assert not public.companion_account_allowed('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'), 'an unconfirmed email must not grant Premium access';
+  update auth.users set email = 'changed@example.test' where id = '589c83df-8ee7-4319-9203-5b5c9aae0d07';
+  assert public.finish_weekly_companion('589c83df-8ee7-4319-9203-5b5c9aae0d07', '2026-10-12', token, false, 'Late result', '[]', 'test'),
+    'email changes do not revoke access or invalidate an authorized generation';
+  update auth.users set email = 'me@thijsterbeek.com', email_confirmed_at = null where id = '589c83df-8ee7-4319-9203-5b5c9aae0d07';
+  assert not public.companion_account_allowed('589c83df-8ee7-4319-9203-5b5c9aae0d07'), 'an unconfirmed email must not grant Premium access';
 end $$;
 rollback;

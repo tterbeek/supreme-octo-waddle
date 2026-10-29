@@ -1,3 +1,5 @@
+import { AdminRoute } from "../../src/components/AdminRoute";
+import EmailChangePage from "../../src/pages/EmailChangePage";
 import SwipeActions from "../../src/components/SwipeActions";
 import PullToRefresh from "../../src/components/PullToRefresh";
 import { syncPolarIfStale, POLAR_PULL_COOLDOWN_MS } from "../../src/services/polar.service";
@@ -117,9 +119,15 @@ qa.setSocialProfile = (name:string,accepted:number,community=true,photo=false) =
   qa.profileNoCommunity=!community;
 };
 const auth: any = supabase.auth;
-auth.getUser = async () => ({ data: { user: (qa as any).signedOut?null:qa.case === "admin-weekly" ? { ...user, email: "me@thijsterbeek.com" } : user }, error: null });
-auth.getSession = async () => ({ data: { session: { user, access_token: "fictional-not-a-token" } }, error: null });
-auth.onAuthStateChange = () => ({ data: { subscription: { unsubscribe() {} } } });
+const emailAuthListeners=new Set<(event:string,session:any)=>void>();
+qa.resetAccountEmail=()=>{qa.emailUser={...user,email:'original@example.invalid',new_email:''};qa.emailSignedOut=false;qa.emailFail=false;qa.emailRequests=[];qa.emailResends=[];};
+qa.finishAccountEmail=()=>{qa.emailUser={...qa.emailUser,email:qa.emailUser.new_email,new_email:''};emailAuthListeners.forEach(callback=>callback('USER_UPDATED',{user:qa.emailUser}));};
+
+auth.getUser = async () => ({ data: { user: ["owner-admin","owner-weekly"].includes(qa.case)?qa.ownerUser:["profile-email","email-change-callback"].includes(qa.case)?qa.emailSignedOut?null:qa.emailUser:(qa as any).signedOut?null:qa.case === "admin-weekly" ? { ...user, id: "7725b4a2-16df-47dd-bae0-c7695717a342", email: "renamed-owner@example.invalid" } : user }, error: null });
+auth.getSession = async () => ({ data: { session: { user:qa.case==="profile-email"?qa.emailUser:user, access_token: "fictional-not-a-token" } }, error: null });
+auth.onAuthStateChange = (callback:(event:string,session:any)=>void) => {emailAuthListeners.add(callback);return {data:{subscription:{unsubscribe(){emailAuthListeners.delete(callback);}}}};};
+auth.updateUser=async(attributes:any,options:any)=>{qa.emailRequests.push({attributes,options});await wait();if(qa.emailFail)return {data:{user:null},error:{message:'Email change could not be requested'}};qa.emailUser={...qa.emailUser,new_email:attributes.email};emailAuthListeners.forEach(callback=>callback('USER_UPDATED',{user:qa.emailUser}));return {data:{user:qa.emailUser},error:null};};
+auth.resend=async(options:any)=>{qa.emailResends.push(options);await wait();return {error:qa.emailFail?{message:'Please wait before requesting another email'}:null};};
 auth.signInWithOtp = async (options:any) => { qa.authRequests=(qa.authRequests||[]).concat([options]);await wait(); return { error: qa.authError ? {message:qa.authError} : qa.fail ? { message: "Simulated auth error" } : null }; };
 auth.verifyOtp = async () => { await wait(); return { data: { session: { user }, user }, error: qa.fail ? { message: "Simulated auth error" } : null }; };
 (supabase as any).from = (table: string) => {
@@ -350,6 +358,10 @@ function Scenario({ name, close, saved }: { name: string; close: () => void; sav
   if(name.startsWith("import-"))return <ImportScenario key={name} name={name}/>;
   if(name.startsWith("map-"))return <MapScenario name={name}/>;
   switch (name) {
+    case "owner-admin": return <AdminRoute><p>Admin reporting available</p></AdminRoute>;
+    case "owner-weekly": return <AdminWeeklyCompanion/>;
+    case "profile-email": return <ProfileSettingsPage/>;
+    case "email-change-callback": return <EmailChangePage/>;
     case "trends": return <TrendsScenario/>;
     case 'social-page': return <SocialPage/>;
     case 'social-sharing': return <ActivitySharingSheet activityId="social-owned-activity" onClose={close} onSaved={saved}/>;
@@ -415,7 +427,7 @@ function Harness() {
   const close = () => { qa.closed++; setOpen(false); };
   return <UnitContext.Provider value={{ unitSystem, setUnitSystem }}><FormNavigationGuard />
     <main className="p-4" style={{ minHeight: 1800 }}><button type="button" onClick={() => setOpen(true)}>Open form</button><p>Fictional form QA only</p>
-      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(["/forms","/settings","/settings/profile","/settings/circle","/circle","/signup","/login"].includes(location.pathname) || location.pathname.startsWith("/circle/invite/") || location.pathname.startsWith('/community/join/')) && open && <Scenario key={key+location.pathname} name={location.pathname==="/signup"?"signup":location.pathname==="/login"?"login":location.pathname==="/settings/profile"?"profile-settings":location.pathname==="/settings"?"settings":location.pathname==="/settings/circle"?"circle-connections":name} close={close} saved={() => qa.saved++} />}
+      {name==='memories-nav'?<MemoryNavigationFixture key={key}/>:(["/forms","/settings","/settings/profile","/settings/circle","/circle","/signup","/login","/auth/email-change"].includes(location.pathname) || location.pathname.startsWith("/circle/invite/") || location.pathname.startsWith('/community/join/')) && open && <Scenario key={key+location.pathname} name={location.pathname==="/auth/email-change"?"email-change-callback":location.pathname==="/signup"?"signup":location.pathname==="/login"?"login":location.pathname==="/settings/profile"?"profile-settings":location.pathname==="/settings"?"settings":location.pathname==="/settings/circle"?"circle-connections":name} close={close} saved={() => qa.saved++} />}
     </main>
   </UnitContext.Provider>;
 }

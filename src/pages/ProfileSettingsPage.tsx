@@ -4,6 +4,7 @@ import { FormActions, FormError } from '../components/forms/FormLayout';
 import { getCurrentUser } from '../services/auth.service';
 import { fetchOwnCircleProfile, saveOwnCircleProfile, uploadCircleProfileImage, CIRCLE_ACCESS_UPDATED_EVENT } from '../services/circle.service';
 import { NOTE_STORAGE_BUCKET, signStorageValues } from '../services/storage.service';
+import AccountEmailSettings from '../components/AccountEmailSettings';
 
 export default function ProfileSettingsPage() {
   const input = useRef<HTMLInputElement>(null);
@@ -30,7 +31,7 @@ export default function ProfileSettingsPage() {
         if (cancelled) return;
         setUserId(user.id); setName(profile?.social_display_name || ''); setSavedName(profile?.social_display_name || '');
         setImagePath(profile?.social_profile_image_path || null); setThumbPath(profile?.social_profile_thumb_path || null);
-        setEmail(profile?.login_email || user.email || '');
+        setEmail(user.email || '');
       } catch (e) { if (!cancelled) setError((e as Error).message); }
       finally { if (!cancelled) setLoading(false); }
     };
@@ -72,7 +73,7 @@ export default function ProfileSettingsPage() {
       <input ref={input} aria-label="Profile picture" type="file" accept="image/*" className="hidden" disabled={busy || !userId} onChange={event => { const file = event.target.files?.[0]; if (file) void save(file); event.target.value = ''; }} />
     </div>
     <div className="mn-field"><label htmlFor="circle-name">Friendly name</label><input id="circle-name" type="text" value={name} onChange={event => setName(event.target.value)} placeholder="How others should see you" /></div>
-    <p className="text-xs text-movenotes-muted">Account email: {email || 'Unavailable'}</p>
+    {userId && <AccountEmailSettings userId={userId} />}
     <FormActions><button disabled={busy || loading || !userId} onClick={() => void save()}>{busy ? 'Saving…' : 'Save profile'}</button></FormActions>
   </FormPage>;
 }

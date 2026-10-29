@@ -35,7 +35,7 @@ export default function AdminWeeklyCompanion() {
   };
   return <section className="rounded-xl border border-warm-200 bg-warm-100 p-5 space-y-3" aria-labelledby="admin-weekly-title">
     <h2 id="admin-weekly-title" className="text-lg font-semibold">Weekly Companion</h2>
-    <p className="text-sm text-gray-600">For me@thijsterbeek.com only. Run the most recent completed Monday–Sunday now, using the latest eligible feedback. This does not change the normal weekly timing.</p>
+    <p className="text-sm text-gray-600">For your owner account only. Run the most recent completed Monday–Sunday now, using the latest eligible feedback. This does not change the normal weekly timing.</p>
     <button type="button" className="mn-primary px-5 py-3" disabled={busy} onClick={() => { setError(null); setMessage(null); setStoreTestRequest(false); setOpen(true); }}>Run weekly now</button>
     {!open && message && <p role="status" className="text-sm">{message}</p>}
     {!open && diagnostics && <div className="text-xs space-y-1 break-words" aria-label="OpenAI test request details">
