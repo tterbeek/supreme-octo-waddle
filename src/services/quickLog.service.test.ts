@@ -7,7 +7,7 @@ const { from, replaceActivityEquipment } = vi.hoisted(() => ({
 vi.mock("../supabaseClient", () => ({ supabase: { from } }));
 vi.mock("./equipment.service", () => ({ replaceActivityEquipment }));
 
-import { completeImportedActivity, type SaveQuickLogInput } from "./quickLog.service";
+import { completeImportedActivity, createPresetFromActivity, saveQuickLog, type SaveQuickLogInput } from "./quickLog.service";
 
 const input: SaveQuickLogInput = {
   userId: "user-1", activityType: "run", date: "2026-10-12",
@@ -54,5 +54,49 @@ describe("completeImportedActivity", () => {
     const result = await completeImportedActivity("existing-id", input, "user-1");
     expect(result.error?.message).toBe("Equipment link failed");
     expect(query.update).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("preset route snapshots", () => {
+  const route = "_p~iF~ps|U_ulLnnqC_mqNvxq" + String.fromCharCode(96) + "@";
+  beforeEach(() => {
+    from.mockReset();
+    replaceActivityEquipment.mockReset().mockResolvedValue({ error: null });
+  });
+  it("reads the owner's saved route when creating a preset, including lazily loaded maps", async () => {
+    const single = vi.fn().mockResolvedValue({ data: { route_polyline: route }, error: null });
+    const query = { select: vi.fn(), eq: vi.fn(), single };
+    query.select.mockReturnValue(query); query.eq.mockReturnValue(query);
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    from.mockImplementation(table => table === "activities" ? query : { insert });
+    await createPresetFromActivity({
+      activityId: "existing-id", userId: "user-1", activityType: "run", name: "Regular route",
+      distanceValue: 5, durationValue: 30, effortValue: 2,
+    });
+    expect(query.eq).toHaveBeenCalledWith("id", "existing-id");
+    expect(query.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(insert).toHaveBeenCalledWith([expect.objectContaining({ route_polyline: route, type: "run" })]);
+  });
+  it("does not silently save a route-less preset if the activity lookup fails", async () => {
+    const query = { select: vi.fn(), eq: vi.fn(), single: vi.fn().mockResolvedValue({ data: null, error: new Error("Lookup failed") }) };
+    query.select.mockReturnValue(query); query.eq.mockReturnValue(query);
+    from.mockReturnValue(query);
+    const result = await createPresetFromActivity({
+      activityId: "existing-id", userId: "user-1", activityType: "run", name: "Regular route",
+      distanceValue: 5, durationValue: 30, effortValue: null,
+    });
+    expect(result.error?.message).toBe("Lookup failed");
+    expect(from).toHaveBeenCalledTimes(1);
+  });
+  it.each([route, null])("copies only the selected preset route onto a new manual activity: %s", async routePolyline => {
+    const query = { insert: vi.fn(), select: vi.fn(), single: vi.fn().mockResolvedValue({ data: { id: "new-id" }, error: null }) };
+    query.insert.mockReturnValue(query); query.select.mockReturnValue(query);
+    from.mockReturnValue(query);
+    expect((await saveQuickLog({ ...input, routePolyline, equipmentIds: [] })).id).toBe("new-id");
+    const saved = query.insert.mock.calls[0][0][0];
+    expect(saved.route_polyline).toBe(routePolyline);
+    expect(saved).not.toHaveProperty("external_id");
+    expect(saved).not.toHaveProperty("external_source");
+    expect(saved).not.toHaveProperty("source");
   });
 });

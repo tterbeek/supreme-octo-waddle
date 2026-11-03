@@ -314,6 +314,7 @@ export function useQuickLogForm({
       feelingAfterValue: feelingAfter,
       title,
       equipmentIds: selectedEquipmentIds,
+      routePolyline: !existingActivity && activePreset?.type === activityType ? activePreset.route_polyline ?? null : null,
     };
 
     const { id: newActivityId, error } = existingActivity
@@ -327,6 +328,7 @@ export function useQuickLogForm({
 
     if (saveAsPreset && presetName.trim()) {
       await createPresetFromActivity({
+        activityId: newActivityId,
         userId: currentUserId,
         activityType,
         name: presetName.trim(),

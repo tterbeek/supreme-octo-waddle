@@ -42,15 +42,15 @@ export async function fetchFeedPage(
     return { data: rows, error };
   }
 
-  const importedIds = rows
-    .filter((row) => row.entry_kind === "activity" && row.source !== "manual")
+  const activityIds = rows
+    .filter((row) => row.entry_kind === "activity")
     .map((row) => row.id);
   let enrichedRows = rows;
-  if (importedIds.length > 0) {
+  if (activityIds.length > 0) {
     const statusResult = await supabase
       .from("activities")
       .select("id, user_enrichment_status, route_polyline, route_checked_at, import_status, import_updated_at, imported_at, external_source")
-      .in("id", importedIds);
+      .in("id", activityIds);
     // Never expose an editable imported card when its completion state is unknown.
     if (statusResult.error) return {
       data: rows.filter(row => row.entry_kind !== 'activity' || row.source === 'manual'),

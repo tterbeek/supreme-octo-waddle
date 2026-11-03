@@ -405,7 +405,7 @@ export function useActivityEditForm({
       if (saveAsPreset && presetName.trim()) {
         if (!currentUserId) throw new Error("Sign in to save a preset.");
         const { error: presetError } = await createPresetFromActivity({
-          userId: currentUserId, activityType, name: presetName.trim(), distanceValue, durationValue, effortValue,
+          activityId: activity.id, userId: currentUserId, activityType, name: presetName.trim(), distanceValue, durationValue, effortValue,
         });
         if (presetError) throw presetError;
       }

@@ -864,6 +864,7 @@ export type Database = {
       }
       presets: {
         Row: {
+          route_polyline: string | null
           created_at: string | null
           distance_km: number | null
           duration_min: number | null
@@ -875,6 +876,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          route_polyline?: string | null
           created_at?: string | null
           distance_km?: number | null
           duration_min?: number | null
@@ -886,6 +888,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          route_polyline?: string | null
           created_at?: string | null
           distance_km?: number | null
           duration_min?: number | null

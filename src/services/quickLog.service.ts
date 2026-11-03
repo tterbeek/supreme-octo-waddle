@@ -56,6 +56,7 @@ export async function fetchPresets(userId: string) {
 }
 
 export type SaveQuickLogInput = {
+  routePolyline?: string | null;
   userId: string;
   activityType: string;
   date: string;
@@ -82,6 +83,7 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
         feeling_during: input.feelingDuringValue,
         feeling_after: input.feelingAfterValue,
         title: input.title,
+        route_polyline: input.routePolyline ?? null,
       },
     ])
     .select("id")
@@ -157,6 +159,7 @@ export async function completeImportedActivity(
 }
 
 export async function createPresetFromActivity(params: {
+  activityId: string;
   userId: string;
   activityType: string;
   name: string;
@@ -164,6 +167,10 @@ export async function createPresetFromActivity(params: {
   durationValue: number | null;
   effortValue: number | null;
 }) {
+  // Read the saved route so a lazily loaded map is included too.
+  const { data: activity, error: routeError } = await supabase.from("activities")
+    .select("route_polyline").eq("id", params.activityId).eq("user_id", params.userId).single();
+  if (routeError || !activity) return { error: routeError ?? new Error("Could not read activity route.") };
   const { error } = await supabase.from("presets").insert([
     {
       user_id: params.userId,
@@ -172,6 +179,7 @@ export async function createPresetFromActivity(params: {
       distance_km: params.distanceValue,
       duration_min: params.durationValue,
       effort: params.effortValue,
+      route_polyline: activity.route_polyline ?? null,
       last_used_at: new Date().toISOString(),
     },
   ]);

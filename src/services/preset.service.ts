@@ -45,6 +45,7 @@ export async function fetchPreset(id: string) {
 }
 
 export type UpsertPresetPayload = {
+  route_polyline?: string | null;
   user_id?: string;
   type: string;
   name: string;

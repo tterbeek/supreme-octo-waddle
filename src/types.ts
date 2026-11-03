@@ -1,4 +1,5 @@
 export type Preset = {
+  route_polyline?: string | null;
   id: string;
   type: string;
   name: string;
