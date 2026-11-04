@@ -351,6 +351,7 @@ export default function EditActivityModal({
 
     {showEquipmentDialog && !reflectionOnly && (
       <EquipmentDialog
+          activityType={activityType}
         equipment={equipment}
         selectedEquipmentIds={selectedEquipmentIds}
         onChange={(ids) => setSelectedEquipmentIds(ids)}

@@ -1,3 +1,4 @@
+import EquipmentSuggestions from "../../components/EquipmentSuggestions";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalSheet from "../../components/ModalSheet";
@@ -204,26 +205,10 @@ export default function AddActivityForm({
               mode="optionalOnly"
             />
 
-            <div className="mt-1">
-              {equipmentSummary ? (
-                <button
-                  type="button"
-                  onClick={() => setShowEquipmentDialog(true)}
-                  className="block w-full rounded-md border border-warm-200 p-3 text-left"
-                >
-                  <div className="text-sm text-gray-600">Equipment</div>
-                  <div className="text-base text-gray-900">{equipmentSummary}</div>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="block text-sm text-movenotes-primary underline"
-                  onClick={() => setShowEquipmentDialog(true)}
-                >
-                  + Add equipment
-                </button>
-              )}
-            </div>
+            <EquipmentSuggestions activityType={activityType} equipment={equipment}
+              selected={selectedEquipmentIds} onChange={setSelectedEquipmentIds}
+              onOpenAll={()=>setShowEquipmentDialog(true)}/>
+
           </div>
         </div>
 
@@ -264,6 +249,7 @@ export default function AddActivityForm({
 
       {showEquipmentDialog && (
         <EquipmentDialog
+          activityType={activityType}
           equipment={equipment}
           selectedEquipmentIds={selectedEquipmentIds}
           onChange={(ids) => setSelectedEquipmentIds(ids)}

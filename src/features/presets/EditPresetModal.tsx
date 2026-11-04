@@ -111,13 +111,14 @@ export default function EditPresetModal({
     loadEquipment();
   }, [preset]);
 
-  const addEquipment = async (eqName: string, notes: string) => {
+  const addEquipment = async (eqName: string, notes: string, activityTypes: string[] = [activityType]) => {
     const currentUserId = await ensureUser();
     if (!currentUserId) return null;
     const { equipment: created } = await createEquipment({
       userId: currentUserId,
       name: eqName,
       notes,
+      activityTypes,
     });
     if (!created) return null;
     setEquipment((prev) => [created, ...prev]);
@@ -275,6 +276,7 @@ export default function EditPresetModal({
 
       {showEquipmentDialog && (
         <EquipmentDialog
+          activityType={activityType}
           equipment={equipment}
           selectedEquipmentIds={selectedEquipmentIds}
           onChange={setSelectedEquipmentIds}

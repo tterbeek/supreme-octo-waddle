@@ -1,3 +1,4 @@
+import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import ModalSheet from "./ModalSheet";
@@ -7,14 +8,16 @@ import { FormActions } from "./forms/FormLayout";
 
 type EquipmentDialogProps = {
   equipment: Equipment[];
+  activityType?: string;
   selectedEquipmentIds: string[];
   onChange: (ids: string[]) => void;
-  onAddEquipment: (name: string, notes: string) => Promise<Equipment | null>;
+  onAddEquipment: (name: string, notes: string, activityTypes?: string[]) => Promise<Equipment | null>;
   onClose: () => void;
 };
 
 export default function EquipmentDialog({
   equipment,
+  activityType,
   selectedEquipmentIds,
   onChange,
   onAddEquipment,
@@ -37,8 +40,8 @@ export default function EquipmentDialog({
     setShowAddForm(false);
   };
 
-  const handleAddEquipment = async (name: string, notes: string) => {
-    const created = await onAddEquipment(name, notes);
+  const handleAddEquipment = async (name: string, notes: string, activityTypes: string[]) => {
+    const created = await onAddEquipment(name, notes, activityTypes);
     if (!created) {
       return { ok: false, error: "Could not add equipment right now" };
     }
@@ -59,18 +62,22 @@ export default function EquipmentDialog({
     onClose();
   };
 
+  const groups = activityType
+    ? [
+        { label: `For ${ACTIVITY_TYPES[activityType]?.label ?? "this activity type"}`, items: equipment.filter(item=>item.activity_types?.includes(activityType)) },
+        { label: "Other equipment", items: equipment.filter(item=>!item.activity_types?.includes(activityType)) },
+      ]
+    : [{ label: "Existing equipment", items: equipment }];
+
   return (
     <ModalSheet title="Equipment" onClose={handleCancel} dirty={JSON.stringify([...localSelected].sort()) !== JSON.stringify([...selectedEquipmentIds].sort())}>
 
       <div className="mb-5">
-        <div className="text-sm text-gray-600 mb-2">Existing equipment</div>
+        {groups.filter((group,index)=>group.items.length>0 || (index===0&&equipment.length>0)).map(group=><section key={group.label} aria-label={group.label} className="mb-4">
+        <h3 className="text-sm text-gray-600 mb-2">{group.label}</h3>
         <div className="flex flex-col gap-2">
-          {equipment.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No equipment yet. Add your first item below.
-            </p>
-          )}
-          {equipment.map((item) => {
+          {!group.items.length && <p className="text-sm text-gray-500">No equipment linked to this activity type yet.</p>}
+          {group.items.map((item) => {
             const checked = localSelected.includes(item.id);
             return (
               <button
@@ -100,6 +107,8 @@ export default function EquipmentDialog({
             );
           })}
         </div>
+        </section>)}
+        {!equipment.length&&<p className="text-sm text-gray-500">No equipment yet. Add your first item below.</p>}
       </div>
 
       <div className="border-t border-gray-200 pt-4">
@@ -128,6 +137,7 @@ export default function EquipmentDialog({
         <EquipmentFormSheet
           title="Add new equipment"
           primaryLabel="Add equipment"
+          initialActivityTypes={activityType ? [activityType] : []}
           savingLabel="Adding..."
           onSubmit={handleAddEquipment}
           onClose={closeAddForm}

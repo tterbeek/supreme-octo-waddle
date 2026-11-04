@@ -36,6 +36,7 @@ export async function createEquipment(params: {
   userId: string;
   name: string;
   notes?: string;
+  activityTypes?: string[];
 }) {
   const { data, error } = await supabase
     .from("equipment")
@@ -44,6 +45,7 @@ export async function createEquipment(params: {
         user_id: params.userId,
         name: params.name,
         notes: params.notes ?? null,
+        activity_types: params.activityTypes ?? [],
       },
     ])
     .select("*")
@@ -59,13 +61,14 @@ export async function createEquipment(params: {
 
 export async function updateEquipment(
   equipmentId: string,
-  updates: { name: string; notes?: string | null }
+  updates: { name: string; notes?: string | null; activityTypes?: string[] }
 ) {
   const { data, error } = await supabase
     .from("equipment")
     .update({
       name: updates.name,
       notes: updates.notes ?? null,
+      ...(updates.activityTypes ? { activity_types: updates.activityTypes } : {}),
     })
     .eq("id", equipmentId)
     .select("*")
@@ -175,4 +178,12 @@ export async function replacePresetEquipment(
   }
 
   return { error };
+}
+
+export async function fetchRecentEquipment(activityType:string):Promise<Equipment[]> {
+ try {
+  const {data,error}=await supabase.rpc('recent_equipment_for_type',{p_type:activityType});
+  if(error)return [];
+  return (data||[]) as Equipment[];
+ } catch {return [];}
 }

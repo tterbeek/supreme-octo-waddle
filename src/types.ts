@@ -12,6 +12,7 @@ export type Preset = {
 };
 
 export type Equipment = {
+  activity_types?: string[];
   id: string;
   user_id: string;
   name: string;

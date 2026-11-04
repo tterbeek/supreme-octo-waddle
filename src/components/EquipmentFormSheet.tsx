@@ -1,3 +1,4 @@
+import EquipmentActivityTypes from "./EquipmentActivityTypes";
 import FormTextarea from "./forms/FormTextarea";
 import { useEffect, useState } from "react";
 import ModalSheet from "./ModalSheet";
@@ -14,7 +15,8 @@ type EquipmentFormSheetProps = {
   savingLabel?: string;
   initialName?: string;
   initialNotes?: string;
-  onSubmit: (name: string, notes: string) => Promise<SubmitResult>;
+  initialActivityTypes?: string[];
+  onSubmit: (name: string, notes: string, activityTypes: string[]) => Promise<SubmitResult>;
   onClose: () => void;
 };
 
@@ -24,19 +26,23 @@ export default function EquipmentFormSheet({
   savingLabel = "Saving...",
   initialName = "",
   initialNotes = "",
+  initialActivityTypes = [],
   onSubmit,
   onClose,
 }: EquipmentFormSheetProps) {
   const [name, setName] = useState(initialName);
   const [notes, setNotes] = useState(initialNotes);
+  const [activityTypes, setActivityTypes] = useState(initialActivityTypes);
+  const initialTypeKey = [...initialActivityTypes].sort().join(",");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setName(initialName);
     setNotes(initialNotes);
+    setActivityTypes(initialTypeKey ? initialTypeKey.split(",") : []);
     setError(null);
-  }, [initialName, initialNotes]);
+  }, [initialName, initialNotes, initialTypeKey]);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -48,7 +54,7 @@ export default function EquipmentFormSheet({
     setError(null);
 
     try {
-      const result = await onSubmit(name.trim(), notes.trim());
+      const result = await onSubmit(name.trim(), notes.trim(), activityTypes);
       if (!result.ok) {
         setError(result.error || "Could not save equipment right now");
         return;
@@ -63,7 +69,7 @@ export default function EquipmentFormSheet({
   };
 
   return (
-    <ModalSheet title={title} onClose={onClose} busy={saving} dirty={name !== initialName || notes !== initialNotes} presentation="dialog">
+    <ModalSheet title={title} onClose={onClose} busy={saving} dirty={name !== initialName || notes !== initialNotes || [...activityTypes].sort().join(",") !== initialTypeKey} presentation="dialog">
       <div className="space-y-3">
         <FormField label="Name (required)" help="Give it a name you'll recognize later.">{field => <input
             {...field}
@@ -81,6 +87,7 @@ export default function EquipmentFormSheet({
             className="w-full border rounded-md p-2 mt-1 resize-none"
             placeholder="Anything you want to remember about this."
           />}</FormField>
+        <EquipmentActivityTypes value={activityTypes} onChange={setActivityTypes}/>
         {error && <p role="alert" className="mn-error">{error}</p>}
         <FormActions>
           <button

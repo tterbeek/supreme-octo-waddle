@@ -167,30 +167,14 @@ export async function createPresetFromActivity(params: {
   durationValue: number | null;
   effortValue: number | null;
 }) {
-  // Read the saved route so a lazily loaded map is included too.
-  const { data: activity, error: routeError } = await supabase.from("activities")
-    .select("route_polyline").eq("id", params.activityId).eq("user_id", params.userId).single();
-  if (routeError || !activity) return { error: routeError ?? new Error("Could not read activity route.") };
-  const { error } = await supabase.from("presets").insert([
-    {
-      user_id: params.userId,
-      type: params.activityType,
-      name: params.name,
-      distance_km: params.distanceValue,
-      duration_min: params.durationValue,
-      effort: params.effortValue,
-      route_polyline: activity.route_polyline ?? null,
-      last_used_at: new Date().toISOString(),
-    },
-  ]);
-
-  if (error) {
-    console.error("[QuickLog] Error saving preset:", error.message);
-    return { error };
-  }
-
-  return { error: null };
+  const { error } = await supabase.rpc("create_activity_preset", {
+    p_activity: params.activityId,
+    p_name: params.name,
+  });
+  if (error) console.error("[QuickLog] Error saving preset:", error.message);
+  return { error };
 }
+
 
 export async function updatePresetLastUsed(presetId: string) {
   const { error } = await supabase

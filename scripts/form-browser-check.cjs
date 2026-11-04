@@ -121,7 +121,7 @@ const exceptions = [];
   await choose('equipment-add');await type('input','New shoes');await evaluate('window.formQA.delay=500;window.formQA.fail=true');await click('Add equipment');
   if(!(await evaluate("document.querySelector('[data-overlay-close]').disabled")))throw Error('Saving form can close');await escape();await waitFor("document.body.innerText.includes('Simulated save error')");await layout('equipment saving error');
   // Nested selectors keep the parent mounted without multiple backdrops or locks.
-  await choose('log');await type('#activity-title','Remember this draft');await click('+ Add equipment');await layout('nested equipment');await click('+ Add new equipment');await type('input','New gear');await layout('nested equipment create');await snapshot('nested-equipment-mobile');
+  await choose('log');await type('#activity-title','Remember this draft');await click('All equipment');await layout('nested equipment');await click('+ Add new equipment');await type('input','New gear');await layout('nested equipment create');await snapshot('nested-equipment-mobile');
   await escape();await click('Discard changes');await click('Close Equipment');
   if(!(await evaluate("document.querySelector('#activity-title').value==='Remember this draft' && document.body.style.position==='fixed'")))throw Error('Nested handoff lost draft or lock');
   await click('Close Log Walk');await click('Discard changes');await waitFor("document.body.style.position!=='fixed'");

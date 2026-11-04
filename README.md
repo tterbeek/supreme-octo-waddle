@@ -246,3 +246,25 @@ Apply migration 20261103000000_preset_routes.sql before deploying this frontend.
 [Protected map sharing and deployment](docs/social-map-sharing.md) adds one-time
 owner consent and server-side start/finish protection. Apply migration
 20261104000000_social_maps.sql and deploy social-route before the frontend.
+
+### Equipment shortcuts by activity type
+
+In Manage equipment, add or edit an item and choose one or more activity types.
+Existing items remain unassigned until edited and stay available in All equipment.
+Logging and imported-activity details show the two most recently used active items
+assigned to that activity type. Tap to select/deselect; preset and existing selections
+remain visible. Equipment without saved usage can be chosen through All equipment.
+
+Apply migration 20261104010000_equipment_activity_types.sql before deploying the
+frontend. No Edge Function deployment or new secrets are needed.
+
+Focused browser verification: node scripts/equipment-browser-check.cjs against the
+existing fictional form fixture server on port 5182. Screenshots are written to
+/tmp/movenotes-equipment-previews; no production data or services are used.
+
+Saving an activity as a preset copies its saved equipment and map together through
+an owner-only database operation. Migration
+20261104020000_activity_preset_equipment.sql fixes equipment missing from presets
+created this way; apply it before the frontend update. Existing presets can still
+be updated through Edit preset. The full equipment picker groups matching items
+first, followed by other/unassigned equipment; both groups remain selectable.

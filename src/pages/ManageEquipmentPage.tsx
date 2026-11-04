@@ -1,3 +1,4 @@
+import EquipmentActivityTypes from "../components/EquipmentActivityTypes";
 import FormTextarea from "../components/forms/FormTextarea";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
@@ -196,6 +197,7 @@ export default function ManageEquipmentPage({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editTypes, setEditTypes] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const { unitSystem } = useUnitSystem();
 
@@ -300,6 +302,7 @@ export default function ManageEquipmentPage({
     if (!selectedEquipment) {
       setEditName("");
       setEditNotes("");
+      setEditTypes([]);
       setSaveError(null);
       setShowStopConfirm(false);
       return;
@@ -307,6 +310,7 @@ export default function ManageEquipmentPage({
 
     setEditName(selectedEquipment.name);
     setEditNotes(selectedEquipment.notes || "");
+    setEditTypes(selectedEquipment.activity_types ?? []);
     setSaveError(null);
     setShowStopConfirm(false);
   }, [selectedEquipment?.id]);
@@ -332,13 +336,14 @@ export default function ManageEquipmentPage({
   const getPrimaryMetric = (activityType: string) =>
     preferences[activityType] ?? getSystemDefaultMetric(activityType);
 
-  const handleAddEquipment = async (name: string, notes: string) => {
+  const handleAddEquipment = async (name: string, notes: string, activityTypes: string[]) => {
     if (!userId) return { ok: false, error: "Please sign in again." };
     const notesValue = notes ? notes : null;
     const { equipment: created } = await createEquipment({
       userId,
       name,
       notes: notesValue || undefined,
+      activityTypes,
     });
 
     if (!created) {
@@ -365,6 +370,7 @@ export default function ManageEquipmentPage({
       {
         name: editName.trim(),
         notes: notesValue,
+        activityTypes: editTypes,
       }
     );
 
@@ -489,9 +495,10 @@ export default function ManageEquipmentPage({
           title="Edit equipment"
           onClose={() => setSelectedId(null)}
           busy={savingChanges}
-          dirty={editName !== selectedEquipment.name || editNotes !== (selectedEquipment.notes ?? "")}
+          dirty={editName !== selectedEquipment.name || editNotes !== (selectedEquipment.notes ?? "") || [...editTypes].sort().join(",") !== [...(selectedEquipment.activity_types ?? [])].sort().join(",")}
         >
           <div className="space-y-4">
+            <EquipmentActivityTypes value={editTypes} onChange={setEditTypes}/>
             <div>
               <label className="text-sm text-gray-700">Name</label>
               <input

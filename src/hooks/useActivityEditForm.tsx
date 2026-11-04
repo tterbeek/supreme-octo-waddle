@@ -466,7 +466,7 @@ export function useActivityEditForm({
     onDeleted();
   };
 
-  const addEquipment = async (name: string, notes: string) => {
+  const addEquipment = async (name: string, notes: string, activityTypes: string[] = [activityType]) => {
     const currentUserId = await ensureUserId();
     if (!currentUserId) return null;
 
@@ -474,6 +474,7 @@ export function useActivityEditForm({
       userId: currentUserId,
       name,
       notes: notes || undefined,
+      activityTypes,
     });
 
     if (!created) {

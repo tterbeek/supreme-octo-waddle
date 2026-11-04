@@ -99,6 +99,7 @@ function fixtureSelected(rows: typeof memoryRows) {
   return rows.filter(r=>ids.has(r.id));
 }
 const equipment: any[] = Array.from({ length: 45 }, (_, i) => ({ id: `equipment-${i}`, user_id: user.id, name: i === 0 ? "Walking shoes" : `Fictional equipment ${i + 1}`, notes: "A remembered detail.", is_active: true, created_at: "2026-01-01" }));
+qa.setEquipmentAssignments=(assignments:Record<string,string[]>)=>{for(const item of equipment)item.activity_types=assignments[item.id]||[];};
 const presets: any[] = Array.from({ length: 18 }, (_, i) => ({ id: `preset-${i}`, user_id: user.id, name: `Gentle walk ${i + 1}`, type: "walk", distance_km: 4, duration_min: 45, effort: 2, equipment_ids: [], preset_equipment: [] }));
 const goal: any = { id: "goal", user_id: user.id, activity_type: "walk", metric: "distance", target: 10, period: "week", name: "Room to move", updated_at: "2026-10-17" };
 const tweak = { id: "tweak", text: "Leave room for a short walk", started_at: "2026-10-01", ended_at: "2026-10-10", end_flow_state: "prompt_reflection" };
@@ -179,6 +180,7 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     const dates=period==='year'?['2020-01-01','2023-01-01','2026-01-01']:period==='month'?['2026-01-01','2026-03-01','2026-10-01']:['2026-10-05','2026-10-12','2026-10-19'];
     return {data:dates.map((period_start,i)=>({activity_type:'run',period_start,distance_value:10+i,duration_value:30+i})),error:null};
   }
+  if(name==='recent_equipment_for_type')return {data:equipment.filter(e=>e.activity_types?.includes(args.p_type)).slice(0,2),error:null};
   if(name.startsWith('social_')){
     if(qa.socialReadDelay)await new Promise(resolve=>setTimeout(resolve,qa.socialReadDelay));
     if(qa.fail)return {data:null,error:{message:'Simulated social error'}};

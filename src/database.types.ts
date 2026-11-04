@@ -558,6 +558,7 @@ export type Database = {
       }
       equipment: {
         Row: {
+          activity_types: string[]
           created_at: string
           id: string
           is_active: boolean
@@ -566,6 +567,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activity_types?: string[]
           created_at?: string
           id?: string
           is_active?: boolean
@@ -574,6 +576,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activity_types?: string[]
           created_at?: string
           id?: string
           is_active?: boolean
@@ -1092,6 +1095,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_activity_preset: { Args: { p_activity: string; p_name: string }; Returns: string }
+      recent_equipment_for_type: { Args: { p_type: string }; Returns: Database["public"]["Tables"]["equipment"]["Row"][] }
       social_home: { Args: Record<string, never>; Returns: Json }
       social_map_consent: { Args: { p_enabled?: boolean }; Returns: Json }
       social_route_input: { Args: { p_activity: string; p_viewer: string }; Returns: string | null }
