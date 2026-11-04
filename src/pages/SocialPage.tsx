@@ -1,3 +1,4 @@
+import SocialMapConsent from '../components/social/SocialMapConsent';
 import FloatingAddButton from '../components/FloatingAddButton';
 import ModalSheet from '../components/ModalSheet';
 import { useCallback,useEffect,useRef,useState } from 'react';
@@ -67,7 +68,8 @@ export default function SocialPage() {
    {home?.enabled&&<>
     <Link className="inline-block min-h-11 py-3 underline text-sm" to="/settings/circle">Manage Circle connections</Link>
     <button className="block min-h-11 underline text-sm" onClick={()=>setOwnComments(true)}>Your comments</button>
-    {home.audiences.map(a=><section key={a.id} className="rounded-xl border p-4 space-y-2">
+    <SocialMapConsent editable />
+   {home.audiences.map(a=><section key={a.id} className="rounded-xl border p-4 space-y-2">
      <h2 className="font-semibold break-words">{a.name}</h2>
      <p className="text-sm">Sharing here: {ruleLabel(a)} · <button className="min-h-11 underline" onClick={()=>setRule(a.id)}>Change</button></p>
      {a.description&&<p className="text-sm whitespace-pre-wrap break-words">{a.description}</p>}
@@ -87,6 +89,7 @@ export default function SocialPage() {
   {error&&<div role="alert" className="rounded-xl border p-4"><p>{error}</p><button className="min-h-11 underline" onClick={refresh}>Retry</button></div>}
   {home&&!home.enabled?<p>The new sharing experience is not enabled in this environment yet.</p>:home&&<>
    <nav aria-label="Social feed audience" className="flex flex-wrap items-center gap-2">{[{id:'',name:'All'},{id:CIRCLE_FILTER,name:'Circle'},...(home.audiences||[]).filter(a=>a.kind==='community')].map(a=><button type="button" key={a.id} aria-pressed={(audience||'')===a.id} className={`min-h-11 max-w-full rounded-full border px-4 text-sm [overflow-wrap:anywhere] ${(audience||'')===a.id?'bg-movenotes-primary/15':''}`} onClick={()=>{const next=new URLSearchParams();if(a.id)next.set('audience',a.id);setParams(next);}}>{a.name}</button>)}</nav>
+   <SocialMapConsent />
    <SocialProfileReminder userId={uid} hasCommunity={home.audiences.some(a=>a.kind==='community')}/>
    {!audience&&challengeIndicators.length>0&&<section aria-label="Community challenges" className="space-y-3">
     <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">Challenges</h2>{challengeIndicators.length>1&&<button type="button" aria-expanded={showAllChallenges} onClick={()=>setShowAllChallenges(value=>!value)} className="inline-flex min-h-11 items-center gap-1 text-sm text-movenotes-primary">{showAllChallenges?'Show less':'View all'}<IconChevronRight size={18} aria-hidden="true"/></button>}</div>

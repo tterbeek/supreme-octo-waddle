@@ -1,3 +1,4 @@
+import SocialRouteMap from './SocialRouteMap';
 import ActivityPhotoPreview from '../ActivityPhotoPreview';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { IconChevronDown, IconDotsVertical, IconSend2 } from '@tabler/icons-react';
@@ -186,6 +187,7 @@ export default function SocialActivityCard({ activity, onConversation, viewerId 
           : <span className="text-sm text-movenotes-muted">Photo unavailable</span>}
       </div>}
 
+      {activity.has_map && <SocialRouteMap activityId={activity.id} preview={activity.photos.length===0}/>}
     </div>
     <section className="space-y-4 border-t border-gray-300/60 pt-4" aria-label="Activity comments">
       <p className="text-xs text-movenotes-muted break-words">Shared with {activity.contexts.map(c => c.name).join(' · ')}</p>

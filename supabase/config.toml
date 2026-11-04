@@ -428,3 +428,6 @@ verify_jwt = false # Strava handshake plus secret callback URL and subscription 
 
 [functions.strava-webhook-worker]
 verify_jwt = false # Requires the server-only x-worker-secret header.
+
+[functions.social-route]
+verify_jwt = false # Handler verifies auth.getUser; only protected geometry is returned.

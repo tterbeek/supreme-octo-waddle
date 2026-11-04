@@ -182,8 +182,12 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
   if(name.startsWith('social_')){
     if(qa.socialReadDelay)await new Promise(resolve=>setTimeout(resolve,qa.socialReadDelay));
     if(qa.fail)return {data:null,error:{message:'Simulated social error'}};
-    const read=name==='social_home'||name==='social_feed'||name==='social_activity'&&!args.p_change||name==='social_community'&&args.p_action==='get'||name==='social_discussion'&&args.p_action==='read'||name==='social_own_comments'||name==='social_challenges'&&args.p_action==='list'||name==='social_invite'&&['preview','get'].includes(args.p_action);
+    const read=name==='social_map_consent'&&args.p_enabled===undefined||name==='social_home'||name==='social_feed'||name==='social_activity'&&!args.p_change||name==='social_community'&&args.p_action==='get'||name==='social_discussion'&&args.p_action==='read'||name==='social_own_comments'||name==='social_challenges'&&args.p_action==='list'||name==='social_invite'&&['preview','get'].includes(args.p_action);
     if(!read){qa.writes.push({table:name,payload:args});await wait();}
+    if(name==='social_map_consent'){
+      if(args.p_enabled!==undefined)qa.mapConsent=args.p_enabled;
+      return {data:{decided:qa.mapConsent!==undefined&&qa.mapConsent!==null,enabled:qa.mapConsent===true,has_route:!!qa.mapHasRoute},error:null};
+    }
     if(name==='social_home')return {data:{enabled:true,circle:'circle-owner',audiences:qa.profileNoCommunity?socialAudiences.filter(a=>a.kind==='circle'):qa.challengeDemo?socialAudiences.filter(a=>a.kind==='circle'||a.community_id==='community-one'):socialAudiences},error:null};
     if(name==='social_set_rule'){Object.assign(socialAudiences.find(a=>a.id===args.p_audience),{mode:args.p_mode,types:args.p_types});return {data:null,error:null};}
     if(name==='social_activity'){
@@ -191,7 +195,7 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
       return {data:{...socialSharing,audiences:socialSharing.audiences.map((a:any)=>({...a}))},error:null};
     }
     if(name==='social_feed'&&args.p_activity==='social-owned-activity')return {data:[{...socialRows[0],id:'social-owned-activity',author_id:user.id,author:'You',contexts:[]}],error:null};
-    if(name==='social_feed')return {data:socialRows.filter(a=>!args.p_activity||a.id===args.p_activity).map(a=>({...a,comment_count:(socialComments[a.id]||[]).length,reaction_counts:socialReactions[a.id]?[{reaction:socialReactions[a.id],count:1}]:[],contexts:args.p_audience?a.contexts.filter((c:any)=>args.p_audience==='00000000-0000-0000-0000-000000000001'?c.kind==='circle':c.audience===args.p_audience):a.contexts})).filter(a=>a.contexts.length),error:null};
+    if(name==='social_feed')return {data:socialRows.filter(a=>!args.p_activity||a.id===args.p_activity).map(a=>({...a,has_map:!!qa.mapHasRoute&&qa.mapConsent===true,comment_count:(socialComments[a.id]||[]).length,reaction_counts:socialReactions[a.id]?[{reaction:socialReactions[a.id],count:1}]:[],contexts:args.p_audience?a.contexts.filter((c:any)=>args.p_audience==='00000000-0000-0000-0000-000000000001'?c.kind==='circle':c.audience===args.p_audience):a.contexts})).filter(a=>a.contexts.length),error:null};
     if(name==='social_community'){
       if(args.p_action==='create'){const id='community-created';if(!socialAudiences.some(a=>a.community_id===id))socialAudiences.push({id:'audience-created',kind:'community',community_id:id,name:args.p_data.name,description:args.p_data.description,role:'owner',mode:'manual',types:[]});return {data:{id},error:null};}
       if(args.p_action==='edit')Object.assign(socialAudiences.find(a=>a.community_id===args.p_id),{name:args.p_data.name,description:args.p_data.description});
@@ -267,6 +271,7 @@ Object.defineProperty(supabase, "functions", { value: { invoke: async (name: str
   }
   if(name==='polar-activity-route'&&qa.case==='share-map-legacy')return {data:{polyline:encodeRoute([[50.83,4.43],[50.85,4.43],[50.85,4.46],[50.87,4.46]])},error:null};
   if(name==='polar-activity-route')return {data:{polyline:qa.case==='map-none'?null:encodeRoute([[50.835,4.435],[50.837,4.438],[50.839,4.436],[50.838,4.431],[50.835,4.435]])},error:qa.fail?{message:'Simulated route failure'}:null};
+  if(name==='social-route')return {data:{segments:[[[50.01,4],[50.02,4],[50.03,4]]]},error:null};
   if(name==='social-media'&&(options as any)?.body?.challenge)return {data:{url:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="330"><rect width="900" height="330" fill="#bad3c4"/><circle cx="450" cy="165" r="135" fill="#5a7c6d"/><path d="M0 280 900 90" stroke="#f3dfae" stroke-width="15"/><text x="450" y="175" text-anchor="middle" font-family="sans-serif" font-size="36" fill="#fff">Fictional Community cover</text></svg>'),expires_in:60},error:null};
   if(name==='social-media'&&(options as any)?.body?.photo?.startsWith('qa-')){const portrait=(options as any).body.photo==='qa-portrait';return {data:{url:'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${portrait?400:600}" height="${portrait?600:400}" viewBox="0 0 600 400"><rect width="600" height="400" fill="#b7c9ac"/><path d="M0 400 280 150 600 400" fill="#6e8b73"/><circle cx="460" cy="85" r="45" fill="#f3dfae"/><text x="300" y="365" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#fff">Fictional shared photo</text></svg>`),expires_in:60},error:null};}
   if(name==='social-media'&&((options as any)?.body?.photo==='profile'||(options as any)?.body?.author))return {data:{url:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#5a7c6d"/><circle cx="16" cy="12" r="6" fill="#f3ede4"/></svg>'),expires_in:60},error:null};

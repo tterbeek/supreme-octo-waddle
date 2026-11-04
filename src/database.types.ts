@@ -1093,6 +1093,8 @@ export type Database = {
     }
     Functions: {
       social_home: { Args: Record<string, never>; Returns: Json }
+      social_map_consent: { Args: { p_enabled?: boolean }; Returns: Json }
+      social_route_input: { Args: { p_activity: string; p_viewer: string }; Returns: string | null }
       social_set_rule: { Args: { p_audience: string; p_mode: string; p_types: string[]; p_zone: string }; Returns: undefined }
       social_activity: { Args: { p_activity: string; p_change?: Json }; Returns: Json }
       social_community: { Args: { p_action: string; p_id?: string; p_data?: Json }; Returns: Json }

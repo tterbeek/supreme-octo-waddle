@@ -6,14 +6,14 @@ import type { Json,Database } from '../database.types';
 export type SocialAudience = { id:string;kind:'circle'|'community';name:string;community_id:string|null;role:'owner'|'admin'|'member'|null;mode:'manual'|'all'|'types';types:string[];description:string|null };
 export type SocialHome = {enabled:boolean;circle?:string;audiences:SocialAudience[]};
 export type SocialContext = {id:string;audience:string;kind:'circle'|'community';community:string|null;name:string};
-export type SocialActivity = {id:string;date:string;shared_at:string;author_id:string;author:string;title:string|null;type:string;distance_km:number|null;duration_min:number|null;public_note:string|null;photos:Array<{id:string;order:number}>;contexts:SocialContext[];comment_count?:number;reaction_counts?:Array<{reaction:string;count:number}>};
+export type SocialActivity = {has_map?:boolean;id:string;date:string;shared_at:string;author_id:string;author:string;title:string|null;type:string;distance_km:number|null;duration_min:number|null;public_note:string|null;photos:Array<{id:string;order:number}>;contexts:SocialContext[];comment_count?:number;reaction_counts?:Array<{reaction:string;count:number}>};
 export type SocialSettings = {private:boolean;public_note:string|null;legacy_photo:boolean;has_legacy_photo:boolean;photos:Array<{id:string;shared:boolean;thumb:string}>;audiences:Array<{id:string;name:string;shared:boolean}>};
 export type SocialComment = {id:string;author_id:string;author:string;body:string;created_at:string;can_delete:boolean;has_avatar?:boolean};
 export type Conversation = {can_moderate:boolean;comments:SocialComment[];reactions:Array<{reaction:string;count:number}>;my_reaction:string|null;blocked?:boolean;reports?:Array<{id:string;reason:string;comment_id:string|null}>;has_more?:boolean;before?:{created_at:string;id:string}|null;comment_count?:number};
 export type Community = {id:string;name:string;description:string;owner_id:string;members:Array<{id:string;name:string;role:'owner'|'admin'|'member'}>};
 export type Challenge = {id:string;title:string;metric:'distance'|'duration'|'count'|'days';target:number;scope:'collective'|'personal';types:string[];starts_on:string;ends_on:string;time_zone:string;total:number;mine:number;participating:boolean;state:'upcoming'|'active'|'completed'|'cancelled';has_cover?:boolean;cover_updated_at?:string|null};
 
-type SocialFunction = 'social_home'|'social_set_rule'|'social_activity'|'social_community'|'social_invite'|'social_feed'|'social_discussion'|'social_challenges'|'social_own_comments'|'social_delete_own_comment'|'social_remove_community_activity';
+type SocialFunction = 'social_home'|'social_set_rule'|'social_activity'|'social_community'|'social_invite'|'social_feed'|'social_discussion'|'social_challenges'|'social_own_comments'|'social_delete_own_comment'|'social_remove_community_activity'|'social_map_consent';
 async function call<T>(name:SocialFunction,args:Record<string,Json|undefined>={},mutates=false):Promise<T> {
   const {data,error}=await supabase.rpc(name as keyof Database['public']['Functions'],args as never);
   if(error)throw new Error(error.message);
@@ -52,4 +52,16 @@ export async function socialCommentAvatar(activity:string,author:string):Promise
 export async function socialPhoto(context:string,photo:string,thumb=false):Promise<string> {
   const {data,error}=await supabase.functions.invoke('social-media',{body:{context,photo,thumb}});
   if(error||!data?.url)throw new Error('Photo unavailable');return socialMediaUrl(data.url,import.meta.env.VITE_SUPABASE_URL);
+}
+
+export type SocialMapConsent = { decided:boolean; enabled:boolean; has_route:boolean };
+export const socialMapConsent=(enabled?:boolean)=>call<SocialMapConsent>('social_map_consent',
+ enabled===undefined?{}:{p_enabled:enabled},enabled!==undefined);
+export async function socialRoute(activity:string,signal?:AbortSignal):Promise<import('../../supabase/functions/_shared/activityRoute').RoutePoint[][]|null> {
+ const {data,error}=await supabase.functions.invoke('social-route',{body:{activity},signal});
+ if(error){
+  if((error.context as Response|undefined)?.status===404)return null;
+  throw new Error('Could not load the shared map.');
+ }
+ return data?.segments??null;
 }

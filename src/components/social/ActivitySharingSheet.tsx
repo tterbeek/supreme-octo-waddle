@@ -1,3 +1,4 @@
+import SocialMapConsent from './SocialMapConsent';
 import { useEffect,useState } from 'react';
 import ModalSheet from '../ModalSheet';
 import { FormActions,FormError } from '../forms/FormLayout';
@@ -18,11 +19,12 @@ export default function ActivitySharingSheet({activityId,onClose,onSaved}:{activ
  }catch(e){setError((e as Error).message);}finally{setBusy(false);}};
  const dirty=!!initial&&(note!==(initial.public_note||'')||JSON.stringify([...audiences].sort())!==JSON.stringify(initial.audiences.filter(a=>a.shared).map(a=>a.id).sort())||JSON.stringify([...photos].sort())!==JSON.stringify(initial.photos.filter(p=>p.shared).map(p=>p.id).sort()));
  return <ModalSheet title="Activity sharing" onClose={onClose} busy={busy} dirty={dirty}><div className="space-y-4">
-  <p className="text-sm text-movenotes-muted">These choices affect this activity only. Shares persist until unshared or access ends; future eligible connections/members can see still-shared history.</p>
+  <p className="text-sm text-movenotes-muted">Audience, note and photo choices affect this activity only. Map sharing applies to all activities you share. Shares persist until unshared or access ends; future eligible connections/members can see still-shared history.</p>
   <p className="text-sm text-movenotes-muted">Sharing with another audience also makes existing comments and reactions visible to its eligible members. Future eligible connections and members can see the same thread.</p>
   {!initial&&!error&&<p role="status">Loading sharing choices…</p>}
   <FormError>{error}</FormError>{!initial&&error&&<button type="button" className="underline" onClick={()=>setRetry(n=>n+1)}>Retry</button>}
   {initial&&<>
+   <SocialMapConsent editable />
    <button type="button" disabled={openingDiscussion} className="min-h-11 underline text-sm" onClick={()=>{setOpeningDiscussion(true);void socialFeed(undefined,undefined,activityId).then(rows=>{if(!rows[0])throw Error('Conversation unavailable');setDiscussion(rows[0]);}).catch(e=>setError(e.message)).finally(()=>setOpeningDiscussion(false));}}>Comments and reactions</button>
    <fieldset className="space-y-2"><legend>Share with</legend>{initial.audiences.map(a=><label key={a.id} className="flex items-center gap-3 rounded-xl border p-3"><input type="checkbox" checked={audiences.includes(a.id)} onChange={e=>setAudiences(e.target.checked?[...audiences,a.id]:audiences.filter(id=>id!==a.id))}/>{a.name}</label>)}</fieldset>
    <button type="button" className="min-h-11 underline text-sm" disabled={initial.private} onClick={()=>void save(true)}>{initial.private?'Kept private':'Keep this activity private'}</button>

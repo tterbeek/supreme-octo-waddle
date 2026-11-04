@@ -240,3 +240,9 @@ that preset copies the route into the new manual activity. Custom logging and
 presets without routes remain map-free; editing other preset details retains its route.
 Existing presets are unchanged: save a new preset from the original activity to include its map.
 Apply migration 20261103000000_preset_routes.sql before deploying this frontend.
+
+### Circle and Community maps
+
+[Protected map sharing and deployment](docs/social-map-sharing.md) adds one-time
+owner consent and server-side start/finish protection. Apply migration
+20261104000000_social_maps.sql and deploy social-route before the frontend.
