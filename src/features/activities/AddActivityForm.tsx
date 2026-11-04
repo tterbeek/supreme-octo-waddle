@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ModalSheet from "../../components/ModalSheet";
+import ActivityRouteMap from "../../components/ActivityRouteMap";
 import { FormActions } from "../../components/forms/FormLayout";
 import TooltipBubble from "../../components/TooltipBubble";
 import PresetsBar from "../../components/quick-log/PresetsBar";
@@ -142,6 +143,13 @@ export default function AddActivityForm({
             onSelectCustom={resetToCustom}
             onOpenMore={() => setShowMorePresets(true)}
           />}
+
+          {!existingActivity && activePreset?.type === activityType && activePreset.route_polyline && (
+            <section aria-label="Preset route">
+              <p className="text-sm text-movenotes-muted">Route from {activePreset.name}</p>
+              <ActivityRouteMap key={activePreset.id} activityId={activePreset.id} source="manual" polyline={activePreset.route_polyline} />
+            </section>
+          )}
 
           <ActivityFormFields
             values={{

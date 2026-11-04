@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import type { Preset } from "../types";
 import { Zap } from "lucide-react";
+import { IconMap2 } from "@tabler/icons-react";
 import {
   ACTIVITY_TYPES,
   isCreatableActivityType,
@@ -177,6 +178,7 @@ export default function PresetsPage() {
                   {p.name || "Untitled preset"}
                 </div>
                 <div className="text-sm text-gray-600 mt-1 flex gap-2 flex-wrap items-center">
+                  {p.route_polyline && <span className="inline-flex items-center gap-1 text-movenotes-primary"><IconMap2 size={16} aria-hidden="true" />Route included</span>}
                   {distanceDisplay && <span>{distanceDisplay}</span>}
                   {p.duration_min != null && (
                     <span>

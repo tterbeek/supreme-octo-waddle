@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import ModalSheet from "../../components/ModalSheet";
+import ActivityRouteMap from "../../components/ActivityRouteMap";
 import { FormActions } from "../../components/forms/FormLayout";
 import { ACTIVITY_TYPES, supportsEffort } from "../../config/activityTypes";
 import { useUnitSystem } from "../../contexts/UnitContext";
@@ -199,6 +200,11 @@ export default function EditPresetModal({
 
   return (
     <ModalSheet title="Edit preset" onClose={onClose} ready={ready} busy={saving || deleting} draft={{ name, distanceKm, duration, effort, selectedEquipmentIds }}>
+
+      {preset.route_polyline && <section className="mb-4" aria-label="Saved preset route">
+        <p className="text-sm text-movenotes-muted">Route included with this preset</p>
+        <ActivityRouteMap activityId={preset.id} source="manual" polyline={preset.route_polyline} />
+      </section>}
 
       <PresetForm
         values={{
