@@ -22,6 +22,7 @@ const ACTIVITY_ORDER: Record<GoalStat["activity_type"], number> = {
   walk: 2,
   strength: 3,
   yoga: 4,
+  dance: 4.5,
   hike: 5,
   swim: 6,
   meditation: 7,

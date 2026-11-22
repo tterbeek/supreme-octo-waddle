@@ -1,7 +1,7 @@
 import policyV1 from './journey-distance-v1.json' with { type: 'json' };
 export const JOURNEY_POLICY = policyV1;
 export type BikeMode = 'conventional'|'electric'|'unknown'|'not_applicable';
-export type BikeSource = 'override'|'equipment'|'conflicting_bikes'|'import'|'unspecified'|null;
+export type BikeSource = 'equipment'|'conflicting_bikes'|'import'|'unspecified'|null;
 export type BikeSnapshot = {mode:BikeMode;source:BikeSource};
 export type ContributionCalculation = {
  basis:'recorded_distance'|'recorded_duration'|'participation'|'invalid';
@@ -37,10 +37,9 @@ export function targetToKm(value:string,imperial:boolean):string|null {
  return format(imperial?multiply(parsed,decimal('1.609344')!):parsed);
 }
 export function resolveJourneyBike(input:{
- type:string;override?:string|null;bikes?:Array<{category?:string|null;electric_assist?:string|null}>;sportSubtype?:string|null;
+ type:string;bikes?:Array<{category?:string|null;electric_assist?:string|null}>;sportSubtype?:string|null;
 }):BikeSnapshot {
  if(input.type!=='ride')return {mode:'not_applicable',source:null};
- if(['conventional','electric','unknown'].includes(input.override??''))return {mode:input.override as BikeMode,source:'override'};
  const bikes=(input.bikes??[]).filter(b=>b.category==='bike');
  const modes=new Set(bikes.map(b=>b.electric_assist==='none'?'conventional':b.electric_assist==='electric'?'electric':'unknown'));
  if(modes.size>1)return {mode:'unknown',source:'conflicting_bikes'};

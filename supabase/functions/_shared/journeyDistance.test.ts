@@ -43,17 +43,15 @@ describe('cycling-baseline virtual-distance policy',()=>{
  });
 });
 describe('bike resolution without guessing from names or performance',()=>{
- it('uses override then structured metadata then explicit integration subtype',()=>{
-  expect(resolveJourneyBike({type:'ride',override:'conventional',bikes:[{category:'bike',electric_assist:'electric'}],sportSubtype:'EBikeRide'})).toEqual({mode:'conventional',source:'override'});
+ it('uses equipment before explicit integration subtype',()=>{
   expect(resolveJourneyBike({type:'ride',bikes:[{category:'bike',electric_assist:'electric'}],sportSubtype:'Ride'})).toEqual({mode:'electric',source:'equipment'});
   expect(resolveJourneyBike({type:'ride',sportSubtype:'EBikeRide'})).toEqual({mode:'electric',source:'import'});
   expect(resolveJourneyBike({type:'ride',sportSubtype:'Ride'})).toEqual({mode:'conventional',source:'import'});
  });
  it('preserves unknown and conflicting bikes instead of inferring assistance',()=>{
   expect(resolveJourneyBike({type:'ride',bikes:[{category:'bike',electric_assist:'electric'},{category:'bike',electric_assist:'none'}],sportSubtype:'EBikeRide'})).toEqual({mode:'unknown',source:'conflicting_bikes'});
-  expect(resolveJourneyBike({type:'ride',override:'unknown',sportSubtype:'EBikeRide'})).toEqual({mode:'unknown',source:'override'});
   expect(resolveJourneyBike({type:'ride',bikes:[{category:'shoes',electric_assist:null}]})).toEqual({mode:'unknown',source:'unspecified'});
-  expect(resolveJourneyBike({type:'swim',override:'electric'})).toEqual({mode:'not_applicable',source:null});
+  expect(resolveJourneyBike({type:'swim'})).toEqual({mode:'not_applicable',source:null});
  });
 });
 

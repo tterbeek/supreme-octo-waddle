@@ -362,7 +362,6 @@ export function useActivityEditForm({
         feeling_during: feelingDuringValue,
         feeling_after: feelingAfterValue,
         effort: effortValue,
-        cycling_mode_override: activity.cycling_mode_override ?? null,
         notes: note,
         note_image_url: imageUrl,
         note_thumb_image_url: thumbUrl,

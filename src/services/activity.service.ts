@@ -10,7 +10,6 @@ export type UpdateActivityInput = {
   feeling_during: FeelingDuring | null;
   feeling_after?: FeelingAfter | null;
   effort: number | null;
-  cycling_mode_override?: string|null;
   notes: string;
   note_image_url: string | null;
   note_thumb_image_url: string | null;
@@ -27,7 +26,6 @@ export async function updateActivity(input: UpdateActivityInput) {
       feeling_during: input.feeling_during,
       ...(input.feeling_after !== undefined ? { feeling_after: input.feeling_after } : {}),
       effort: input.effort,
-      ...(input.cycling_mode_override!==undefined?{cycling_mode_override:input.cycling_mode_override}:{}),
       notes: input.notes,
       note_updated_at: new Date().toISOString(),
       note_image_url: input.note_image_url,

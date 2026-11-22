@@ -67,7 +67,6 @@ export type Database = {
       }
       activities: {
         Row: {
-          cycling_mode_override: string | null
           journey_revision: number
 
           route_polyline: string | null
@@ -105,7 +104,6 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          cycling_mode_override?: string | null
           journey_revision?: number
 
           route_polyline?: string | null
@@ -143,7 +141,6 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          cycling_mode_override?: string | null
           journey_revision?: number
 
           route_polyline?: string | null

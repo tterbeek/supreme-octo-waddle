@@ -7,7 +7,7 @@ export async function fetchCalendarActivities(userId: string, start: string, end
   const rows = [];
   for (let offset = 0; ; offset += 500) {
     const result = await supabase.from('activities').select(
-      'id, user_id, type, source, external_source, import_status, import_updated_at, imported_at, route_polyline, route_checked_at, user_enrichment_status, cycling_mode_override, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, feeling_during, feeling_after, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))'
+      'id, user_id, type, source, external_source, import_status, import_updated_at, imported_at, route_polyline, route_checked_at, user_enrichment_status, raw_sport_type, raw_type, date, started_at, title, notes, distance_km, duration_min, feeling, feeling_during, feeling_after, effort, note_image_url, note_thumb_image_url, created_at, photos:activity_photos(id, image_path, thumb_path, sort_order, created_at), activity_equipment:activity_equipment(equipment:equipment_id (id, name, notes, is_active))'
     ).eq('user_id', userId).gte('date', start).lt('date', end)
       .order('date', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true })
       .range(offset, offset + 499);
@@ -49,7 +49,7 @@ export async function fetchFeedPage(
   if (activityIds.length > 0) {
     const statusResult = await supabase
       .from("activities")
-      .select("id, user_enrichment_status, cycling_mode_override, route_polyline, route_checked_at, import_status, import_updated_at, imported_at, external_source")
+      .select("id, user_enrichment_status, route_polyline, route_checked_at, import_status, import_updated_at, imported_at, external_source")
       .in("id", activityIds);
     // Never expose an editable imported card when its completion state is unknown.
     if (statusResult.error) return {
@@ -59,7 +59,6 @@ export async function fetchFeedPage(
     const statuses = new Map(statusResult.data.map((row) => [row.id, row]));
     enrichedRows = rows.map((row) => ({
       ...row,
-      cycling_mode_override: statuses.get(row.id)?.cycling_mode_override ?? null,
       import_status: statuses.get(row.id)?.import_status ?? 'ready',
       import_updated_at: statuses.get(row.id)?.import_updated_at ?? null,
       imported_at: statuses.get(row.id)?.imported_at ?? null,

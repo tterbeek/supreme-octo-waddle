@@ -15,9 +15,13 @@ describe('Journal route loading', () => {
       { id: 'manual', route_polyline: 'preset-route', import_status: 'ready' },
       { id: 'import', route_polyline: 'import-route', import_status: 'ready' },
     ], error: null });
-    from.mockReturnValue({ select: vi.fn().mockReturnValue({ in: include }) });
+    const select = vi.fn().mockReturnValue({ in: include });
+    from.mockReturnValue({ select });
     const result = await fetchFeedPage(20);
     expect(include).toHaveBeenCalledWith('id', ['manual', 'import']);
+    expect(select.mock.calls[0][0]).not.toContain('cycling_mode_override');
+    expect(result.data).toHaveLength(3);
+    expect(result.error).toBeNull();
     expect(result.data[0]).toMatchObject({ source: 'manual', route_polyline: 'preset-route' });
     expect(result.data[1]).toMatchObject({ source: 'polar', route_polyline: 'import-route' });
     expect(result.data[2].entry_kind).toBe('journal_entry');

@@ -56,7 +56,6 @@ export async function fetchPresets(userId: string) {
 }
 
 export type SaveQuickLogInput = {
-  cyclingOverride?: string|null;
   routePolyline?: string | null;
   userId: string;
   activityType: string;
@@ -84,7 +83,6 @@ export async function saveQuickLog(input: SaveQuickLogInput) {
         feeling_during: input.feelingDuringValue,
         feeling_after: input.feelingAfterValue,
         title: input.title,
-        cycling_mode_override: input.cyclingOverride ?? null,
         route_polyline: input.routePolyline ?? null,
       },
     ])
@@ -132,7 +130,6 @@ export async function completeImportedActivity(
         feeling_during: input.feelingDuringValue,
         feeling_after: input.feelingAfterValue,
         title: input.title,
-        cycling_mode_override: input.cyclingOverride ?? null,
       })
       .eq("id", activityId)
       .eq("user_id", userId)

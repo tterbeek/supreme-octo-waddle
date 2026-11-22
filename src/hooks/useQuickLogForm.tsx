@@ -317,7 +317,6 @@ export function useQuickLogForm({
       feelingAfterValue: feelingAfter,
       title,
       equipmentIds: selectedEquipmentIds,
-      cyclingOverride: existingActivity?.cycling_mode_override ?? null,
       routePolyline: !existingActivity && activePreset?.type === activityType ? activePreset.route_polyline ?? null : null,
     };
 

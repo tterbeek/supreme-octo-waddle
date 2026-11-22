@@ -1,3 +1,4 @@
+import DanceIcon from "../components/icons/DanceIcon";
 import type { ComponentType } from "react";
 
 // Tabler Icons (perfect matches)
@@ -35,6 +36,7 @@ export const SETTINGS_ACTIVITY_TYPE_IDS = [
   "walk",
   "strength",
   "yoga",
+  "dance",
   "hike",
   "swim",
   "meditation",
@@ -57,7 +59,7 @@ export const METRIC_OVERRIDE_ACTIVITY_TYPE_IDS = [
 export const supportsMetricOverride = (activityType: string) =>
   (METRIC_OVERRIDE_ACTIVITY_TYPE_IDS as readonly string[]).includes(activityType);
 
-export const EFFORT_ACTIVITY_TYPE_IDS = ["run", "ride", "swim", "hike"] as const;
+export const EFFORT_ACTIVITY_TYPE_IDS = ["run", "ride", "swim", "hike", "dance"] as const;
 
 export const isCreatableActivityType = (activityType: string) =>
   (CREATABLE_ACTIVITY_TYPE_IDS as readonly string[]).includes(activityType);
@@ -114,6 +116,14 @@ export const ACTIVITY_TYPES: Record<string, ActivityTypeConfig> = {
     label: "Strength",
     equipmentLabel: "Strength",
     Icon: IconBarbell,
+    defaultFields: ["duration_min"],
+    optionalFields: [],
+  },
+  dance: {
+    id: "dance",
+    label: "Dance",
+    equipmentLabel: "Dancing",
+    Icon: DanceIcon,
     defaultFields: ["duration_min"],
     optionalFields: [],
   },

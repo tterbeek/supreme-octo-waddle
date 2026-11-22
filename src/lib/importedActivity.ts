@@ -1,6 +1,5 @@
 export type ImportedActivity = {
   id: string;
-  cycling_mode_override?: string|null;
   user_id?: string | null;
   type: string;
   source?: string | null;
