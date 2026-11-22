@@ -74,4 +74,9 @@ if [[ -d "$tests_dir" ]]; then
   done
 fi
 
+if [[ -f "$repo_root/scripts/check-journey-concurrency.py" ]]; then
+  echo "Checking concurrent journey reconciliation..."
+  python3 "$repo_root/scripts/check-journey-concurrency.py" --container "supabase_db_${verify_project_id}"
+fi
+
 echo "Local schema verification passed. No hosted Supabase project was changed."

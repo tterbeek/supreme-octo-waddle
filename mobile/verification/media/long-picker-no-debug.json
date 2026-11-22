@@ -1,0 +1,9 @@
+{
+  "device": "emulator-5554 Android17/API37",
+  "webViewDebugging": false,
+  "checks": [
+    "Existing PWA native photo picker remains open90seconds",
+    "App process preserved",
+    "Cancelling returns to original edit form without losing saved activity"
+  ]
+}

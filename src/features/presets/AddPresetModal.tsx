@@ -1,3 +1,4 @@
+import type { EquipmentClassificationValue } from "../../components/EquipmentClassification";
 import { useEffect, useState } from "react";
 import ModalSheet from "../../components/ModalSheet";
 import { FormActions } from "../../components/forms/FormLayout";
@@ -132,7 +133,7 @@ export default function AddPresetModal({
     return data.user.id;
   };
 
-  const addEquipment = async (eqName: string, notes: string, activityTypes: string[] = [activityType]) => {
+  const addEquipment = async (eqName: string, notes: string, activityTypes: string[] = [activityType], classification?: EquipmentClassificationValue) => {
     const currentUserId = await ensureUser();
     if (!currentUserId) return null;
     const { equipment: created } = await createEquipment({
@@ -140,6 +141,7 @@ export default function AddPresetModal({
       name: eqName,
       notes,
       activityTypes,
+      classification,
     });
     if (!created) return null;
     setEquipment((prev) => [created, ...prev]);

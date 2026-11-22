@@ -1,3 +1,4 @@
+import EquipmentClassification, { type EquipmentClassificationValue } from "./EquipmentClassification";
 import EquipmentActivityTypes from "./EquipmentActivityTypes";
 import FormTextarea from "./forms/FormTextarea";
 import { useEffect, useState } from "react";
@@ -16,7 +17,8 @@ type EquipmentFormSheetProps = {
   initialName?: string;
   initialNotes?: string;
   initialActivityTypes?: string[];
-  onSubmit: (name: string, notes: string, activityTypes: string[]) => Promise<SubmitResult>;
+  initialClassification?: EquipmentClassificationValue;
+  onSubmit: (name: string, notes: string, activityTypes: string[], classification: EquipmentClassificationValue) => Promise<SubmitResult>;
   onClose: () => void;
 };
 
@@ -27,6 +29,7 @@ export default function EquipmentFormSheet({
   initialName = "",
   initialNotes = "",
   initialActivityTypes = [],
+  initialClassification,
   onSubmit,
   onClose,
 }: EquipmentFormSheetProps) {
@@ -34,6 +37,8 @@ export default function EquipmentFormSheet({
   const [notes, setNotes] = useState(initialNotes);
   const [activityTypes, setActivityTypes] = useState(initialActivityTypes);
   const initialTypeKey = [...initialActivityTypes].sort().join(",");
+  const classificationKey=JSON.stringify(initialClassification??{category:null,electricAssist:null});
+  const [classification,setClassification]=useState<EquipmentClassificationValue>(initialClassification??{category:null,electricAssist:null});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,8 +46,9 @@ export default function EquipmentFormSheet({
     setName(initialName);
     setNotes(initialNotes);
     setActivityTypes(initialTypeKey ? initialTypeKey.split(",") : []);
+    setClassification(JSON.parse(classificationKey));
     setError(null);
-  }, [initialName, initialNotes, initialTypeKey]);
+  }, [initialName, initialNotes, initialTypeKey, classificationKey]);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -54,7 +60,7 @@ export default function EquipmentFormSheet({
     setError(null);
 
     try {
-      const result = await onSubmit(name.trim(), notes.trim(), activityTypes);
+      const result = await onSubmit(name.trim(), notes.trim(), activityTypes, classification);
       if (!result.ok) {
         setError(result.error || "Could not save equipment right now");
         return;
@@ -69,7 +75,7 @@ export default function EquipmentFormSheet({
   };
 
   return (
-    <ModalSheet title={title} onClose={onClose} busy={saving} dirty={name !== initialName || notes !== initialNotes || [...activityTypes].sort().join(",") !== initialTypeKey} presentation="dialog">
+    <ModalSheet title={title} onClose={onClose} busy={saving} dirty={name !== initialName || notes !== initialNotes || [...activityTypes].sort().join(",") !== initialTypeKey || JSON.stringify(classification)!==classificationKey} presentation="dialog">
       <div className="space-y-3">
         <FormField label="Name (required)" help="Give it a name you'll recognize later.">{field => <input
             {...field}
@@ -87,6 +93,7 @@ export default function EquipmentFormSheet({
             className="w-full border rounded-md p-2 mt-1 resize-none"
             placeholder="Anything you want to remember about this."
           />}</FormField>
+        <EquipmentClassification value={classification} onChange={setClassification}/>
         <EquipmentActivityTypes value={activityTypes} onChange={setActivityTypes}/>
         {error && <p role="alert" className="mn-error">{error}</p>}
         <FormActions>

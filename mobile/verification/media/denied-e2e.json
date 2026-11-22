@@ -1,0 +1,18 @@
+{
+  "scenario": "denied",
+  "backend": "local Supabase",
+  "device": "emulator-5554 Android17/API37",
+  "activity": "346fd518-8222-4bd4-b567-a5ef49a0c5a6",
+  "photo": "a14c2ffa-8010-4bcc-b4da-f6b7788f47a1",
+  "coordinates": {
+    "lat": null,
+    "lng": null
+  },
+  "checks": [
+    "Original GPS-bearing photo selected after metadata permission denied",
+    "Existing PWA uploads image successfully",
+    "Coordinates remain empty despite original EXIF containing GPS",
+    "Uploaded image has no GPS EXIF",
+    "Activity saved before photo selection remains intact"
+  ]
+}

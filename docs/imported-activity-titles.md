@@ -52,13 +52,18 @@ the insertion or sync response path.
   loops returning home. A single start coordinate is **not** a fallback.
 - Use the existing server-side `GOOGLE_MAPS_API_KEY`, with a five-second geocode
   timeout. Request locality/postal-town/municipal administrative result types;
-  extract only typed address components. Never use a formatted street address,
-  neighbourhood, park/POI, state or country as the title suffix. See
+  extract only typed locality components on the first pass. If no town or
+  municipality is found, Polar reuses the existing nearby-place resolver used
+  for Strava/photo locations, at the same offset point. Suitable parks, natural
+  features, landmarks or neighbourhoods may then supply the suffix. Formatted
+  street addresses and unsafe names remain excluded. Quota/provider errors skip
+  additional lookups. See
   [Google reverse-geocoding result types](https://developers.google.com/maps/documentation/geocoding/guides-v3/requests-reverse-geocoding).
 - Reuse `location_cache` under an `import-locality:` namespace so old park/POI
-  results cannot be mistaken for towns. Cache only the coarse point (three
-  decimal places) and locality, not a GPS track or exact home/start location.
-- Missing GPS, missing key, no sensible locality, provider/geocoding failures,
+  results cannot be mistaken for towns. That namespace stores only the coarse
+  point (three decimal places) and locality. Place fallback uses the shared
+  resolver/cache at the offset point; no full track is stored in the location cache.
+- Missing GPS, missing key, no suitable locality or nearby place, provider/geocoding failures,
   and interrupted workers leave the usable time/type title intact. Background
   work is best-effort within the platform runtime limit, not a new durable queue.
 - New Polar imports fetch route features in separate one-day requests, grouped

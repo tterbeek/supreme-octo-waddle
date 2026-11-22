@@ -1,3 +1,4 @@
+import type { EquipmentClassificationValue } from "../../components/EquipmentClassification";
 import { useState, useEffect } from "react";
 import ModalSheet from "../../components/ModalSheet";
 import ActivityRouteMap from "../../components/ActivityRouteMap";
@@ -111,7 +112,7 @@ export default function EditPresetModal({
     loadEquipment();
   }, [preset]);
 
-  const addEquipment = async (eqName: string, notes: string, activityTypes: string[] = [activityType]) => {
+  const addEquipment = async (eqName: string, notes: string, activityTypes: string[] = [activityType], classification?: EquipmentClassificationValue) => {
     const currentUserId = await ensureUser();
     if (!currentUserId) return null;
     const { equipment: created } = await createEquipment({
@@ -119,6 +120,7 @@ export default function EditPresetModal({
       name: eqName,
       notes,
       activityTypes,
+      classification,
     });
     if (!created) return null;
     setEquipment((prev) => [created, ...prev]);

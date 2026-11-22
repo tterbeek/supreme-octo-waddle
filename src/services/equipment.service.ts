@@ -1,3 +1,4 @@
+import type { EquipmentClassificationValue } from "../components/EquipmentClassification";
 import { supabase } from "../supabaseClient";
 import type { Equipment } from "../types";
 
@@ -37,6 +38,7 @@ export async function createEquipment(params: {
   name: string;
   notes?: string;
   activityTypes?: string[];
+  classification?: EquipmentClassificationValue;
 }) {
   const { data, error } = await supabase
     .from("equipment")
@@ -46,6 +48,8 @@ export async function createEquipment(params: {
         name: params.name,
         notes: params.notes ?? null,
         activity_types: params.activityTypes ?? [],
+        category: params.classification?.category ?? null,
+        electric_assist: params.classification?.category==="bike" ? params.classification.electricAssist : null,
       },
     ])
     .select("*")
@@ -61,13 +65,14 @@ export async function createEquipment(params: {
 
 export async function updateEquipment(
   equipmentId: string,
-  updates: { name: string; notes?: string | null; activityTypes?: string[] }
+  updates: { name: string; notes?: string | null; activityTypes?: string[]; classification?: EquipmentClassificationValue }
 ) {
   const { data, error } = await supabase
     .from("equipment")
     .update({
       name: updates.name,
       notes: updates.notes ?? null,
+      ...(updates.classification ? { category: updates.classification.category, electric_assist: updates.classification.category==="bike" ? updates.classification.electricAssist : null } : {}),
       ...(updates.activityTypes ? { activity_types: updates.activityTypes } : {}),
     })
     .eq("id", equipmentId)
@@ -102,7 +107,7 @@ export async function fetchEquipmentForActivity(activityId: string) {
   const { data, error } = await supabase
     .from("activity_equipment")
     .select(
-      "equipment:equipment_id (id, user_id, name, notes, is_active, created_at)"
+      "equipment:equipment_id (id, user_id, name, notes, is_active, created_at, category, electric_assist, activity_types)"
     )
     .eq("activity_id", activityId);
 
@@ -120,31 +125,7 @@ export async function replaceActivityEquipment(
   activityId: string,
   equipmentIds: string[]
 ) {
-  const { error: deleteError } = await supabase
-    .from("activity_equipment")
-    .delete()
-    .eq("activity_id", activityId);
-
-  if (deleteError) {
-    console.error("[Equipment] Error clearing activity equipment:", deleteError.message);
-    return { error: deleteError };
-  }
-
-  if (equipmentIds.length === 0) {
-    return { error: null };
-  }
-
-  const { error } = await supabase.from("activity_equipment").insert(
-    equipmentIds.map((equipmentId) => ({
-      activity_id: activityId,
-      equipment_id: equipmentId,
-    }))
-  );
-
-  if (error) {
-    console.error("[Equipment] Error linking equipment to activity:", error.message);
-  }
-
+  const { error } = await supabase.rpc("set_activity_equipment", { p_activity: activityId, p_ids: equipmentIds });
   return { error };
 }
 
@@ -186,4 +167,8 @@ export async function fetchRecentEquipment(activityType:string):Promise<Equipmen
   if(error)return [];
   return (data||[]) as Equipment[];
  } catch {return [];}
+}
+
+export async function refreshActivityBikeDefault(activityId:string){
+ const {error}=await supabase.rpc("refresh_activity_bike_default",{p_activity:activityId});return {error};
 }

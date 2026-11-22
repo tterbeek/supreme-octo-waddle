@@ -11,9 +11,10 @@ export type SocialSettings = {private:boolean;public_note:string|null;legacy_pho
 export type SocialComment = {id:string;author_id:string;author:string;body:string;created_at:string;can_delete:boolean;has_avatar?:boolean};
 export type Conversation = {can_moderate:boolean;comments:SocialComment[];reactions:Array<{reaction:string;count:number}>;my_reaction:string|null;blocked?:boolean;reports?:Array<{id:string;reason:string;comment_id:string|null}>;has_more?:boolean;before?:{created_at:string;id:string}|null;comment_count?:number};
 export type Community = {id:string;name:string;description:string;owner_id:string;members:Array<{id:string;name:string;role:'owner'|'admin'|'member'}>};
-export type Challenge = {id:string;title:string;metric:'distance'|'duration'|'count'|'days';target:number;scope:'collective'|'personal';types:string[];starts_on:string;ends_on:string;time_zone:string;total:number;mine:number;participating:boolean;state:'upcoming'|'active'|'completed'|'cancelled';has_cover?:boolean;cover_updated_at?:string|null};
+export type ChallengeRoute={slug:string;version:number;geometryVersion:string;title:string;targetKm:string};
+export type Challenge = {route?:ChallengeRoute;id:string;title:string;metric:'distance'|'duration'|'count'|'days'|'virtual_distance';target:number|string;scope:'collective'|'personal';types:string[];starts_on:string;ends_on:string|null;time_zone:string;total:number|string;mine:number|string;participating:boolean;state:'upcoming'|'active'|'completed'|'cancelled'|'draft'|'closed';activity_scope?:'all'|'selected';policy_version?:string;contributors_count?:number;destination_reached?:boolean;closed_at?:string|null;has_cover?:boolean;cover_updated_at?:string|null};
 
-type SocialFunction = 'social_home'|'social_set_rule'|'social_activity'|'social_community'|'social_invite'|'social_feed'|'social_discussion'|'social_challenges'|'social_own_comments'|'social_delete_own_comment'|'social_remove_community_activity'|'social_map_consent';
+type SocialFunction = 'social_home'|'social_set_rule'|'social_activity'|'social_community'|'social_invite'|'social_feed'|'social_discussion'|'social_challenges'|'social_own_comments'|'social_delete_own_comment'|'social_remove_community_activity'|'social_map_consent'|'social_journey_details'|'social_journey_catalog'|'social_journey_route';
 async function call<T>(name:SocialFunction,args:Record<string,Json|undefined>={},mutates=false):Promise<T> {
   const {data,error}=await supabase.rpc(name as keyof Database['public']['Functions'],args as never);
   if(error)throw new Error(error.message);
@@ -65,3 +66,9 @@ export async function socialRoute(activity:string,signal?:AbortSignal):Promise<i
  }
  return data?.segments??null;
 }
+
+export type JourneyDetails = { summary:Challenge; policy:typeof import('../../supabase/functions/_shared/journey-distance-v1.json'); own:Array<{id:string;title:string|null;type:string;occurred_at:string;amount:string;calculation:import('../../supabase/functions/_shared/journeyDistance').ContributionCalculation}> };
+export const socialJourneyDetails=(challenge:string)=>call<JourneyDetails>('social_journey_details',{p_challenge:challenge});
+
+export type CuratedRouteDetails={summary:Challenge;template:import('../lib/curatedJourneys').JourneyTemplate;reached:string[];next:import('../lib/curatedJourneys').JourneyWaypoint|null};
+export const socialCuratedRoute=(challenge:string)=>call<CuratedRouteDetails>('social_journey_route',{p_challenge:challenge});

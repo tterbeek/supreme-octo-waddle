@@ -1,0 +1,2 @@
+import fs from'node:fs';import{attach,delay}from'./webview-driver.mjs';import{labels}from'./android-ui.mjs';
+const c=await attach();await c.evaluate(`(()=>{window.__mediaTestResult=null;window.__mediaTestError=null;Capacitor.nativePromise('MoveNotesMedia','pick',{source:'library',maxCount:1}).then(r=>window.__mediaTestResult=r).catch(e=>window.__mediaTestError={message:e.message,code:e.code});return true;})()`);await delay(800);console.log(JSON.stringify(labels()));await delay(1000);c.close();

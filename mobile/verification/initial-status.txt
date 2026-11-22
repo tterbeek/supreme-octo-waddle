@@ -1,0 +1,60 @@
+ M AGENTS.md
+ M README.md
+ M docs/imported-activity-titles.md
+ M scripts/form-qa/fixtures.tsx
+ M scripts/verify-local-schema.sh
+ M src/components/EquipmentDialog.tsx
+ M src/components/EquipmentFormSheet.tsx
+ M src/components/social/ChallengeCard.tsx
+ M src/components/social/ChallengePreview.tsx
+ M src/components/social/SocialForms.tsx
+ M src/database.types.ts
+ M src/features/presets/AddPresetModal.tsx
+ M src/features/presets/EditPresetModal.tsx
+ M src/hooks/useActivityEditForm.tsx
+ M src/hooks/useQuickLogForm.tsx
+ M src/lib/importedActivity.ts
+ M src/pages/ManageEquipmentPage.tsx
+ M src/pages/SocialPage.tsx
+ M src/services/activities.service.ts
+ M src/services/activity.service.ts
+ M src/services/equipment.service.ts
+ M src/services/quickLog.service.ts
+ M src/services/social.service.ts
+ M src/types.ts
+ M supabase/functions/_shared/importedTitleEnrichment.test.ts
+ M supabase/functions/_shared/importedTitleEnrichment.ts
+?? MOVENOTES_ANDROID_HANDOVER.md
+?? docs/MoveNotes-01-Journey-Distance-Codex-Handover.md
+?? docs/MoveNotes-02-Curated-Map-Journeys-Codex-Handover.md
+?? docs/curated-map-challenges.md
+?? docs/screenshots/
+?? docs/virtual-distance.md
+?? mobile/
+?? scripts/check-journey-concurrency.py
+?? scripts/curated-journey-browser-check.cjs
+?? scripts/generate-journey-catalog.mjs
+?? scripts/virtual-distance-browser-check.cjs
+?? src/components/EquipmentClassification.tsx
+?? src/components/journeys/
+?? src/components/social/JourneyDetails.tsx
+?? src/components/social/VirtualDistanceHelp.tsx
+?? src/data/
+?? src/lib/communityFeed.test.ts
+?? src/lib/communityFeed.ts
+?? src/lib/curatedJourneys.ts
+?? src/lib/journeyArtwork.test.ts
+?? src/lib/journeyArtwork.ts
+?? src/lib/virtualDistance.ts
+?? supabase/functions/_shared/journey-distance-v1.json
+?? supabase/functions/_shared/journeyDistance.test.ts
+?? supabase/functions/_shared/journeyDistance.ts
+?? supabase/functions/_shared/journeyGeometry.test.ts
+?? supabase/functions/_shared/journeyGeometry.ts
+?? supabase/journey-catalog-seed.sql
+?? supabase/migrations/20261105000000_virtual_distance.sql
+?? supabase/migrations/20261105010000_close_all_challenges.sql
+?? supabase/migrations/20261105020000_challenge_archive.sql
+?? supabase/migrations/20261105030000_curated_map_challenges.sql
+?? supabase/tests/curated_map_challenges.sql
+?? supabase/tests/virtual_distance.sql

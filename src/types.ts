@@ -12,6 +12,8 @@ export type Preset = {
 };
 
 export type Equipment = {
+  category?: "bike"|"shoes"|"other"|null;
+  electric_assist?: "none"|"electric"|"unknown"|null;
   activity_types?: string[];
   id: string;
   user_id: string;

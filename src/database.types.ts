@@ -67,6 +67,9 @@ export type Database = {
       }
       activities: {
         Row: {
+          cycling_mode_override: string | null
+          journey_revision: number
+
           route_polyline: string | null
           import_status: string
           import_updated_at: string | null
@@ -102,6 +105,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          cycling_mode_override?: string | null
+          journey_revision?: number
+
           route_polyline?: string | null
           import_status?: string
           import_updated_at?: string | null
@@ -137,6 +143,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          cycling_mode_override?: string | null
+          journey_revision?: number
+
           route_polyline?: string | null
           import_status?: string
           import_updated_at?: string | null
@@ -558,6 +567,9 @@ export type Database = {
       }
       equipment: {
         Row: {
+          category: string | null
+          electric_assist: string | null
+
           activity_types: string[]
           created_at: string
           id: string
@@ -567,6 +579,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
+          electric_assist?: string | null
+
           activity_types?: string[]
           created_at?: string
           id?: string
@@ -576,6 +591,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
+          electric_assist?: string | null
+
           activity_types?: string[]
           created_at?: string
           id?: string
@@ -1095,6 +1113,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      set_activity_equipment: { Args: { p_activity: string; p_ids: string[] }; Returns: undefined }
+      refresh_activity_bike_default: { Args: { p_activity: string }; Returns: undefined }
+      social_journey_catalog: { Args: Record<string, never>; Returns: Json }
+      social_journey_route: { Args: { p_challenge: string }; Returns: Json }
+      social_journey_details: { Args: { p_challenge: string }; Returns: Json }
       create_activity_preset: { Args: { p_activity: string; p_name: string }; Returns: string }
       recent_equipment_for_type: { Args: { p_type: string }; Returns: Database["public"]["Tables"]["equipment"]["Row"][] }
       social_home: { Args: Record<string, never>; Returns: Json }

@@ -1,0 +1,10 @@
+{
+  "backend": "none: native selector/EXIF check",
+  "source": "fictional GPS photo",
+  "coordinates": {
+    "lat": 50.85,
+    "lng": 4.35
+  },
+  "originalFileReturned": true,
+  "processPreserved": true
+}

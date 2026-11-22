@@ -1,0 +1,14 @@
+{
+  "artifact": "artifacts/MoveNotes-capacitor-debug.apk",
+  "sha256": "d06d85acc37b58ee6b8d77e3e4126f82b612b96fbc347b331753e2bf65d5cc6e",
+  "bytes": 9513413,
+  "device": "emulator-5554 sdk_gphone16k_x86_64 Android17/API37",
+  "backend": "existing local Supabase",
+  "checks": [
+    "Final APK installs and renders actual PWA",
+    "Existing local session and saved activity survive APK update/restart",
+    "Native platform Android",
+    "No service-worker registration"
+  ],
+  "limits": "Provider redirects, interactive OTP, native camera/upload failures, map interactions and broad feature certification remain open"
+}

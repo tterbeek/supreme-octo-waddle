@@ -1,3 +1,7 @@
+import { LocalJourneyArtwork as JourneyArtwork } from '../journeys/JourneyArtwork';
+import { curatedJourney } from '../../lib/curatedJourneys';
+import { useUnitSystem } from '../../contexts/UnitContext';
+import { challengeDistance } from '../../lib/virtualDistance';
 import { useEffect, useState } from 'react';
 import { IconChevronRight, IconCircleCheckFilled, IconFlag } from '@tabler/icons-react';
 import { socialChallengeCover, type Challenge } from '../../services/social.service';
@@ -5,6 +9,11 @@ import { socialChallengeCover, type Challenge } from '../../services/social.serv
 export default function ChallengePreview({ challenge, communityName, onOpen }: {
   challenge: Challenge; communityName: string; onOpen: () => void;
 }) {
+  const {unitSystem}=useUnitSystem();
+  const routeTemplate=challenge.route?curatedJourney(challenge.route.slug,challenge.route.version):undefined;
+  const virtual=challenge.metric==='virtual_distance';
+  const distance=virtual||challenge.metric==='distance';
+  const distanceUnit=unitSystem==='imperial'?'miles':'km';
   const [cover, setCover] = useState('');
   useEffect(() => {
     let cancelled = false;
@@ -20,14 +29,15 @@ export default function ChallengePreview({ challenge, communityName, onOpen }: {
   const actual = Number(challenge.scope === 'collective' ? challenge.total : challenge.mine);
   const target = Number(challenge.target);
   const percent = target > 0 ? Math.max(0, Math.min(100, actual / target * 100)) : 0;
-  const reached = target > 0 && actual >= target && challenge.state !== 'upcoming';
-  const unit = challenge.metric === 'distance' ? 'km' : challenge.metric === 'duration' ? 'min' : challenge.metric === 'days' ? 'active dates' : 'activities';
-  const quantity = (value: number) => value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const reached = target > 0 && actual >= target && ['active','completed','closed'].includes(challenge.state);
+  const unit = distance ? distanceUnit : challenge.metric === 'duration' ? 'min' : challenge.metric === 'days' ? 'active dates' : 'activities';
+  const quantity = (value: number) => (distance?challengeDistance(value,unitSystem):value).toLocaleString(undefined, { maximumFractionDigits: virtual?1:2 });
   return <button type="button" onClick={onOpen} aria-label={`${challenge.title} — ${communityName}`} className="flex w-full items-stretch gap-3 rounded-2xl border border-warm-200 bg-white/25 p-3 text-left transition-colors hover:bg-white/50 sm:gap-4 sm:p-4">
     <span className="relative flex min-h-28 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-movenotes-primary/10 text-movenotes-primary sm:w-32">
-      {cover ? <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setCover('')} /> : <IconFlag size={28} aria-hidden="true" />}
+      {cover ? <img src={cover} alt="" className="absolute inset-0 h-full w-full object-cover" onError={() => setCover('')} /> : routeTemplate?<span className="absolute inset-0 flex items-center"><JourneyArtwork template={routeTemplate}/></span>: <IconFlag size={28} aria-hidden="true" />}
     </span>
     <span className="flex min-w-0 flex-1 flex-col justify-center gap-2 py-1">
+      {virtual&&<span className="text-xs text-movenotes-primary">Virtual distance</span>}
       <span className="break-words text-xs text-movenotes-muted sm:text-sm">{communityName}</span>
       <span className="flex items-center justify-between gap-2"><span className="min-w-0 break-words text-base font-bold leading-tight sm:text-xl">{challenge.title}</span><IconChevronRight size={20} className="shrink-0 text-movenotes-muted" aria-hidden="true" /></span>
       <span role="progressbar" aria-label="Challenge progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={`${quantity(actual)} of ${quantity(target)} ${unit}`} className="mt-1 block h-2.5 overflow-hidden rounded-full bg-movenotes-primary/10"><span style={{ width: `${percent}%` }} className="block h-full rounded-full bg-movenotes-primary/80" /></span>

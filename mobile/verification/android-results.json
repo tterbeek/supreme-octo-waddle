@@ -1,0 +1,15 @@
+{
+  "device": "emulator-5554 / sdk_gphone16k_x86_64",
+  "android": "17 / API37",
+  "backend": "existing local Supabase, fictional test user",
+  "checks": [
+    "Actual bundled PWA renders inside Capacitor secure WebView",
+    "Existing PWA login screen and branding render",
+    "Local Supabase verified session accepted by unchanged PWA auth",
+    "No native service-worker registration"
+  ],
+  "limits": [
+    "Local default emails are link-only: session bootstrapped from own verification mail via CDP, not an interactive OTP verification pass",
+    "No staging or provider authorization supplied"
+  ]
+}

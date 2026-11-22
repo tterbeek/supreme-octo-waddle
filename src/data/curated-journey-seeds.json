@@ -1,0 +1,477 @@
+{
+  "version": 1,
+  "places": {
+    "amsterdam": {
+      "name": "Amsterdam",
+      "coordinate": [
+        4.9041,
+        52.3676
+      ],
+      "story": "A starting point full of possibilities. Imagine a quiet pause by the water before the next chapter."
+    },
+    "brussels": {
+      "name": "Brussels",
+      "coordinate": [
+        4.3517,
+        50.8503
+      ],
+      "story": "A city-sized pause on the way. Picture a little time to wander before moving on together."
+    },
+    "paris": {
+      "name": "Paris",
+      "coordinate": [
+        2.3522,
+        48.8566
+      ],
+      "story": "A destination to linger over. Imagine a slow stroll and a moment to take in the city."
+    },
+    "rotterdam": {
+      "name": "Rotterdam",
+      "coordinate": [
+        4.4777,
+        51.9244
+      ],
+      "story": "A change of scene for the shared journal. Picture a waterside pause and room to look around."
+    },
+    "antwerp": {
+      "name": "Antwerp",
+      "coordinate": [
+        4.4025,
+        51.2194
+      ],
+      "story": "Another city, another page. Imagine taking the unhurried way through its streets."
+    },
+    "luxembourg": {
+      "name": "Luxembourg",
+      "coordinate": [
+        6.1319,
+        49.6116
+      ],
+      "story": "A welcome pause between destinations. Picture finding a peaceful spot to rest."
+    },
+    "maastricht": {
+      "name": "Maastricht",
+      "coordinate": [
+        5.69,
+        50.8514
+      ],
+      "story": "A place to take a breath before the next leg. Imagine a gentle wander with no hurry."
+    },
+    "london": {
+      "name": "London",
+      "coordinate": [
+        -0.1276,
+        51.5072
+      ],
+      "story": "A new chapter in a busy city. Picture stepping away from the bustle for a quiet moment."
+    },
+    "cardiff": {
+      "name": "Cardiff",
+      "coordinate": [
+        -3.1791,
+        51.4816
+      ],
+      "story": "A stop to explore at your own pace. Imagine a little detour before the next crossing."
+    },
+    "dublin": {
+      "name": "Dublin",
+      "coordinate": [
+        -6.2603,
+        53.3498
+      ],
+      "story": "A city stop with time for a conversation. Picture sharing a table before the next chapter."
+    },
+    "belfast": {
+      "name": "Belfast",
+      "coordinate": [
+        -5.9301,
+        54.5973
+      ],
+      "story": "Another destination reached together. Imagine setting aside a little time to discover it."
+    },
+    "edinburgh": {
+      "name": "Edinburgh",
+      "coordinate": [
+        -3.1883,
+        55.9533
+      ],
+      "story": "A place to pause and look around. Picture a slow walk before continuing the story."
+    },
+    "lyon": {
+      "name": "Lyon",
+      "coordinate": [
+        4.8357,
+        45.764
+      ],
+      "story": "A pause along the road to Rome. Imagine finding a quiet corner and something good to eat."
+    },
+    "milan": {
+      "name": "Milan",
+      "coordinate": [
+        9.19,
+        45.4642
+      ],
+      "story": "A city chapter before the final leg. Picture an unhurried stroll and a moment to recharge."
+    },
+    "rome": {
+      "name": "Rome",
+      "coordinate": [
+        12.4964,
+        41.9028
+      ],
+      "story": "A destination worth taking slowly. Imagine closing this chapter with a little time to wander."
+    },
+    "geneva": {
+      "name": "Geneva",
+      "coordinate": [
+        6.1432,
+        46.2044
+      ],
+      "story": "The start of a mountain-inspired chapter. Picture a breath of fresh air before setting off."
+    },
+    "chamonix": {
+      "name": "Chamonix",
+      "coordinate": [
+        6.8694,
+        45.9237
+      ],
+      "story": "A stop for a mountain daydream. Imagine looking up, taking a breath and staying a while."
+    },
+    "zermatt": {
+      "name": "Zermatt",
+      "coordinate": [
+        7.7491,
+        46.0207
+      ],
+      "story": "A pause in the middle of the adventure. Picture a quiet moment with the mountains in mind."
+    },
+    "innsbruck": {
+      "name": "Innsbruck",
+      "coordinate": [
+        11.4041,
+        47.2692
+      ],
+      "story": "Another mountain-inspired destination. Imagine stretching your legs before the next chapter."
+    },
+    "salzburg": {
+      "name": "Salzburg",
+      "coordinate": [
+        13.055,
+        47.8095
+      ],
+      "story": "A gentle place to finish this chapter. Picture a last stroll to look back on the shared adventure."
+    },
+    "copenhagen": {
+      "name": "Copenhagen",
+      "coordinate": [
+        12.5683,
+        55.6761
+      ],
+      "story": "A new northern chapter. Imagine an easy start and time to take in the city."
+    },
+    "oslo": {
+      "name": "Oslo",
+      "coordinate": [
+        10.7522,
+        59.9139
+      ],
+      "story": "A place to pause on the northern adventure. Picture a little space to breathe between destinations."
+    },
+    "bergen": {
+      "name": "Bergen",
+      "coordinate": [
+        5.3221,
+        60.39299
+      ],
+      "story": "Another page in the northern journal. Imagine a waterside pause before moving on."
+    },
+    "stockholm": {
+      "name": "Stockholm",
+      "coordinate": [
+        18.0686,
+        59.3293
+      ],
+      "story": "A city stop to enjoy slowly. Picture a quiet walk and time to notice the details."
+    },
+    "helsinki": {
+      "name": "Helsinki",
+      "coordinate": [
+        24.9384,
+        60.1699
+      ],
+      "story": "The final page of this northern chapter. Imagine taking a moment to appreciate how far the group has come."
+    },
+    "barcelona": {
+      "name": "Barcelona",
+      "coordinate": [
+        2.1734,
+        41.3851
+      ],
+      "story": "A bright beginning for the shared adventure. Picture a slow stroll before the next destination."
+    },
+    "marseille": {
+      "name": "Marseille",
+      "coordinate": [
+        5.3698,
+        43.2965
+      ],
+      "story": "A pause with the sea in mind. Imagine finding a spot to watch the day go by."
+    },
+    "athens": {
+      "name": "Athens",
+      "coordinate": [
+        23.7275,
+        37.9838
+      ],
+      "story": "A city chapter to savour. Picture taking the slow way and leaving room for a detour."
+    },
+    "istanbul": {
+      "name": "Istanbul",
+      "coordinate": [
+        28.9784,
+        41.0082
+      ],
+      "story": "A meeting point in the shared story. Imagine pausing to take in a new scene."
+    },
+    "new-york": {
+      "name": "New York",
+      "coordinate": [
+        -74.006,
+        40.7128
+      ],
+      "story": "A big-city chapter with small moments to notice. Picture a quiet pause among the bustle."
+    },
+    "chicago": {
+      "name": "Chicago",
+      "coordinate": [
+        -87.6298,
+        41.8781
+      ],
+      "story": "A new page across the continent. Imagine stretching your legs and exploring a little."
+    },
+    "denver": {
+      "name": "Denver",
+      "coordinate": [
+        -104.9903,
+        39.7392
+      ],
+      "story": "Room for a fresh-air daydream. Picture a pause before the next stretch of the adventure."
+    },
+    "las-vegas": {
+      "name": "Las Vegas",
+      "coordinate": [
+        -115.1398,
+        36.1699
+      ],
+      "story": "A change of scene on the way west. Imagine finding a quiet moment before moving on."
+    },
+    "san-francisco": {
+      "name": "San Francisco",
+      "coordinate": [
+        -122.4194,
+        37.7749
+      ],
+      "story": "A destination for a lingering pause. Picture looking back over the chapters that brought the group here."
+    },
+    "tokyo": {
+      "name": "Tokyo",
+      "coordinate": [
+        139.6917,
+        35.6895
+      ],
+      "story": "A new adventure begins here. Imagine setting out with time to notice the small details."
+    },
+    "mount-fuji": {
+      "name": "Mount Fuji",
+      "coordinate": [
+        138.7274,
+        35.3606
+      ],
+      "story": "A mountain landmark for this shared story. Picture a moment to look up and take a breath."
+    },
+    "kyoto": {
+      "name": "Kyoto",
+      "coordinate": [
+        135.7681,
+        35.0116
+      ],
+      "story": "A place for an unhurried pause. Imagine a quiet wander before the next leg."
+    },
+    "osaka": {
+      "name": "Osaka",
+      "coordinate": [
+        135.5023,
+        34.6937
+      ],
+      "story": "Another city chapter to enjoy. Picture sharing a meal before continuing together."
+    },
+    "hiroshima": {
+      "name": "Hiroshima",
+      "coordinate": [
+        132.4553,
+        34.3853
+      ],
+      "story": "A place to pause thoughtfully. Imagine taking time to look around and reflect."
+    },
+    "fukuoka": {
+      "name": "Fukuoka",
+      "coordinate": [
+        130.4017,
+        33.5902
+      ],
+      "story": "The final destination of this chapter. Picture a gentle finish and a moment to look back."
+    },
+    "singapore": {
+      "name": "Singapore",
+      "coordinate": [
+        103.8198,
+        1.3521
+      ],
+      "story": "A new scene in the world adventure. Imagine stopping for a little shade and a quiet moment."
+    },
+    "sydney": {
+      "name": "Sydney",
+      "coordinate": [
+        151.2093,
+        -33.8688
+      ],
+      "story": "A pause before a long virtual ocean crossing. Picture a breath of fresh air before the next chapter."
+    }
+  },
+  "routes": [
+    {
+      "slug": "weekend-in-paris",
+      "title": "A Weekend in Paris",
+      "description": "River cities and a little time to dream.",
+      "places": [
+        "amsterdam",
+        "brussels",
+        "paris"
+      ],
+      "visualTheme": "river"
+    },
+    {
+      "slug": "benelux-loop",
+      "title": "The Benelux Loop",
+      "description": "A shared loop through familiar neighbours.",
+      "places": [
+        "amsterdam",
+        "rotterdam",
+        "antwerp",
+        "brussels",
+        "luxembourg",
+        "maastricht",
+        "amsterdam"
+      ],
+      "visualTheme": "sage"
+    },
+    {
+      "slug": "british-isles",
+      "title": "Around the British Isles",
+      "description": "City stories, sea crossings and a return home.",
+      "places": [
+        "london",
+        "cardiff",
+        "dublin",
+        "belfast",
+        "edinburgh",
+        "london"
+      ],
+      "visualTheme": "teal"
+    },
+    {
+      "slug": "road-to-rome",
+      "title": "The Road to Rome",
+      "description": "One destination at a time, all the way to Rome.",
+      "places": [
+        "amsterdam",
+        "paris",
+        "lyon",
+        "milan",
+        "rome"
+      ],
+      "visualTheme": "olive"
+    },
+    {
+      "slug": "across-the-alps",
+      "title": "Across the Alps",
+      "description": "A mountain-inspired adventure, moved together.",
+      "places": [
+        "geneva",
+        "chamonix",
+        "zermatt",
+        "innsbruck",
+        "salzburg"
+      ],
+      "visualTheme": "alpine"
+    },
+    {
+      "slug": "nordic-adventure",
+      "title": "The Nordic Adventure",
+      "description": "Room to breathe between northern destinations.",
+      "places": [
+        "copenhagen",
+        "oslo",
+        "bergen",
+        "stockholm",
+        "helsinki"
+      ],
+      "visualTheme": "forest"
+    },
+    {
+      "slug": "mediterranean-explorer",
+      "title": "Mediterranean Explorer",
+      "description": "Warm city colours and blue-water daydreams.",
+      "places": [
+        "barcelona",
+        "marseille",
+        "rome",
+        "athens",
+        "istanbul"
+      ],
+      "visualTheme": "sea"
+    },
+    {
+      "slug": "coast-to-coast-america",
+      "title": "Coast to Coast America",
+      "description": "A wide-open adventure across a continent.",
+      "places": [
+        "new-york",
+        "chicago",
+        "denver",
+        "las-vegas",
+        "san-francisco"
+      ],
+      "visualTheme": "sand"
+    },
+    {
+      "slug": "discover-japan",
+      "title": "Discover Japan",
+      "description": "A trail of places to pause and discover.",
+      "places": [
+        "tokyo",
+        "mount-fuji",
+        "kyoto",
+        "osaka",
+        "hiroshima",
+        "fukuoka"
+      ],
+      "visualTheme": "blossom"
+    },
+    {
+      "slug": "around-the-world",
+      "title": "Around the World Together",
+      "description": "A shared travel journal with the whole world ahead.",
+      "places": [
+        "amsterdam",
+        "istanbul",
+        "singapore",
+        "sydney",
+        "san-francisco",
+        "new-york",
+        "amsterdam"
+      ],
+      "visualTheme": "ocean"
+    }
+  ]
+}

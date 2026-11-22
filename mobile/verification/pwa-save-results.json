@@ -1,0 +1,8 @@
+{
+  "backend": "local Supabase",
+  "checks": [
+    "Android Back uses existing unsaved-change protection",
+    "Original Quick Log creates exactly one real local activity"
+  ],
+  "activityId": "af2caac9-7d51-400d-86c8-82b046cbf773"
+}

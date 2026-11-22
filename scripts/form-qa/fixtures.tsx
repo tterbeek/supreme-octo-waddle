@@ -1,3 +1,9 @@
+import { curatedJourneys,journeyPosition } from '../../src/lib/curatedJourneys';
+import CuratedJourneyDetails from '../../src/components/journeys/CuratedJourneyDetails';
+import ModalSheet from '../../src/components/ModalSheet';
+import { ChallengeForm } from '../../src/components/social/SocialForms';
+import JourneyDetails from '../../src/components/social/JourneyDetails';
+import { JOURNEY_POLICY, calculateJourneyContribution } from '../../supabase/functions/_shared/journeyDistance';
 import { AdminRoute } from "../../src/components/AdminRoute";
 import EmailChangePage from "../../src/pages/EmailChangePage";
 import SwipeActions from "../../src/components/SwipeActions";
@@ -76,6 +82,9 @@ const socialSharing:any={private:false,public_note:'',legacy_photo:false,has_leg
 const socialRows:any[]=[{id:'social-activity',date:'2026-10-25',shared_at:'2026-10-25T09:00:00Z',author_id:'fictional-friend',author:'Fictional friend',title:'A morning walk',type:'walk',distance_km:4,duration_min:45,public_note:'Some shared words.',photos:[],contexts:[{id:'circle-context',audience:'circle-owner',kind:'circle',community:null,name:'Circle'},{id:'community-context',audience:'audience-community',kind:'community',community:'community-one',name:'Brussels Runners'}]}];
 const socialComments:any={'social-activity':[{id:'thread-comment',author_id:'fictional-friend',author:'Fictional friend',body:'One shared conversation',created_at:'2026-10-25T09:00:00Z',can_delete:false,has_avatar:true}]};
 const socialReactions:Record<string,string|null>={};const fixtureChallenges:any[]=[];
+qa.setCuratedDemo=(slug='weekend-in-paris',total=200,state='active')=>{const t=curatedJourneys.find(t=>t.slug===slug)!;fixtureChallenges.length=0;fixtureChallenges.push({id:'curated-demo',title:t.title,metric:'virtual_distance',target:t.targetKm,scope:'collective',types:[],activity_scope:'all',starts_on:'2026-10-19',ends_on:null,time_zone:'Europe/Brussels',state,total,mine:11.25,contributors_count:4,policy_version:'journey-distance-v1',closed_at:state==='closed'?'2026-11-05T10:00:00Z':null,route:{slug:t.slug,version:t.version,geometryVersion:t.geometryVersion,title:t.title,targetKm:String(t.targetKm)}});};
+qa.setCuratedTotal=(total:number)=>{fixtureChallenges[0].total=total;qa.refreshCurated?.();};
+qa.setChallengeCompleted=()=>{fixtureChallenges[0].state='completed';};
 qa.setChallengeTotal=(total:number)=>{fixtureChallenges[0].total=total;};
 qa.setChallengeDemo=()=>{qa.challengeDemo=true;if(!socialRows[0].contexts.some((c:any)=>c.community==='community-one'))socialRows[0].contexts.push({id:'community-context',audience:'audience-community',kind:'community',community:'community-one',name:'Brussels Runners'});fixtureChallenges.length=0;fixtureChallenges.push({id:'challenge-demo',title:'Around the world together',metric:'distance',target:10,scope:'collective',types:['walk','run','ride'],starts_on:'2026-10-19',ends_on:'2026-11-02',time_zone:'Europe/Brussels',state:'active',total:16,mine:4,has_cover:true,cover_updated_at:'2026-10-26T10:00:00Z'});};
 qa.setCardOwner=(owner:boolean)=>{socialRows[0].author_id=owner?user.id:'fictional-friend';};
@@ -84,6 +93,7 @@ qa.setCardDemo=(orientation:string,total=8,photoCount=1)=>{
  socialComments['social-activity']=Array.from({length:total},(_,i)=>({id:'demo-comment-'+i,author_id:'demo-author-'+i,author:['Emma','Ben','Alex'][i%3],body:'A shared moment '+(i+1),created_at:new Date(Date.now()-(8-i)*3600_000).toISOString(),can_delete:false}));
 };
 const activity: any = { id: "fictional-activity", user_id: user.id, title: "A gentle morning walk", type: "walk", date: "2026-10-17", distance_km: 4, duration_min: 45, notes: "A private note that must be kept.", feeling_during: "smile", feeling_after: "happy", effort: 2, source: "manual", activity_equipment: [] };
+qa.setEquipmentUsage=()=>{activity.activity_equipment=[{equipment_id:'equipment-0'}];};
 const memoryContext={start:'2024-10-01',end:'2024-11-01'};
 const memoryRows=Array.from({length:45},(_,i)=>({...activity,id:`memory-${i}`,created_at:`2024-10-24T12:00:${String(59-i).padStart(2,'0')}`,date:'2024-10-24',title:i===1?'Polar walk':i===2?'A feeling remembered':i===3?'A photo without a note':`An October walk ${i+1}`,
  notes:i===0?'We took the quieter path.\n\nThere was time to stop and talk.\n'+('These are my original words. '.repeat(40)):i===1||i===2||i===3||i>=35?null:activity.notes,
@@ -180,11 +190,13 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     const dates=period==='year'?['2020-01-01','2023-01-01','2026-01-01']:period==='month'?['2026-01-01','2026-03-01','2026-10-01']:['2026-10-05','2026-10-12','2026-10-19'];
     return {data:dates.map((period_start,i)=>({activity_type:'run',period_start,distance_value:10+i,duration_value:30+i})),error:null};
   }
+  if(name==='set_activity_equipment'){qa.writes.push({table:'activity_equipment',op:'replace',payload:args.p_ids.map((id:string)=>({activity_id:args.p_activity,equipment_id:id}))});return {data:null,error:qa.fail?{message:'Simulated equipment error'}:null};}
+  if(name==='refresh_activity_bike_default')return {data:null,error:null};
   if(name==='recent_equipment_for_type')return {data:equipment.filter(e=>e.activity_types?.includes(args.p_type)).slice(0,2),error:null};
   if(name.startsWith('social_')){
     if(qa.socialReadDelay)await new Promise(resolve=>setTimeout(resolve,qa.socialReadDelay));
     if(qa.fail)return {data:null,error:{message:'Simulated social error'}};
-    const read=name==='social_map_consent'&&args.p_enabled===undefined||name==='social_home'||name==='social_feed'||name==='social_activity'&&!args.p_change||name==='social_community'&&args.p_action==='get'||name==='social_discussion'&&args.p_action==='read'||name==='social_own_comments'||name==='social_challenges'&&args.p_action==='list'||name==='social_invite'&&['preview','get'].includes(args.p_action);
+    const read=name==='social_journey_route'||name==='social_journey_catalog'||name==='social_journey_details'||name==='social_map_consent'&&args.p_enabled===undefined||name==='social_home'||name==='social_feed'||name==='social_activity'&&!args.p_change||name==='social_community'&&args.p_action==='get'||name==='social_discussion'&&args.p_action==='read'||name==='social_own_comments'||name==='social_challenges'&&args.p_action==='list'||name==='social_invite'&&['preview','get'].includes(args.p_action);
     if(!read){qa.writes.push({table:name,payload:args});await wait();}
     if(name==='social_map_consent'){
       if(args.p_enabled!==undefined)qa.mapConsent=args.p_enabled;
@@ -221,9 +233,14 @@ auth.verifyOtp = async () => { await wait(); return { data: { session: { user },
     if(name==='social_own_comments')return {data:{comments:(socialComments['social-activity']||[]).filter((c:any)=>c.author_id===user.id).map(({id,body,created_at}:any)=>({id,body,created_at})),has_more:false,before:null},error:null};
     if(name==='social_delete_own_comment'){socialComments['social-activity']=socialComments['social-activity'].filter((c:any)=>c.id!==args.p_id||c.author_id!==user.id);return {data:true,error:null};}
     if(name==='social_remove_community_activity'){for(const a of socialRows)a.contexts=a.contexts.filter((c:any)=>c.community!==args.p_community);return {data:null,error:null};}
+    if(name==='social_journey_catalog')return {data:curatedJourneys,error:null};
+    if(name==='social_journey_route'){const summary=fixtureChallenges.find(c=>c.id===args.p_challenge);const template=curatedJourneys.find(t=>t.slug===summary.route.slug&&t.version===summary.route.version)!;const p=journeyPosition(template,Number(summary.total));return {data:{summary:{...summary},template,reached:template.waypoints.filter((_w,i)=>p.reached[i]).map(w=>w.occurrenceId),next:p.next},error:null};}
+    if(name==='social_journey_details')return {data:{summary:{mine:'11.25'},policy:JOURNEY_POLICY,own:[{id:'fictional-run',title:'A quiet run',type:'run',amount:'11.25',calculation:calculateJourneyContribution({activityType:'run',distanceKm:5,durationMinutes:42,effort:3})}]},error:null};
     if(name==='social_challenges'){
-      if(args.p_action==='create')fixtureChallenges.push({...args.p_data,id:'challenge-new',state:'active',total:0,mine:0,participating:false});
+      if(args.p_action==='create'&&args.p_data.journey_template_slug){const t=curatedJourneys.find(t=>t.slug===args.p_data.journey_template_slug)!;args.p_data.target=t.targetKm;args.p_data.route={slug:t.slug,version:t.version,geometryVersion:t.geometryVersion,title:t.title,targetKm:String(t.targetKm)};}
+      if(args.p_action==='create')fixtureChallenges.push({...args.p_data,id:'challenge-new',state:args.p_data.status||'active',total:0,mine:0,participating:true,policy_version:args.p_data.metric==='virtual_distance'?'journey-distance-v1':null});
       if(args.p_action==='update')Object.assign(fixtureChallenges.find(c=>c.id===args.p_data.id),args.p_data);
+      if(args.p_action==='close')Object.assign(fixtureChallenges.find(c=>c.id===args.p_data.id),{state:'closed',closed_at:new Date().toISOString()});
       if(args.p_action==='cancel')fixtureChallenges.find(c=>c.id===args.p_data.id).state='cancelled';
       if(['create','update','cover'].includes(args.p_action)&&'cover_path' in (args.p_data||{})){const challenge=fixtureChallenges.find(c=>c.id===(args.p_data.id||'challenge-new'));challenge.has_cover=!!args.p_data.cover_path;challenge.cover_updated_at=new Date().toISOString();}
       return {data:fixtureChallenges.map(c=>({...c})),error:null};
@@ -359,6 +376,10 @@ function MapScenario({ name }: { name: string }) {
   </div>;
 }
 
+function CuratedScenario({close}:{close:()=>void}){
+ const [,refresh]=useState(0);qa.refreshCurated=()=>refresh(n=>n+1);
+ return <ModalSheet title="Challenge details" sheetClassName="max-w-4xl" onClose={close}><CuratedJourneyDetails challenge={{...fixtureChallenges[0]}}/></ModalSheet>;
+}
 function Scenario({ name, close, saved }: { name: string; close: () => void; saved: () => void }) {
   if(name.startsWith('share-map'))return <ActivityImageSheet activityId={activity.id} onClose={close}/>;
   if(name==='pull-refresh')return <PullRefreshScenario/>;
@@ -375,6 +396,12 @@ function Scenario({ name, close, saved }: { name: string; close: () => void; sav
     case 'community-join': return <CommunityJoinPage/>;
     case 'memories': case 'memories-empty': case 'memories-recent': return <MemoriesPage/>;
     case 'memories-reader': case 'memories-missing': case 'memories-error': return <MemoryReader id="memory-0" context={memoryContext} onClose={close} onChange={()=>{}} onUpdated={saved}/>;
+    case 'challenge-edit': return <ChallengeForm community='community-one' challenge={fixtureChallenges[0]} onClose={close} onSaved={saved}/>;
+    case 'curated-detail': return <CuratedScenario close={close}/>;
+    case 'journey-create': return <ChallengeForm journey community='community-one' onClose={close} onSaved={saved}/>;
+    case 'challenge-create': return <ChallengeForm community='community-one' onClose={close} onSaved={saved}/>;
+    case 'journey-details': return <JourneyDetails challenge='fictional-journey'/>;
+    case 'ride-log': return <AddActivityForm initialType='ride' onClose={close} onLogged={saved}/>;
     case "log": return <AddActivityForm initialType="walk" onClose={close} onLogged={saved} />;
     case "import": return <AddActivityForm existingActivity={{ ...activity, source: "polar", user_enrichment_status: "pending" }} onClose={close} onLogged={saved} />;
     case "edit": return <EditActivityModal activity={activity} onClose={close} onUpdated={saved} onDeleted={saved} />;
@@ -429,6 +456,7 @@ function Harness() {
   const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
   const navigate = useNavigate(); const location = useLocation();
   qa.select = (value: string) => { allowFormNavigation(() => navigate(value === "circle-invite" ? "/circle/invite/fictional" : value==='community-join'?'/community/join/'+'a'.repeat(64):value==='memories-nav'?'/memories':"/forms", { replace: true })); qa.case = value; qa.fail = false; qa.delay = 0; setName(value); setKey(n => n + 1); setOpen(true); };
+  qa.setUnits = setUnitSystem;
   qa.checkpoint = () => allowFormNavigation(() => navigate("/forms?checkpoint=1"));
   qa.navigate = (to: string) => navigate(to);
   const close = () => { qa.closed++; setOpen(false); };

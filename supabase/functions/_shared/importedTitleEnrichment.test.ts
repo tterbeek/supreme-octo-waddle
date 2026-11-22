@@ -1,9 +1,13 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyImportedTitle, importedLocalityResolver, localityFromGeocode, runImportedTitleJobs, scheduleImportedTitleJobs, type ImportedTitleSnapshot } from "./importedTitleEnrichment";
 import { generateImportedActivityTitle } from "./importedActivityTitle";
 
+const { resolveLocation } = vi.hoisted(() => ({ resolveLocation: vi.fn() }));
+vi.mock("./locationResolver.ts", () => ({ resolveLocation }));
+beforeEach(() => { resolveLocation.mockReset().mockResolvedValue(null); });
+
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
-describe("locality-only geocoding", () => {
+describe("locality-first geocoding", () => {
   it("reads vetted locality components, never a formatted address, street, neighbourhood, park, country or state", () => {
     expect(localityFromGeocode([{ address_components: [{ long_name: "Brussels", types: ["locality"] }] }])).toBe("Brussels");
     expect(localityFromGeocode([{ address_components: [{ long_name: "Some park", types: ["park"] }, { long_name: "Belgium", types: ["country"] }] }])).toBeNull();
@@ -33,10 +37,56 @@ describe("locality-only geocoding", () => {
     const resolver = importedLocalityResolver({ from: () => query } as never, "fake-test-key");
     const title = await generateImportedActivityTitle({ activityType: "run", startedAt: "2026-10-23T05:30:00", providerTitle: "Run", route: [{ lat: 50.85, lng: 4.35 }, { lat: 50.853, lng: 4.35 }] }, { resolveLocality: resolver });
     expect(title).toBe("Early morning run Brussels");
+    expect(resolveLocation).not.toHaveBeenCalled();
     const url = new URL(String(fetcher.mock.calls[0][0]));
     expect(url.searchParams.get("latlng")).not.toBe("50.85,4.35");
     expect(url.searchParams.get("result_type")).not.toContain("street_address");
     expect(query.upsert).toHaveBeenCalledWith({ key: "import-locality:50.851,4.35", lat: 50.851, lng: 4.35, name: "Brussels", type: "locality" });
+  });
+});
+
+describe("nearby place fallback", () => {
+  function client() {
+    const q = {select:vi.fn(),eq:vi.fn(),maybeSingle:vi.fn().mockResolvedValue({data:null,error:null})};
+    q.select.mockReturnValue(q);q.eq.mockReturnValue(q);
+    return {from:vi.fn(()=>q)} as never;
+  }
+  const point={lat:50.853,lng:4.35};
+  it.each(["OK","ZERO_RESULTS"])("uses the existing nearby-place resolver when locality lookup gives %s without a town", async status => {
+    vi.stubGlobal("fetch",vi.fn().mockResolvedValue(Response.json({status,results:[]})));
+    resolveLocation.mockResolvedValue({name:"Sonian Forest",type:"park"});
+    expect(await importedLocalityResolver(client(),"fixture-key")(point)).toBe("Sonian Forest");
+    expect(resolveLocation).toHaveBeenCalledWith(expect.objectContaining({lat:point.lat,lng:point.lng,googleMapsApiKey:"fixture-key"}));
+  });
+  it("adds the place to the time-of-day title using the same offset point", async () => {
+    vi.stubGlobal("fetch",vi.fn().mockImplementation(async()=>Response.json({status:"ZERO_RESULTS",results:[]})));
+    resolveLocation.mockResolvedValue({name:"Sonian Forest",type:"park"});
+    const title=await generateImportedActivityTitle({
+      activityType:"run",startedAt:"2026-10-23T05:30:00",providerTitle:"Run",
+      route:[{lat:50.85,lng:4.35},{lat:50.853,lng:4.35}],
+    },{resolveLocality:importedLocalityResolver(client(),"fixture-key")});
+    expect(title).toBe("Early morning run Sonian Forest");
+    const used=resolveLocation.mock.calls[0][0];
+    expect(used.lat).not.toBe(50.85);
+  });
+  it("omits the place when both lookups fail and rejects street-address fallback names", async () => {
+    vi.stubGlobal("fetch",vi.fn().mockImplementation(async()=>Response.json({status:"ZERO_RESULTS",results:[]})));
+    const resolver=importedLocalityResolver(client(),"fixture-key");
+    expect(await resolver(point)).toBeNull();
+    resolveLocation.mockResolvedValue({name:"123 Main Street",type:"point_of_interest"});
+    expect(await resolver(point)).toBeNull();
+  });
+  it.each(["OVER_QUERY_LIMIT","REQUEST_DENIED"])("does not launch extra lookups after %s",async status=>{
+    vi.stubGlobal("fetch",vi.fn().mockResolvedValue(Response.json({status})));
+    expect(await importedLocalityResolver(client(),"fixture-key")(point)).toBeNull();
+    expect(resolveLocation).not.toHaveBeenCalled();
+  });
+  it("preserves meaningful provider titles without geocoding",async()=>{
+    const resolver=vi.fn(importedLocalityResolver(client(),"fixture-key"));
+    const title=await generateImportedActivityTitle({activityType:"run",startedAt:"2026-10-23T05:30:00",providerTitle:"Run with Sam",
+      route:[{lat:50.85,lng:4.35},{lat:50.853,lng:4.35}]},{resolveLocality:resolver});
+    expect(title).toBe("Run with Sam");
+    expect(resolver).not.toHaveBeenCalled();
   });
 });
 

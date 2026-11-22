@@ -1,0 +1,854 @@
+[
+  {
+    "slug": "weekend-in-paris",
+    "version": 1,
+    "title": "A Weekend in Paris",
+    "titleKey": "journeys.weekend-in-paris.title",
+    "description": "River cities and a little time to dream.",
+    "descriptionKey": "journeys.weekend-in-paris.description",
+    "visualTheme": "river",
+    "waypoints": [
+      {
+        "name": "Amsterdam",
+        "coordinate": [
+          4.9041,
+          52.3676
+        ],
+        "story": "A starting point full of possibilities. Imagine a quiet pause by the water before the next chapter.",
+        "placeId": "amsterdam",
+        "nameKey": "places.amsterdam.name",
+        "storyKey": "places.amsterdam.story",
+        "occurrenceId": "weekend-in-paris:0:amsterdam",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Brussels",
+        "coordinate": [
+          4.3517,
+          50.8503
+        ],
+        "story": "A city-sized pause on the way. Picture a little time to wander before moving on together.",
+        "placeId": "brussels",
+        "nameKey": "places.brussels.name",
+        "storyKey": "places.brussels.story",
+        "occurrenceId": "weekend-in-paris:1:brussels",
+        "cumulativeKm": 172.973420957771
+      },
+      {
+        "name": "Paris",
+        "coordinate": [
+          2.3522,
+          48.8566
+        ],
+        "story": "A destination to linger over. Imagine a slow stroll and a moment to take in the city.",
+        "placeId": "paris",
+        "nameKey": "places.paris.name",
+        "storyKey": "places.paris.story",
+        "occurrenceId": "weekend-in-paris:2:paris",
+        "cumulativeKm": 436.94920198418
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 436.94920198418,
+    "isLoop": false,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "across-the-alps",
+    "version": 1,
+    "title": "Across the Alps",
+    "titleKey": "journeys.across-the-alps.title",
+    "description": "A mountain-inspired adventure, moved together.",
+    "descriptionKey": "journeys.across-the-alps.description",
+    "visualTheme": "alpine",
+    "waypoints": [
+      {
+        "name": "Geneva",
+        "coordinate": [
+          6.1432,
+          46.2044
+        ],
+        "story": "The start of a mountain-inspired chapter. Picture a breath of fresh air before setting off.",
+        "placeId": "geneva",
+        "nameKey": "places.geneva.name",
+        "storyKey": "places.geneva.story",
+        "occurrenceId": "across-the-alps:0:geneva",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Chamonix",
+        "coordinate": [
+          6.8694,
+          45.9237
+        ],
+        "story": "A stop for a mountain daydream. Imagine looking up, taking a breath and staying a while.",
+        "placeId": "chamonix",
+        "nameKey": "places.chamonix.name",
+        "storyKey": "places.chamonix.story",
+        "occurrenceId": "across-the-alps:1:chamonix",
+        "cumulativeKm": 64.13558680316
+      },
+      {
+        "name": "Zermatt",
+        "coordinate": [
+          7.7491,
+          46.0207
+        ],
+        "story": "A pause in the middle of the adventure. Picture a quiet moment with the mountains in mind.",
+        "placeId": "zermatt",
+        "nameKey": "places.zermatt.name",
+        "storyKey": "places.zermatt.story",
+        "occurrenceId": "across-the-alps:2:zermatt",
+        "cumulativeKm": 132.969945496898
+      },
+      {
+        "name": "Innsbruck",
+        "coordinate": [
+          11.4041,
+          47.2692
+        ],
+        "story": "Another mountain-inspired destination. Imagine stretching your legs before the next chapter.",
+        "placeId": "innsbruck",
+        "nameKey": "places.innsbruck.name",
+        "storyKey": "places.innsbruck.story",
+        "occurrenceId": "across-the-alps:3:innsbruck",
+        "cumulativeKm": 444.568721520995
+      },
+      {
+        "name": "Salzburg",
+        "coordinate": [
+          13.055,
+          47.8095
+        ],
+        "story": "A gentle place to finish this chapter. Picture a last stroll to look back on the shared adventure.",
+        "placeId": "salzburg",
+        "nameKey": "places.salzburg.name",
+        "storyKey": "places.salzburg.story",
+        "occurrenceId": "across-the-alps:4:salzburg",
+        "cumulativeKm": 582.286229683689
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 582.286229683689,
+    "isLoop": false,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "benelux-loop",
+    "version": 1,
+    "title": "The Benelux Loop",
+    "titleKey": "journeys.benelux-loop.title",
+    "description": "A shared loop through familiar neighbours.",
+    "descriptionKey": "journeys.benelux-loop.description",
+    "visualTheme": "sage",
+    "waypoints": [
+      {
+        "name": "Amsterdam",
+        "coordinate": [
+          4.9041,
+          52.3676
+        ],
+        "story": "A starting point full of possibilities. Imagine a quiet pause by the water before the next chapter.",
+        "placeId": "amsterdam",
+        "nameKey": "places.amsterdam.name",
+        "storyKey": "places.amsterdam.story",
+        "occurrenceId": "benelux-loop:0:amsterdam",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Rotterdam",
+        "coordinate": [
+          4.4777,
+          51.9244
+        ],
+        "story": "A change of scene for the shared journal. Picture a waterside pause and room to look around.",
+        "placeId": "rotterdam",
+        "nameKey": "places.rotterdam.name",
+        "storyKey": "places.rotterdam.story",
+        "occurrenceId": "benelux-loop:1:rotterdam",
+        "cumulativeKm": 57.229341501803
+      },
+      {
+        "name": "Antwerp",
+        "coordinate": [
+          4.4025,
+          51.2194
+        ],
+        "story": "Another city, another page. Imagine taking the unhurried way through its streets.",
+        "placeId": "antwerp",
+        "nameKey": "places.antwerp.name",
+        "storyKey": "places.antwerp.story",
+        "occurrenceId": "benelux-loop:2:antwerp",
+        "cumulativeKm": 135.79394941652
+      },
+      {
+        "name": "Brussels",
+        "coordinate": [
+          4.3517,
+          50.8503
+        ],
+        "story": "A city-sized pause on the way. Picture a little time to wander before moving on together.",
+        "placeId": "brussels",
+        "nameKey": "places.brussels.name",
+        "storyKey": "places.brussels.story",
+        "occurrenceId": "benelux-loop:3:brussels",
+        "cumulativeKm": 176.989483542212
+      },
+      {
+        "name": "Luxembourg",
+        "coordinate": [
+          6.1319,
+          49.6116
+        ],
+        "story": "A welcome pause between destinations. Picture finding a peaceful spot to rest.",
+        "placeId": "luxembourg",
+        "nameKey": "places.luxembourg.name",
+        "storyKey": "places.luxembourg.story",
+        "occurrenceId": "benelux-loop:4:luxembourg",
+        "cumulativeKm": 364.077526976793
+      },
+      {
+        "name": "Maastricht",
+        "coordinate": [
+          5.69,
+          50.8514
+        ],
+        "story": "A place to take a breath before the next leg. Imagine a gentle wander with no hurry.",
+        "placeId": "maastricht",
+        "nameKey": "places.maastricht.name",
+        "storyKey": "places.maastricht.story",
+        "occurrenceId": "benelux-loop:5:maastricht",
+        "cumulativeKm": 505.474386840177
+      },
+      {
+        "name": "Amsterdam",
+        "coordinate": [
+          4.9041,
+          52.3676
+        ],
+        "story": "A starting point full of possibilities. Imagine a quiet pause by the water before the next chapter.",
+        "placeId": "amsterdam",
+        "nameKey": "places.amsterdam.name",
+        "storyKey": "places.amsterdam.story",
+        "occurrenceId": "benelux-loop:6:amsterdam",
+        "cumulativeKm": 682.584811117099
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 682.584811117099,
+    "isLoop": true,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "discover-japan",
+    "version": 1,
+    "title": "Discover Japan",
+    "titleKey": "journeys.discover-japan.title",
+    "description": "A trail of places to pause and discover.",
+    "descriptionKey": "journeys.discover-japan.description",
+    "visualTheme": "blossom",
+    "waypoints": [
+      {
+        "name": "Tokyo",
+        "coordinate": [
+          139.6917,
+          35.6895
+        ],
+        "story": "A new adventure begins here. Imagine setting out with time to notice the small details.",
+        "placeId": "tokyo",
+        "nameKey": "places.tokyo.name",
+        "storyKey": "places.tokyo.story",
+        "occurrenceId": "discover-japan:0:tokyo",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Mount Fuji",
+        "coordinate": [
+          138.7274,
+          35.3606
+        ],
+        "story": "A mountain landmark for this shared story. Picture a moment to look up and take a breath.",
+        "placeId": "mount-fuji",
+        "nameKey": "places.mount-fuji.name",
+        "storyKey": "places.mount-fuji.story",
+        "occurrenceId": "discover-japan:1:mount-fuji",
+        "cumulativeKm": 94.619602703884
+      },
+      {
+        "name": "Kyoto",
+        "coordinate": [
+          135.7681,
+          35.0116
+        ],
+        "story": "A place for an unhurried pause. Imagine a quiet wander before the next leg.",
+        "placeId": "kyoto",
+        "nameKey": "places.kyoto.name",
+        "storyKey": "places.kyoto.story",
+        "occurrenceId": "discover-japan:2:kyoto",
+        "cumulativeKm": 366.329619288398
+      },
+      {
+        "name": "Osaka",
+        "coordinate": [
+          135.5023,
+          34.6937
+        ],
+        "story": "Another city chapter to enjoy. Picture sharing a meal before continuing together.",
+        "placeId": "osaka",
+        "nameKey": "places.osaka.name",
+        "storyKey": "places.osaka.story",
+        "occurrenceId": "discover-japan:3:osaka",
+        "cumulativeKm": 409.199220458697
+      },
+      {
+        "name": "Hiroshima",
+        "coordinate": [
+          132.4553,
+          34.3853
+        ],
+        "story": "A place to pause thoughtfully. Imagine taking time to look around and reflect.",
+        "placeId": "hiroshima",
+        "nameKey": "places.hiroshima.name",
+        "storyKey": "places.hiroshima.story",
+        "occurrenceId": "discover-japan:4:hiroshima",
+        "cumulativeKm": 690.377815914678
+      },
+      {
+        "name": "Fukuoka",
+        "coordinate": [
+          130.4017,
+          33.5902
+        ],
+        "story": "The final destination of this chapter. Picture a gentle finish and a moment to look back.",
+        "placeId": "fukuoka",
+        "nameKey": "places.fukuoka.name",
+        "storyKey": "places.fukuoka.story",
+        "occurrenceId": "discover-japan:5:fukuoka",
+        "cumulativeKm": 899.334602742882
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 899.334602742882,
+    "isLoop": false,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "british-isles",
+    "version": 1,
+    "title": "Around the British Isles",
+    "titleKey": "journeys.british-isles.title",
+    "description": "City stories, sea crossings and a return home.",
+    "descriptionKey": "journeys.british-isles.description",
+    "visualTheme": "teal",
+    "waypoints": [
+      {
+        "name": "London",
+        "coordinate": [
+          -0.1276,
+          51.5072
+        ],
+        "story": "A new chapter in a busy city. Picture stepping away from the bustle for a quiet moment.",
+        "placeId": "london",
+        "nameKey": "places.london.name",
+        "storyKey": "places.london.story",
+        "occurrenceId": "british-isles:0:london",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Cardiff",
+        "coordinate": [
+          -3.1791,
+          51.4816
+        ],
+        "story": "A stop to explore at your own pace. Imagine a little detour before the next crossing.",
+        "placeId": "cardiff",
+        "nameKey": "places.cardiff.name",
+        "storyKey": "places.cardiff.story",
+        "occurrenceId": "british-isles:1:cardiff",
+        "cumulativeKm": 211.256385537257
+      },
+      {
+        "name": "Dublin",
+        "coordinate": [
+          -6.2603,
+          53.3498
+        ],
+        "story": "A city stop with time for a conversation. Picture sharing a table before the next chapter.",
+        "placeId": "dublin",
+        "nameKey": "places.dublin.name",
+        "storyKey": "places.dublin.story",
+        "occurrenceId": "british-isles:2:dublin",
+        "cumulativeKm": 505.861371527917
+      },
+      {
+        "name": "Belfast",
+        "coordinate": [
+          -5.9301,
+          54.5973
+        ],
+        "story": "Another destination reached together. Imagine setting aside a little time to discover it.",
+        "placeId": "belfast",
+        "nameKey": "places.belfast.name",
+        "storyKey": "places.belfast.story",
+        "occurrenceId": "british-isles:3:belfast",
+        "cumulativeKm": 646.247692905102
+      },
+      {
+        "name": "Edinburgh",
+        "coordinate": [
+          -3.1883,
+          55.9533
+        ],
+        "story": "A place to pause and look around. Picture a slow walk before continuing the story.",
+        "placeId": "edinburgh",
+        "nameKey": "places.edinburgh.name",
+        "storyKey": "places.edinburgh.story",
+        "occurrenceId": "british-isles:4:edinburgh",
+        "cumulativeKm": 876.206142299232
+      },
+      {
+        "name": "London",
+        "coordinate": [
+          -0.1276,
+          51.5072
+        ],
+        "story": "A new chapter in a busy city. Picture stepping away from the bustle for a quiet moment.",
+        "placeId": "london",
+        "nameKey": "places.london.name",
+        "storyKey": "places.london.story",
+        "occurrenceId": "british-isles:5:london",
+        "cumulativeKm": 1409.884796370472
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 1409.884796370472,
+    "isLoop": true,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "road-to-rome",
+    "version": 1,
+    "title": "The Road to Rome",
+    "titleKey": "journeys.road-to-rome.title",
+    "description": "One destination at a time, all the way to Rome.",
+    "descriptionKey": "journeys.road-to-rome.description",
+    "visualTheme": "olive",
+    "waypoints": [
+      {
+        "name": "Amsterdam",
+        "coordinate": [
+          4.9041,
+          52.3676
+        ],
+        "story": "A starting point full of possibilities. Imagine a quiet pause by the water before the next chapter.",
+        "placeId": "amsterdam",
+        "nameKey": "places.amsterdam.name",
+        "storyKey": "places.amsterdam.story",
+        "occurrenceId": "road-to-rome:0:amsterdam",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Paris",
+        "coordinate": [
+          2.3522,
+          48.8566
+        ],
+        "story": "A destination to linger over. Imagine a slow stroll and a moment to take in the city.",
+        "placeId": "paris",
+        "nameKey": "places.paris.name",
+        "storyKey": "places.paris.story",
+        "occurrenceId": "road-to-rome:1:paris",
+        "cumulativeKm": 429.861983446582
+      },
+      {
+        "name": "Lyon",
+        "coordinate": [
+          4.8357,
+          45.764
+        ],
+        "story": "A pause along the road to Rome. Imagine finding a quiet corner and something good to eat.",
+        "placeId": "lyon",
+        "nameKey": "places.lyon.name",
+        "storyKey": "places.lyon.story",
+        "occurrenceId": "road-to-rome:2:lyon",
+        "cumulativeKm": 821.361455882195
+      },
+      {
+        "name": "Milan",
+        "coordinate": [
+          9.19,
+          45.4642
+        ],
+        "story": "A city chapter before the final leg. Picture an unhurried stroll and a moment to recharge.",
+        "placeId": "milan",
+        "nameKey": "places.milan.name",
+        "storyKey": "places.milan.story",
+        "occurrenceId": "road-to-rome:3:milan",
+        "cumulativeKm": 1161.630718564147
+      },
+      {
+        "name": "Rome",
+        "coordinate": [
+          12.4964,
+          41.9028
+        ],
+        "story": "A destination worth taking slowly. Imagine closing this chapter with a little time to wander.",
+        "placeId": "rome",
+        "nameKey": "places.rome.name",
+        "storyKey": "places.rome.story",
+        "occurrenceId": "road-to-rome:4:rome",
+        "cumulativeKm": 1638.516061621492
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 1638.516061621492,
+    "isLoop": false,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "nordic-adventure",
+    "version": 1,
+    "title": "The Nordic Adventure",
+    "titleKey": "journeys.nordic-adventure.title",
+    "description": "Room to breathe between northern destinations.",
+    "descriptionKey": "journeys.nordic-adventure.description",
+    "visualTheme": "forest",
+    "waypoints": [
+      {
+        "name": "Copenhagen",
+        "coordinate": [
+          12.5683,
+          55.6761
+        ],
+        "story": "A new northern chapter. Imagine an easy start and time to take in the city.",
+        "placeId": "copenhagen",
+        "nameKey": "places.copenhagen.name",
+        "storyKey": "places.copenhagen.story",
+        "occurrenceId": "nordic-adventure:0:copenhagen",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Oslo",
+        "coordinate": [
+          10.7522,
+          59.9139
+        ],
+        "story": "A place to pause on the northern adventure. Picture a little space to breathe between destinations.",
+        "placeId": "oslo",
+        "nameKey": "places.oslo.name",
+        "storyKey": "places.oslo.story",
+        "occurrenceId": "nordic-adventure:1:oslo",
+        "cumulativeKm": 483.309222160144
+      },
+      {
+        "name": "Bergen",
+        "coordinate": [
+          5.3221,
+          60.39299
+        ],
+        "story": "Another page in the northern journal. Imagine a waterside pause before moving on.",
+        "placeId": "bergen",
+        "nameKey": "places.bergen.name",
+        "storyKey": "places.bergen.story",
+        "occurrenceId": "nordic-adventure:2:bergen",
+        "cumulativeKm": 788.401446853509
+      },
+      {
+        "name": "Stockholm",
+        "coordinate": [
+          18.0686,
+          59.3293
+        ],
+        "story": "A city stop to enjoy slowly. Picture a quiet walk and time to notice the details.",
+        "placeId": "stockholm",
+        "nameKey": "places.stockholm.name",
+        "storyKey": "places.stockholm.story",
+        "occurrenceId": "nordic-adventure:3:stockholm",
+        "cumulativeKm": 1508.626820983217
+      },
+      {
+        "name": "Helsinki",
+        "coordinate": [
+          24.9384,
+          60.1699
+        ],
+        "story": "The final page of this northern chapter. Imagine taking a moment to appreciate how far the group has come.",
+        "placeId": "helsinki",
+        "nameKey": "places.helsinki.name",
+        "storyKey": "places.helsinki.story",
+        "occurrenceId": "nordic-adventure:4:helsinki",
+        "cumulativeKm": 1904.446926840292
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 1904.446926840292,
+    "isLoop": false,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "mediterranean-explorer",
+    "version": 1,
+    "title": "Mediterranean Explorer",
+    "titleKey": "journeys.mediterranean-explorer.title",
+    "description": "Warm city colours and blue-water daydreams.",
+    "descriptionKey": "journeys.mediterranean-explorer.description",
+    "visualTheme": "sea",
+    "waypoints": [
+      {
+        "name": "Barcelona",
+        "coordinate": [
+          2.1734,
+          41.3851
+        ],
+        "story": "A bright beginning for the shared adventure. Picture a slow stroll before the next destination.",
+        "placeId": "barcelona",
+        "nameKey": "places.barcelona.name",
+        "storyKey": "places.barcelona.story",
+        "occurrenceId": "mediterranean-explorer:0:barcelona",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Marseille",
+        "coordinate": [
+          5.3698,
+          43.2965
+        ],
+        "story": "A pause with the sea in mind. Imagine finding a spot to watch the day go by.",
+        "placeId": "marseille",
+        "nameKey": "places.marseille.name",
+        "storyKey": "places.marseille.story",
+        "occurrenceId": "mediterranean-explorer:1:marseille",
+        "cumulativeKm": 337.875351943549
+      },
+      {
+        "name": "Rome",
+        "coordinate": [
+          12.4964,
+          41.9028
+        ],
+        "story": "A destination worth taking slowly. Imagine closing this chapter with a little time to wander.",
+        "placeId": "rome",
+        "nameKey": "places.rome.name",
+        "storyKey": "places.rome.story",
+        "occurrenceId": "mediterranean-explorer:2:rome",
+        "cumulativeKm": 941.212847643677
+      },
+      {
+        "name": "Athens",
+        "coordinate": [
+          23.7275,
+          37.9838
+        ],
+        "story": "A city chapter to savour. Picture taking the slow way and leaving room for a detour.",
+        "placeId": "athens",
+        "nameKey": "places.athens.name",
+        "storyKey": "places.athens.story",
+        "occurrenceId": "mediterranean-explorer:3:athens",
+        "cumulativeKm": 1992.075626687558
+      },
+      {
+        "name": "Istanbul",
+        "coordinate": [
+          28.9784,
+          41.0082
+        ],
+        "story": "A meeting point in the shared story. Imagine pausing to take in a new scene.",
+        "placeId": "istanbul",
+        "nameKey": "places.istanbul.name",
+        "storyKey": "places.istanbul.story",
+        "occurrenceId": "mediterranean-explorer:4:istanbul",
+        "cumulativeKm": 2554.123741523576
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 2554.123741523576,
+    "isLoop": false,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "coast-to-coast-america",
+    "version": 1,
+    "title": "Coast to Coast America",
+    "titleKey": "journeys.coast-to-coast-america.title",
+    "description": "A wide-open adventure across a continent.",
+    "descriptionKey": "journeys.coast-to-coast-america.description",
+    "visualTheme": "sand",
+    "waypoints": [
+      {
+        "name": "New York",
+        "coordinate": [
+          -74.006,
+          40.7128
+        ],
+        "story": "A big-city chapter with small moments to notice. Picture a quiet pause among the bustle.",
+        "placeId": "new-york",
+        "nameKey": "places.new-york.name",
+        "storyKey": "places.new-york.story",
+        "occurrenceId": "coast-to-coast-america:0:new-york",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Chicago",
+        "coordinate": [
+          -87.6298,
+          41.8781
+        ],
+        "story": "A new page across the continent. Imagine stretching your legs and exploring a little.",
+        "placeId": "chicago",
+        "nameKey": "places.chicago.name",
+        "storyKey": "places.chicago.story",
+        "occurrenceId": "coast-to-coast-america:1:chicago",
+        "cumulativeKm": 1144.292854508773
+      },
+      {
+        "name": "Denver",
+        "coordinate": [
+          -104.9903,
+          39.7392
+        ],
+        "story": "Room for a fresh-air daydream. Picture a pause before the next stretch of the adventure.",
+        "placeId": "denver",
+        "nameKey": "places.denver.name",
+        "storyKey": "places.denver.story",
+        "occurrenceId": "coast-to-coast-america:2:denver",
+        "cumulativeKm": 2621.998831023367
+      },
+      {
+        "name": "Las Vegas",
+        "coordinate": [
+          -115.1398,
+          36.1699
+        ],
+        "story": "A change of scene on the way west. Imagine finding a quiet moment before moving on.",
+        "placeId": "las-vegas",
+        "nameKey": "places.las-vegas.name",
+        "storyKey": "places.las-vegas.story",
+        "occurrenceId": "coast-to-coast-america:3:las-vegas",
+        "cumulativeKm": 3595.599418996181
+      },
+      {
+        "name": "San Francisco",
+        "coordinate": [
+          -122.4194,
+          37.7749
+        ],
+        "story": "A destination for a lingering pause. Picture looking back over the chapters that brought the group here.",
+        "placeId": "san-francisco",
+        "nameKey": "places.san-francisco.name",
+        "storyKey": "places.san-francisco.story",
+        "occurrenceId": "coast-to-coast-america:4:san-francisco",
+        "cumulativeKm": 4266.261273352242
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 4266.261273352242,
+    "isLoop": false,
+    "crossesAntimeridian": false
+  },
+  {
+    "slug": "around-the-world",
+    "version": 1,
+    "title": "Around the World Together",
+    "titleKey": "journeys.around-the-world.title",
+    "description": "A shared travel journal with the whole world ahead.",
+    "descriptionKey": "journeys.around-the-world.description",
+    "visualTheme": "ocean",
+    "waypoints": [
+      {
+        "name": "Amsterdam",
+        "coordinate": [
+          4.9041,
+          52.3676
+        ],
+        "story": "A starting point full of possibilities. Imagine a quiet pause by the water before the next chapter.",
+        "placeId": "amsterdam",
+        "nameKey": "places.amsterdam.name",
+        "storyKey": "places.amsterdam.story",
+        "occurrenceId": "around-the-world:0:amsterdam",
+        "cumulativeKm": 0
+      },
+      {
+        "name": "Istanbul",
+        "coordinate": [
+          28.9784,
+          41.0082
+        ],
+        "story": "A meeting point in the shared story. Imagine pausing to take in a new scene.",
+        "placeId": "istanbul",
+        "nameKey": "places.istanbul.name",
+        "storyKey": "places.istanbul.story",
+        "occurrenceId": "around-the-world:1:istanbul",
+        "cumulativeKm": 2211.950617221594
+      },
+      {
+        "name": "Singapore",
+        "coordinate": [
+          103.8198,
+          1.3521
+        ],
+        "story": "A new scene in the world adventure. Imagine stopping for a little shade and a quiet moment.",
+        "placeId": "singapore",
+        "nameKey": "places.singapore.name",
+        "storyKey": "places.singapore.story",
+        "occurrenceId": "around-the-world:2:singapore",
+        "cumulativeKm": 10853.610063554006
+      },
+      {
+        "name": "Sydney",
+        "coordinate": [
+          151.2093,
+          -33.8688
+        ],
+        "story": "A pause before a long virtual ocean crossing. Picture a breath of fresh air before the next chapter.",
+        "placeId": "sydney",
+        "nameKey": "places.sydney.name",
+        "storyKey": "places.sydney.story",
+        "occurrenceId": "around-the-world:3:sydney",
+        "cumulativeKm": 17159.869486499356
+      },
+      {
+        "name": "San Francisco",
+        "coordinate": [
+          -122.4194,
+          37.7749
+        ],
+        "story": "A destination for a lingering pause. Picture looking back over the chapters that brought the group here.",
+        "placeId": "san-francisco",
+        "nameKey": "places.san-francisco.name",
+        "storyKey": "places.san-francisco.story",
+        "occurrenceId": "around-the-world:4:san-francisco",
+        "cumulativeKm": 29107.546507858828
+      },
+      {
+        "name": "New York",
+        "coordinate": [
+          -74.006,
+          40.7128
+        ],
+        "story": "A big-city chapter with small moments to notice. Picture a quiet pause among the bustle.",
+        "placeId": "new-york",
+        "nameKey": "places.new-york.name",
+        "storyKey": "places.new-york.story",
+        "occurrenceId": "around-the-world:5:new-york",
+        "cumulativeKm": 33236.63837625286
+      },
+      {
+        "name": "Amsterdam",
+        "coordinate": [
+          4.9041,
+          52.3676
+        ],
+        "story": "A starting point full of possibilities. Imagine a quiet pause by the water before the next chapter.",
+        "placeId": "amsterdam",
+        "nameKey": "places.amsterdam.name",
+        "storyKey": "places.amsterdam.story",
+        "occurrenceId": "around-the-world:6:amsterdam",
+        "cumulativeKm": 39099.86282646739
+      }
+    ],
+    "geometryVersion": "great-circle-v1",
+    "targetKm": 39099.86282646739,
+    "isLoop": true,
+    "crossesAntimeridian": true
+  }
+]

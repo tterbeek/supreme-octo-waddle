@@ -1,3 +1,4 @@
+import type { EquipmentClassificationValue } from "./EquipmentClassification";
 import { ACTIVITY_TYPES } from "../config/activityTypes";
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
@@ -11,7 +12,7 @@ type EquipmentDialogProps = {
   activityType?: string;
   selectedEquipmentIds: string[];
   onChange: (ids: string[]) => void;
-  onAddEquipment: (name: string, notes: string, activityTypes?: string[]) => Promise<Equipment | null>;
+  onAddEquipment: (name: string, notes: string, activityTypes?: string[], classification?: EquipmentClassificationValue) => Promise<Equipment | null>;
   onClose: () => void;
 };
 
@@ -40,8 +41,8 @@ export default function EquipmentDialog({
     setShowAddForm(false);
   };
 
-  const handleAddEquipment = async (name: string, notes: string, activityTypes: string[]) => {
-    const created = await onAddEquipment(name, notes, activityTypes);
+  const handleAddEquipment = async (name: string, notes: string, activityTypes: string[], classification: EquipmentClassificationValue) => {
+    const created = await onAddEquipment(name, notes, activityTypes, classification);
     if (!created) {
       return { ok: false, error: "Could not add equipment right now" };
     }
@@ -101,7 +102,7 @@ export default function EquipmentDialog({
                   >
                     <Check className="w-4 h-4" strokeWidth={2.5} />
                   </span>
-                  <span className="text-sm text-gray-800">{item.name}</span>
+                  <span className="text-sm text-gray-800">{item.name}{item.category==='bike'&&item.electric_assist==='electric'&&<span className="block text-xs text-gray-500">Electric bike</span>}</span>
                 </div>
               </button>
             );

@@ -1,3 +1,9 @@
+import CuratedJourneyDetails from '../journeys/CuratedJourneyDetails';
+import JourneyArtwork from '../journeys/JourneyArtwork';
+import { curatedJourney } from '../../lib/curatedJourneys';
+import JourneyDetails from './JourneyDetails';
+import { useUnitSystem } from '../../contexts/UnitContext';
+import { challengeDistance } from '../../lib/virtualDistance';
 import { useEffect, useRef, useState } from 'react';
 import { IconCalendar, IconCamera, IconChevronRight, IconCircleCheckFilled } from '@tabler/icons-react';
 import { format, parseISO, subDays } from 'date-fns';
@@ -10,6 +16,11 @@ import ModalSheet from '../ModalSheet';
 export default function ChallengeCard({ challenge, community, canManage, onUpdate, onChanged }: {
   challenge: Challenge; community: string; canManage: boolean; onUpdate: () => void; onChanged: () => void;
 }) {
+  const {unitSystem}=useUnitSystem();
+  const routeTemplate=challenge.route?curatedJourney(challenge.route.slug,challenge.route.version):undefined;
+  const virtual=challenge.metric==='virtual_distance';
+  const distance=virtual||challenge.metric==='distance';
+  const distanceUnit=unitSystem==='imperial'?'miles':'km';
   const [cover, setCover] = useState(''); const [coverVersion, setCoverVersion] = useState(0);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [details, setDetails] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -29,20 +40,22 @@ export default function ChallengeCard({ challenge, community, canManage, onUpdat
   const value = Number(challenge.scope === 'collective' ? challenge.total : challenge.mine);
   const target = Number(challenge.target);
   const percent = target > 0 ? Math.max(0, Math.min(100, value / target * 100)) : 0;
-  const reached = value >= target && target > 0 && ['active', 'completed'].includes(challenge.state);
-  const unit = challenge.metric === 'distance' ? 'km' : challenge.metric === 'duration' ? 'min' : challenge.metric === 'days' ? 'active dates' : 'activities';
-  const quantity = (number: number) => number.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  const first = parseISO(challenge.starts_on); const last = subDays(parseISO(challenge.ends_on), 1);
-  const dateRange = `${format(first, first.getFullYear() === last.getFullYear() ? 'd MMM' : 'd MMM yyyy')} – ${format(last, 'd MMM yyyy')}`;
-  const state = reached ? 'Goal reached' : challenge.state === 'active' ? null : challenge.state === 'upcoming' ? 'Upcoming' : challenge.state === 'cancelled' ? 'Cancelled' : 'Completed';
+  const reached = value >= target && target > 0 && ['active', 'completed','closed'].includes(challenge.state);
+  const unit = distance ? distanceUnit : challenge.metric === 'duration' ? 'min' : challenge.metric === 'days' ? 'active dates' : 'activities';
+  const quantity = (number: number) => (distance?challengeDistance(number,unitSystem):number).toLocaleString(undefined, { maximumFractionDigits: virtual?1:2 });
+  const first = parseISO(challenge.starts_on); const last = challenge.ends_on?subDays(parseISO(challenge.ends_on), virtual?0:1):null;
+  const dateRange = virtual ? 'From '+format(first,'d MMM yyyy')+(last?' · Target '+format(last,'d MMM yyyy'):'') : `${format(first, last&&first.getFullYear() === last.getFullYear() ? 'd MMM' : 'd MMM yyyy')} – ${last?format(last,'d MMM yyyy'):''}`;
+  const state = challenge.state==='closed' ? 'Closed'+(challenge.closed_at?' · '+format(parseISO(challenge.closed_at),'d MMM yyyy'):'') : reached ? 'Goal reached' : challenge.state === 'active' ? null : challenge.state === 'upcoming' ? 'Upcoming' : challenge.state === 'cancelled' ? 'Cancelled' : challenge.state==='draft'?'Draft':'Completed';
   const types = challenge.types.length ? challenge.types.map(type => ACTIVITY_TYPES[type]).filter(Boolean) : [];
   return <article aria-label={`Challenge: ${challenge.title}`} className="overflow-hidden rounded-2xl border border-warm-200 bg-white/25">
+    {routeTemplate&&!challenge.has_cover&&<JourneyArtwork template={routeTemplate}/>}
     {(challenge.has_cover || canManage) && <div className={`relative ${challenge.has_cover ? 'aspect-[2.7/1] bg-movenotes-primary/10' : 'flex justify-end px-4 pt-4 sm:px-6'}`}>
       {cover && <img src={cover} alt={`${challenge.title} cover`} className="h-full w-full object-cover" onError={() => setCover('')} />}
       {canManage && <button type="button" disabled={busy} onClick={() => input.current?.click()} className={`${challenge.has_cover ? 'absolute right-3 top-3 sm:right-4 sm:top-4' : ''} inline-flex min-h-11 items-center gap-2 rounded-full border border-warm-200 bg-warm-50/70 px-4 text-sm text-movenotes-primary disabled:opacity-50`}><IconCamera size={18} />{busy ? 'Saving cover…' : challenge.has_cover ? 'Change cover' : 'Add cover'}</button>}
       {canManage && <input ref={input} type="file" accept="image/*" aria-label="Challenge cover image" className="sr-only" disabled={busy} onChange={event => { const file = event.target.files?.[0]; if (file) void upload(file); event.target.value = ''; }} />}
     </div>}
     <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+      {distance&&<p className="text-xs text-movenotes-primary">{virtual?'Virtual distance':'Recorded distance'}</p>}
       <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 break-words text-2xl font-bold leading-tight sm:text-3xl">{challenge.title}</h3>{canManage && <ChallengeActions onUpdate={onUpdate} />}</div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="flex items-center gap-2 text-sm text-gray-500"><IconCalendar size={22} className="shrink-0" />{dateRange}</p>
@@ -60,6 +73,7 @@ export default function ChallengeCard({ challenge, community, canManage, onUpdat
           <div role="progressbar" aria-label="Challenge progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={`${quantity(value)} of ${quantity(target)} ${unit}`} className="h-3.5 overflow-hidden rounded-full bg-movenotes-primary/10"><div style={{ width: `${percent}%` }} className="h-full rounded-full bg-movenotes-primary/80" /></div>
         </div>
       </div>
+      {virtual&&<p className="text-sm text-movenotes-muted">{challenge.contributors_count??0} contributors · {challenge.activity_scope==='selected'?types.map(t=>t.label).join(', '):'All activity types'}</p>}
       {!!types.length && <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">{types.map(type => <span key={type.id} className="inline-flex items-center gap-2"><span className="text-movenotes-accent"><type.Icon size={20} /></span>{type.label}</span>)}</div>}
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       <footer className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-gray-300/50 pt-3 text-xs text-movenotes-muted">
@@ -67,12 +81,13 @@ export default function ChallengeCard({ challenge, community, canManage, onUpdat
         <button type="button" className="inline-flex min-h-11 items-center gap-1 text-sm text-movenotes-text" onClick={() => setDetails(true)}>Challenge details<IconChevronRight size={18} /></button>
       </footer>
     </div>
-    {details && <ModalSheet title="Challenge details" onClose={() => setDetails(false)}><div className="space-y-4">
+    {details && <ModalSheet title="Challenge details" sheetClassName={challenge.route?"max-w-4xl":"max-w-xl"} onClose={() => setDetails(false)}>{challenge.route?<CuratedJourneyDetails challenge={challenge}/>:<div className="space-y-4">
       <h3 className="text-lg font-semibold break-words">{challenge.title}</h3>
       <p>{dateRange} · {challenge.time_zone}</p>
       <p>{challenge.scope === 'collective' ? 'Collective target' : 'Personal target'}: {quantity(target)} {unit}</p>
       <p>{challenge.types.length ? types.map(type => type.label).join(' · ') : 'All activity types'}</p>
+      {virtual&&<JourneyDetails challenge={challenge.id}/>}
       <p className="text-sm text-movenotes-muted">All Community members are included. Only eligible activities shared here count; private activities stay private. Totals update after edits, unsharing or leaving the Community.</p>
-    </div></ModalSheet>}
+    </div>}</ModalSheet>}
   </article>;
 }

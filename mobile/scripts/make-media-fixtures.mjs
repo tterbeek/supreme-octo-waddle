@@ -1,0 +1,6 @@
+import sharp from '../../node_modules/sharp/lib/index.js';import fs from 'node:fs';
+const dir=new URL('../verification/media/',import.meta.url);fs.mkdirSync(dir,{recursive:true});
+const jpeg=await sharp({create:{width:640,height:480,channels:3,background:'#b9cdbb'}}).jpeg().toBuffer();
+const t=Buffer.alloc(128);t.write('II');t.writeUInt16LE(42,2);t.writeUInt32LE(8,4);t.writeUInt16LE(1,8);t.writeUInt16LE(0x8825,10);t.writeUInt16LE(4,12);t.writeUInt32LE(1,14);t.writeUInt32LE(26,18);
+t.writeUInt16LE(4,26);function entry(index,tag,type,count,value){const at=28+index*12;t.writeUInt16LE(tag,at);t.writeUInt16LE(type,at+2);t.writeUInt32LE(count,at+4);t.writeUInt32LE(value,at+8);}entry(0,1,2,2,78);entry(1,2,5,3,80);entry(2,3,2,2,69);entry(3,4,5,3,104);for(const[at,vals]of[[80,[50,51,0]],[104,[4,21,0]]])vals.forEach((v,i)=>{t.writeUInt32LE(v,at+i*8);t.writeUInt32LE(1,at+i*8+4);});
+const body=Buffer.concat([Buffer.from('Exif\0\0'),t]);const marker=Buffer.alloc(4);marker.writeUInt16BE(0xffe1,0);marker.writeUInt16BE(body.length+2,2);fs.writeFileSync(new URL('MoveNotesGPS.jpg',dir),Buffer.concat([jpeg.subarray(0,2),marker,body,jpeg.subarray(2)]));fs.writeFileSync(new URL('MoveNotesNoGPS.jpg',dir),jpeg);console.log('Fictional fixtures: GPS50.85,4.35; and no GPS');

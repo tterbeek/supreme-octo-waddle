@@ -1,3 +1,4 @@
+import EquipmentClassification, { type EquipmentClassificationValue } from "../components/EquipmentClassification";
 import EquipmentActivityTypes from "../components/EquipmentActivityTypes";
 import FormTextarea from "../components/forms/FormTextarea";
 import { useEffect, useMemo, useState } from "react";
@@ -197,6 +198,7 @@ export default function ManageEquipmentPage({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [classification,setClassification]=useState<EquipmentClassificationValue>({category:null,electricAssist:null});
   const [editTypes, setEditTypes] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const { unitSystem } = useUnitSystem();
@@ -288,15 +290,6 @@ export default function ManageEquipmentPage({
   }, []);
 
   const selectedEquipment = equipment.find((item) => item.id === selectedId) || null;
-  const selectedUsage = selectedEquipment ? usageMap[selectedEquipment.id] : null;
-  const selectedUsageTypes = selectedUsage
-    ? sortTypes(Object.keys(selectedUsage.byType))
-    : [];
-  const isSelectedUnused = selectedEquipment ? selectedUsageTypes.length === 0 : true;
-  const selectedFirstUseDate = selectedUsage?.firstUseDate || selectedEquipment?.created_at || null;
-  const selectedInUseSince = selectedFirstUseDate ? formatDate(selectedFirstUseDate) : "";
-  const selectedInUseAbout = selectedFirstUseDate ? formatApproxSince(selectedFirstUseDate) : "";
-  const selectedAddedDate = selectedEquipment ? formatDate(selectedEquipment.created_at) : "";
 
   useEffect(() => {
     if (!selectedEquipment) {
@@ -311,32 +304,15 @@ export default function ManageEquipmentPage({
     setEditName(selectedEquipment.name);
     setEditNotes(selectedEquipment.notes || "");
     setEditTypes(selectedEquipment.activity_types ?? []);
+    setClassification({category:selectedEquipment.category??null,electricAssist:selectedEquipment.electric_assist??null});
     setSaveError(null);
     setShowStopConfirm(false);
   }, [selectedEquipment?.id]);
 
-  const renderTypeLine = (types: string[], textClassName = "text-gray-600") => (
-    <div className={`flex flex-wrap items-center gap-2 text-sm ${textClassName}`}>
-      {types.map((type, index) => {
-        const config = getTypeConfig(type);
-        const Icon = config.Icon;
-        const label = config.equipmentLabel || config.label || type;
-
-        return (
-          <span key={type} className="inline-flex items-center gap-1 text-gray-500">
-            <Icon size={16} strokeWidth={1.7} />
-            <span>{label}</span>
-            {index < types.length - 1 && <span className="text-gray-400">·</span>}
-          </span>
-        );
-      })}
-    </div>
-  );
-
   const getPrimaryMetric = (activityType: string) =>
     preferences[activityType] ?? getSystemDefaultMetric(activityType);
 
-  const handleAddEquipment = async (name: string, notes: string, activityTypes: string[]) => {
+  const handleAddEquipment = async (name: string, notes: string, activityTypes: string[], classification: EquipmentClassificationValue) => {
     if (!userId) return { ok: false, error: "Please sign in again." };
     const notesValue = notes ? notes : null;
     const { equipment: created } = await createEquipment({
@@ -344,6 +320,7 @@ export default function ManageEquipmentPage({
       name,
       notes: notesValue || undefined,
       activityTypes,
+      classification,
     });
 
     if (!created) {
@@ -371,6 +348,7 @@ export default function ManageEquipmentPage({
         name: editName.trim(),
         notes: notesValue,
         activityTypes: editTypes,
+        classification,
       }
     );
 
@@ -443,15 +421,29 @@ export default function ManageEquipmentPage({
               >
                 <div className="text-base font-semibold text-gray-800">
                   {item.name}
+                  {item.category==="bike"&&item.electric_assist==="electric"&&<span className="block text-xs text-gray-500">Electric bike</span>}
                 </div>
                 {hasUsage ? (
-                  <div className="mt-1">{renderTypeLine(usageTypes)}</div>
+                  <div className="mt-2 space-y-2" aria-label="Usage summary">
+                    {usageTypes.map(type => {
+                      const stats = usage.byType[type];
+                      const config = getTypeConfig(type);
+                      const Icon = config.Icon;
+                      const metricValue = getPrimaryMetric(type) === "distance"
+                        ? formatApproxDistance(stats.distanceKm, unitSystem)
+                        : formatApproxDuration(stats.durationMin);
+                      return <div key={type} className="flex items-start gap-2 text-sm text-gray-600">
+                        <span className="mt-0.5 shrink-0" aria-hidden="true"><Icon size={16} strokeWidth={1.7}/></span>
+                        <span>{stats.count} {pluralize(TYPE_NOUNS[type] || "session", stats.count)}{metricValue ? ` · ${metricValue}` : ""}</span>
+                      </div>;
+                    })}
+                  </div>
                 ) : (
                   <div className="text-sm text-gray-500 mt-1">Not used yet</div>
                 )}
                 {hasUsage && sinceDate && (
                   <div className="text-xs text-gray-500 mt-1">
-                    Since {sinceDate}
+                    Since {sinceDate} · {formatApproxSince(firstUseDate!)}
                   </div>
                 )}
               </button>
@@ -495,10 +487,9 @@ export default function ManageEquipmentPage({
           title="Edit equipment"
           onClose={() => setSelectedId(null)}
           busy={savingChanges}
-          dirty={editName !== selectedEquipment.name || editNotes !== (selectedEquipment.notes ?? "") || [...editTypes].sort().join(",") !== [...(selectedEquipment.activity_types ?? [])].sort().join(",")}
+          dirty={classification.category!==(selectedEquipment.category??null)||classification.electricAssist!==(selectedEquipment.electric_assist??null)||editName !== selectedEquipment.name || editNotes !== (selectedEquipment.notes ?? "") || [...editTypes].sort().join(",") !== [...(selectedEquipment.activity_types ?? [])].sort().join(",")}
         >
           <div className="space-y-4">
-            <EquipmentActivityTypes value={editTypes} onChange={setEditTypes}/>
             <div>
               <label className="text-sm text-gray-700">Name</label>
               <input
@@ -520,88 +511,10 @@ export default function ManageEquipmentPage({
                 placeholder="Anything you want to remember about this."
               />
             </div>
+            <EquipmentClassification value={classification} onChange={setClassification}/>
+            <EquipmentActivityTypes value={editTypes} onChange={setEditTypes}/>
           </div>
 
-          <div className="space-y-4 mt-5">
-            {isSelectedUnused ? (
-              <div className="space-y-3">
-                <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
-                  <div className="text-xs uppercase text-gray-500">Status</div>
-                  <div className="text-base font-semibold text-gray-800">
-                    Not used yet
-                  </div>
-                </div>
-                {selectedAddedDate && (
-                  <div className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3">
-                    <div className="text-xs uppercase text-gray-500">Added</div>
-                    <div className="text-sm text-gray-700">{selectedAddedDate}</div>
-                  </div>
-                )}
-                <p className="text-sm text-gray-600">
-                  Activity types and usage will appear here once you use this.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                <div>
-                  <div className="text-xs uppercase text-gray-500 mb-1">Used for</div>
-                  {renderTypeLine(selectedUsageTypes, "text-gray-800")}
-                </div>
-                {selectedInUseSince && (
-                  <div>
-                    <div className="text-xs uppercase text-gray-500 mb-1">
-                      In use since
-                    </div>
-                    <div className="text-sm text-gray-700">
-                      {selectedInUseSince} {selectedInUseAbout ? `· ${selectedInUseAbout}` : ""}
-                    </div>
-                  </div>
-                )}
-                <div>
-                  <div className="text-xs uppercase text-gray-500 mb-2">
-                    Usage summary
-                  </div>
-                  <div className="space-y-3">
-                    {selectedUsageTypes.map((type) => {
-                      const stats = selectedUsage?.byType[type];
-                      if (!stats || stats.count <= 0) return null;
-                      const config = getTypeConfig(type);
-                      const Icon = config.Icon;
-                      const label = config.equipmentLabel || config.label || type;
-                      const noun = TYPE_NOUNS[type] || "session";
-                      const countLine = `${stats.count} ${pluralize(noun, stats.count)}`;
-                      const metric = getPrimaryMetric(type);
-                      const metricValue =
-                        metric === "distance"
-                          ? formatApproxDistance(stats.distanceKm, unitSystem)
-                          : formatApproxDuration(stats.durationMin);
-                      const detailLine = metricValue
-                        ? `${countLine} · ${metricValue}`
-                        : countLine;
-
-                      return (
-                        <div
-                          key={type}
-                          className="rounded-xl border border-warm-200 bg-warm-50 px-4 py-3"
-                        >
-                          <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                            <span className="text-gray-500">
-                              <Icon size={16} strokeWidth={1.7} />
-                            </span>
-                            <span>{label}</span>
-                          </div>
-                          <div className="text-sm text-gray-600 mt-1">{detailLine}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-3">
-                    These numbers are approximations based on your activity notes.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
 
           {saveError && <p role="alert" className="mn-error">{saveError}</p>}
 

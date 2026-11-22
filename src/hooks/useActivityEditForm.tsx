@@ -1,3 +1,4 @@
+import type { EquipmentClassificationValue } from "../components/EquipmentClassification";
 import { useEffect, useState } from "react";
 import {
   resolveActivityFields,
@@ -361,6 +362,7 @@ export function useActivityEditForm({
         feeling_during: feelingDuringValue,
         feeling_after: feelingAfterValue,
         effort: effortValue,
+        cycling_mode_override: activity.cycling_mode_override ?? null,
         notes: note,
         note_image_url: imageUrl,
         note_thumb_image_url: thumbUrl,
@@ -466,7 +468,7 @@ export function useActivityEditForm({
     onDeleted();
   };
 
-  const addEquipment = async (name: string, notes: string, activityTypes: string[] = [activityType]) => {
+  const addEquipment = async (name: string, notes: string, activityTypes: string[] = [activityType], classification?: EquipmentClassificationValue) => {
     const currentUserId = await ensureUserId();
     if (!currentUserId) return null;
 
@@ -475,6 +477,7 @@ export function useActivityEditForm({
       name,
       notes: notes || undefined,
       activityTypes,
+      classification,
     });
 
     if (!created) {

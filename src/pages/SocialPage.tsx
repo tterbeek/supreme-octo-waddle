@@ -1,3 +1,4 @@
+import { buildCommunityFeed } from '../lib/communityFeed';
 import SocialMapConsent from '../components/social/SocialMapConsent';
 import FloatingAddButton from '../components/FloatingAddButton';
 import ModalSheet from '../components/ModalSheet';
@@ -96,11 +97,11 @@ export default function SocialPage() {
     {(showAllChallenges?challengeIndicators:challengeIndicators.slice(0,1)).map(({audience:target,communityName,challenge})=><ChallengePreview key={challenge.id} challenge={challenge} communityName={communityName} onOpen={()=>setParams({audience:target})}/>)}
    </section>}
    {community&&<section className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">Our challenges</h2>{selectedAudience?.role!=='member'&&<button type="button" aria-label="Create challenge" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-movenotes-primary px-4 py-2 text-sm text-movenotes-primary" onClick={()=>setChallengeForm(true)}><IconPlus size={20}/><span className="sm:hidden">Create</span><span className="hidden sm:inline">Create challenge</span></button>}</div>
-    {!challenges.length&&<p className="text-sm text-movenotes-muted">No challenges yet.</p>}
-    {challenges.map(ch=><ChallengeCard key={ch.id} challenge={ch} community={community} canManage={selectedAudience?.role!=='member'} onUpdate={()=>setEditingChallenge(ch)} onChanged={refresh}/>)}
+    {!challenges.some(ch=>ch.state!=='closed')&&<p className="text-sm text-movenotes-muted">{challenges.some(ch=>ch.state==='closed')?'No active challenges.':'No challenges yet.'}</p>}
+    {challenges.filter(ch=>ch.state!=='closed').map(ch=><ChallengeCard key={ch.id} challenge={ch} community={community} canManage={selectedAudience?.role!=='member'} onUpdate={()=>setEditingChallenge(ch)} onChanged={refresh}/>)}
    </section>}
-   {!feed.length&&!loading&&<p className="rounded-xl border p-5 text-sm">Nothing shared here yet. Your Journal stays private until you choose to share.</p>}
-   <div className="space-y-4">{feed.map(a=><SocialActivityCard key={a.id} activity={a} viewerId={uid} onConversation={()=>openConversation(a.id)}/>)}</div>
+   {!feed.length&&!challenges.some(ch=>ch.state==='closed')&&!loading&&<p className="rounded-xl border p-5 text-sm">Nothing shared here yet. Your Journal stays private until you choose to share.</p>}
+   <div className="space-y-4">{buildCommunityFeed(feed,community?challenges:[],more).map(entry=>entry.kind==='activity'?<SocialActivityCard key={'activity-'+entry.activity.id} activity={entry.activity} viewerId={uid} onConversation={()=>openConversation(entry.activity.id)}/>:<ChallengeCard key={'challenge-'+entry.challenge.id} challenge={entry.challenge} community={community!} canManage={selectedAudience?.role!=='member'} onUpdate={()=>setEditingChallenge(entry.challenge)} onChanged={refresh}/>)}</div>
    {more&&<button className="min-h-11 w-full rounded-full border" disabled={loadingMore} onClick={()=>void loadMore()}>{loadingMore?'Loading…':'Older activities'}</button>}
   </>}
   </>}

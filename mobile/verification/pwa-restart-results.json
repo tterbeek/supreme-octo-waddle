@@ -1,0 +1,9 @@
+{
+  "device": "emulator-5554 Android17/API37",
+  "backend": "local Supabase",
+  "checks": [
+    "Skipping the existing optional reflection preserves the saved activity",
+    "Restart restores real local Supabase session and Journal activity",
+    "Existing PWA share renderer opens Android native image share sheet; no message sent"
+  ]
+}

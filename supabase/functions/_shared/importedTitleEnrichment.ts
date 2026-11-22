@@ -1,3 +1,4 @@
+import { resolveLocation } from "./locationResolver.ts";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { generateImportedActivityTitle, sensibleLocality, type ImportedTitleInput, type RoutePoint } from "./importedActivityTitle.ts";
 
@@ -7,7 +8,7 @@ export type ImportedTitleSnapshot = {
 };
 
 type GeocodeResult = { address_components?: { long_name?: string; types?: string[] }[] };
-/** Never use formatted_address, street components, parks or neighbourhoods. */
+/** First pass: only locality components, never street addresses or POIs. */
 export function localityFromGeocode(results: GeocodeResult[]) {
   for (const type of ["locality", "postal_town", "administrative_area_level_3", "administrative_area_level_4"]) {
     for (const result of results) for (const component of result.address_components ?? []) {
@@ -20,8 +21,8 @@ export function localityFromGeocode(results: GeocodeResult[]) {
   return null;
 }
 
-/** Reuse the existing server-side Google key and location cache, with a separate
- * coarse key namespace so older park/POI cache entries cannot become titles. */
+/** Prefer a locality; only then reuse the existing nearby-place resolver.
+ * The separate locality cache prevents a photo POI from masquerading as a town. */
 export function importedLocalityResolver(client: SupabaseClient, apiKey: string | undefined) {
   return async (point: RoutePoint): Promise<string | null> => {
     if (!apiKey) return null;
@@ -29,16 +30,27 @@ export function importedLocalityResolver(client: SupabaseClient, apiKey: string 
     const lng = Number(point.lng.toFixed(3));
     const key = `import-locality:${lat},${lng}`;
     const { data: cached } = await client.from("location_cache").select("name, type").eq("key", key).maybeSingle();
-    if (cached?.type === "locality") return sensibleLocality(cached.name);
+    if (cached?.type === "locality") {
+      const name = sensibleLocality(cached.name);
+      if (name) return name;
+    }
     const params = new URLSearchParams({ latlng: `${point.lat},${point.lng}`, language: "en", key: apiKey,
       result_type: "locality|postal_town|administrative_area_level_3|administrative_area_level_4" });
     const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params}`, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) return null;
     const payload = await response.json() as { status?: string; results?: GeocodeResult[] };
-    if (payload.status !== "OK" || !Array.isArray(payload.results)) return null;
-    const name = localityFromGeocode(payload.results);
-    if (name) await client.from("location_cache").upsert({ key, lat, lng, name, type: "locality" });
-    return name;
+    // Avoid more paid lookups after a provider/network error or exhausted quota.
+    if (payload.status !== "OK" && payload.status !== "ZERO_RESULTS") return null;
+    const name = localityFromGeocode(payload.results ?? []);
+    if (name) {
+      await client.from("location_cache").upsert({ key, lat, lng, name, type: "locality" });
+      return name;
+    }
+    const place = await resolveLocation({
+      serviceClient: client, googleMapsApiKey: apiKey,
+      lat: point.lat, lng: point.lng, logPrefix: "[imported-title]",
+    });
+    return sensibleLocality(place?.name);
   };
 }
 

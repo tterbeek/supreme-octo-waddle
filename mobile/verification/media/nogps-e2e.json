@@ -1,0 +1,20 @@
+{
+  "scenario": "nogps",
+  "device": "emulator-5554 Android17/API37",
+  "backend": "local Supabase",
+  "activity": "4a2ff15d-a8c1-46d4-b162-b71830d615bd",
+  "photo": "c44e952f-b154-416e-b89d-d80c4e82ac38",
+  "coordinates": {
+    "lat": null,
+    "lng": null
+  },
+  "checks": [
+    "Existing PWA creates activity first",
+    "Native selected photo returns original image",
+    "Existing PWA reflection uploads image and thumbnail",
+    "Photo row persisted with expected coordinates",
+    "Stored compressed image has no raw GPS EXIF",
+    "Saved activity survives photo flow"
+  ],
+  "uploadedBytes": 2561
+}

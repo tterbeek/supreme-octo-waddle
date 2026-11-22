@@ -268,3 +268,11 @@ an owner-only database operation. Migration
 created this way; apply it before the frontend update. Existing presets can still
 be updated through Edit preset. The full equipment picker groups matching items
 first, followed by other/unassigned equipment; both groups remain selectable.
+
+### Community Virtual distance
+
+See [Virtual distance implementation and release notes](docs/virtual-distance.md). Apply migrations `20261105000000_virtual_distance.sql` through `20261105020000_challenge_archive.sql` before this frontend release. No additional Edge Functions or secrets are required. Existing recorded-distance challenges keep their calculation; Community participation remains automatic and only currently shared eligible activities count.
+
+### Curated map routes for Community challenges
+
+Choose **Create challenge → Virtual distance → Choose a map route**. Ten predefined routes use the existing contribution engine; targets come from the selected route. See [implementation, local testing and release notes](docs/curated-map-challenges.md). Apply `20261105030000_curated_map_challenges.sql` before this frontend. Reuse the existing Mapbox browser token; no new Edge Functions are required.

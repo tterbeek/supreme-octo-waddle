@@ -1,0 +1,5 @@
+{
+  "backend": "explicitly authorized hosted backend",
+  "source": "root index.html/src/public; no copied UI",
+  "serviceWorker": false
+}

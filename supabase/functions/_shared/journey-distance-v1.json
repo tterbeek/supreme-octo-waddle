@@ -1,0 +1,46 @@
+{
+  "id": "journey-distance-v1",
+  "decimalPlaces": 12,
+  "participationKmPerDay": "1",
+  "activityCategories": {
+    "ride": "cycling",
+    "run": "running",
+    "walk": "walking",
+    "swim": "swimming",
+    "strength": "strength",
+    "hike": "other",
+    "yoga": "other",
+    "meditation": "other",
+    "restore": "other",
+    "other": "other"
+  },
+  "electricSubtypes": [
+    "ebikeride",
+    "emountainbikeride",
+    "electriccycling",
+    "electricmountainbiking",
+    "ebiking",
+    "ebike",
+    "electricbiking"
+  ],
+  "conventionalSubtypes": [
+    "ride",
+    "mountainbikeride",
+    "gravelride",
+    "virtualride",
+    "cycling",
+    "roadcycling",
+    "mountainbiking",
+    "indoorcycling",
+    "spinning"
+  ],
+  "virtualKmPerHour": "18",
+  "distanceMultipliers": {
+    "cycling": "1",
+    "electric_cycling": "0.5",
+    "running": "2.25",
+    "walking": "4",
+    "swimming": "9"
+  },
+  "electricTimeFactor": "0.5"
+}

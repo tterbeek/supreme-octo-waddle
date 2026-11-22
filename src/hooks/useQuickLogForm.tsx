@@ -1,3 +1,4 @@
+import type { EquipmentClassificationValue } from "../components/EquipmentClassification";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { allowFormNavigation } from "../lib/formLifecycle";
 import { ACTIVITY_TYPES, supportsEffort } from "../config/activityTypes";
@@ -208,7 +209,7 @@ export function useQuickLogForm({
     setEffort(null);
   };
 
-  const addEquipment = async (name: string, notes: string, activityTypes: string[] = [activityType]) => {
+  const addEquipment = async (name: string, notes: string, activityTypes: string[] = [activityType], classification?: EquipmentClassificationValue) => {
     const currentUserId = await ensureUserId();
     if (!currentUserId) return null;
 
@@ -217,6 +218,7 @@ export function useQuickLogForm({
       name,
       notes: notes || undefined,
       activityTypes,
+      classification,
     });
 
     if (!created) {
@@ -315,6 +317,7 @@ export function useQuickLogForm({
       feelingAfterValue: feelingAfter,
       title,
       equipmentIds: selectedEquipmentIds,
+      cyclingOverride: existingActivity?.cycling_mode_override ?? null,
       routePolyline: !existingActivity && activePreset?.type === activityType ? activePreset.route_polyline ?? null : null,
     };
 

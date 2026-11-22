@@ -1,0 +1,1 @@
+import {attach}from'./webview-driver.mjs';const c=await attach();console.log(await c.evaluate(`JSON.stringify({available:Capacitor.isPluginAvailable('MoveNotesMedia'),headers:Capacitor.PluginHeaders?.find(p=>p.name==='MoveNotesMedia'),text:document.body.innerText.slice(0,400),inputs:[...document.querySelectorAll('input')].map(i=>i.id)})`));c.close();

@@ -1,0 +1,8 @@
+{
+  "backend": "local Supabase",
+  "checks": [
+    "Existing PWA Choose photos opens Android native photo picker",
+    "Picker cancellation returns to optional reflection",
+    "Skipping reflection preserves local activity after cancellation"
+  ]
+}
