@@ -1,3 +1,3 @@
-import './policies.test.mjs';
-import './media.test.mjs';
-import './local-images.test.mjs';
+import './policies.check.mjs';
+import './media.check.mjs';
+import './local-images.check.mjs';
